@@ -1,5 +1,18 @@
 # Clinic Demo
 
+Agents that work on codebases ask three questions — *what does this action
+accept?*, *why was that forbidden?*, *where is this symbol?* — and this
+repository answers all three from the way the application is actually built:
+an Ash resource layer that declares its own contract and hands it to
+[`ash_agent_tools`](https://github.com/lukegalea/ash_agent_tools), an Elixir
+language server for everything that *is* a symbol, and two plain documents —
+DMN and BPMN — for what the clinic decides and what it does. The domain is a
+vet clinic's appointment book, kept deliberately small so that everything
+interesting lives in the tooling and the documents rather than in more code.
+[`docs/storyline.md`](docs/storyline.md) is the narrative and the
+retrospective; the guided tour below is every claim made there, run against
+this tree as checked out.
+
 A deliberately small Phoenix and Ash application, used to demonstrate three
 libraries that between them cover what an application knows, what it decides
 and what it does:
@@ -149,9 +162,13 @@ of question and neither tool answers the other's.
 
 [Serena](https://github.com/oraios/serena), over an Elixir language server,
 handles symbols: where is this function, who calls it, rename it everywhere.
-`ash_agent_tools`, via `bin/ash-agent`, handles declarations: what does this
-action accept, what are this attribute's constraints, what could forbid this
-call.
+`ash_agent_tools` handles declarations: what does this action accept, what
+are this attribute's constraints, what could forbid this call. It reaches an
+agent two ways, with the same JSON on both: as an MCP daemon
+(`mix ash_agent.serve` on `127.0.0.1:4100`, registered live in `.mcp.json`
+and `opencode.json` — boot the Mix process once, and every call afterwards is
+a millisecond read), or via `bin/ash-agent` in a shell, which pays a Mix boot
+per call and is what a CI job or a person uses.
 
 The boundary is structural rather than a matter of taste. `find_symbol` for
 `complete` returns nothing, because there is no symbol called `complete` —
@@ -222,33 +239,46 @@ mix ash_agent.describe ClinicDemo.Scheduling.Appointment complete --pretty
   "type": "update",
   "description": "The visit happened. Clinical notes are mandatory.",
   "accept": [],
-  "input": { "required": ["notes"], "optional": [], "private": [] },
-  "arguments": [
-    {
-      "name": "notes",
-      "type": "string",
-      "description": "What was found and what was done.",
-      "required?": true,
-      "allow_nil?": false,
-      "public?": true,
-      "default": null,
-      "source": {
-        "file": ".../lib/clinic_demo/scheduling/appointment.ex",
-        "line": 215
+  "input": {
+    "required": ["notes"],
+    "optional": [],
+    "private": [],
+    "arguments": [
+      {
+        "name": "notes",
+        "type": "string",
+        "description": "What was found and what was done.",
+        "required?": true,
+        "allow_nil?": false,
+        "public?": true,
+        "default": null,
+        "constraints": {
+          "min_length": 10, "max_length": 4000, "trim?": true, "allow_empty?": false
+        },
+        "source": {
+          "file": ".../lib/clinic_demo/scheduling/appointment.ex",
+          "line": 215
+        }
       }
-    }
-  ],
-  "returns": { "kind": "record", "type": "Elixir.ClinicDemo.Scheduling.Appointment" }
+    ]
+  },
+  "returns": { "kind": "record", "type": "Elixir.ClinicDemo.Scheduling.Appointment" },
+  "code_interfaces": [
+    { "name": "complete_appointment", "domain": "Elixir.ClinicDemo.Scheduling",
+      "args": ["notes"], "get?": false, "on_resource?": false }
+  ]
 }
 ```
 
 Note `"accept": []`. Nothing on this action is settable as an attribute; the
-only way in is the `notes` argument. An agent that greps for `def complete`
-learns none of that. The `source` field is a file and line, so the next step
-is a targeted read rather than a search.
+only way in is the `notes` argument — and its `constraints` are in the
+contract itself: ten characters of clinical notes, at most 4000, trimmed. An
+agent that greps for `def complete` learns none of that. The `source` field
+is a file and line, so the next step is a targeted read rather than a search.
 
 Drop the action name to get the whole resource — fields with their types and
-constraints, relationships with their destinations, and every action.
+constraints, the aggregates and calculations, relationships with their
+destinations, and every action.
 
 ### 3. Will my call work, before I make it?
 
@@ -277,8 +307,10 @@ mix ash_agent.validate ClinicDemo.Scheduling.Appointment book \
   "expected": {
     "required": ["patient_id", "clinician_id", "scheduled_at", "reason"],
     "optional": [
-      { "name": "duration_minutes", "type": "integer" },
-      { "name": "severity", "type": "integer" }
+      { "name": "duration_minutes", "type": "integer",
+        "constraints": { "min": 5, "max": 240 } },
+      { "name": "severity", "type": "integer",
+        "constraints": { "min": 1, "max": 5 } }
     ]
   },
   "normalized_inputs": { "reason": "Hi", "duration_minutes": 3 }
@@ -289,7 +321,9 @@ Four distinct classes of mistake caught in one round trip: a malformed UUID, a
 camelCased key with a spelling suggestion, two missing required inputs, and two
 constraint violations. Nothing ran. No changeset was submitted, no action
 fired, the database was not touched — `validate` builds the input with
-`error?: false` and inspects it.
+`error?: false` and inspects it. The `expected` block carries the optional
+inputs' constraints, so the five-minute floor on `duration_minutes` is
+readable before the call, not learned from the error.
 
 `normalized_inputs` shows the cast values, so `"3"` comes back as `3`.
 
@@ -303,6 +337,7 @@ mix ash_agent.search appoint --pretty
 {
   "query": "appoint",
   "count": 2,
+  "kinds": null,
   "results": [
     {
       "name": "appointments",
@@ -323,7 +358,8 @@ mix ash_agent.search appoint --pretty
 ```
 
 Substring match, case-insensitive, across attributes, actions, calculations
-and relationships on every loaded resource. `--kind attribute` narrows it.
+and relationships on every loaded resource. `--kind attribute` narrows it
+(and then `"kinds"` echoes the restriction back).
 This is the step that replaces "grep, get forty hits, read six files".
 
 ### 5. What is at this line?
@@ -349,13 +385,22 @@ mix ash_agent.context lib/clinic_demo/scheduling/appointment.ex:208 --pretty
     { "kind": "action", "name": "reschedule", "line": 178, "distance": 13 },
     { "kind": "action", "name": "cancel", "line": 227, "distance": 19 }
   ],
-  "references": { "actions": [], "relationships": [], "code_interfaces": [] }
+  "references": {
+    "actions": [],
+    "relationships": [],
+    "code_interfaces": [
+      { "name": "complete_appointment", "domain": "Elixir.ClinicDemo.Scheduling",
+        "args": ["notes"], "get?": false, "on_resource?": false }
+    ]
+  }
 }
 ```
 
-Point it at a compiler error, a diff hunk, or wherever the cursor landed. A
-miss is graceful: you get `"match": null` and the nearest declarations, never
-an error.
+Point it at a compiler error, a diff hunk, or wherever the cursor landed.
+The `references` block answers "who calls into this?" at the Ash level — the
+domain's `complete_appointment` code interface names `:complete` among its
+args — which is the question `grep "complete"` drowns in. A miss is graceful:
+you get `"match": null` and the nearest declarations, never an error.
 
 ### 6. What did the rule decide, and why is that the only place it lives?
 
@@ -570,6 +615,11 @@ mix ash_agent.laws lib/clinic_demo/visits/invoker.ex lib/clinic_demo/rules.ex \
       "clean?": true,
       "counts": { "definite": 0, "likely": 0, "review": 0 },
       "laws_checked": 26,
+      "laws_without_detectors": [
+        { "id": "18", "name": "changeset-errors-before-ui-debugging" },
+        { "id": "06", "name": "has-many-queries-belongs-to-joins" },
+        "... (seven behavioural laws in total, listed so nobody assumes full coverage)"
+      ],
       "violations": []
     },
     {
@@ -577,6 +627,7 @@ mix ash_agent.laws lib/clinic_demo/visits/invoker.ex lib/clinic_demo/rules.ex \
       "clean?": false,
       "counts": { "definite": 0, "likely": 0, "review": 1 },
       "laws_checked": 26,
+      "laws_without_detectors": [ "..." ],
       "violations": [
         {
           "law": "16",
@@ -644,21 +695,30 @@ hid them would be a worse demo.
 
 ### ash_agent_tools
 
-- `describe_action` reports an empty `code_interfaces` list for actions whose
-  interfaces are declared on the domain rather than the resource. Ash 3.33
-  stores those at `reference.definitions`; the tool reads `reference.define`.
-  Every code interface in this demo is declared on the domain, which is the
-  idiomatic placement, so the field is empty throughout.
-- `describe_resource` lists attributes under `fields`. The aggregates and
-  calculations declared on `Patient` and `Appointment` do not appear in the
-  output.
-- An action **argument** carries no `constraints` in the output, though an
-  attribute does. `describe_resource` reports
-  `"constraints": {"one_of": ["scheduled", "checked_in", ...]}` for the
-  `status` attribute, but `describe_action ... record_triage` says only
-  `"type": "atom"` for the `urgency` argument, whose `one_of` is the four
-  urgencies. `validate`'s `expected` block omits them too, so an agent finds
-  the four values by sending a fifth and reading `"is invalid"`.
+Found here by dogfooding, logged, and since **fixed upstream** — this
+repository pins `688fad7`, which carries the fixes, so the tour above shows
+the post-fix behavior:
+
+- `describe_action` used to report an empty `code_interfaces` list for
+  actions whose interfaces are declared on the domain rather than the
+  resource (Ash 3.33 stores those at `reference.definitions`; the tool read
+  `reference.define`). Every code interface in this demo is declared on the
+  domain — the idiomatic placement — so the field was empty throughout.
+  Now populated, with an `on_resource?` marker; `context` reports them too
+  (tour step 5).
+- `describe_resource` used to list attributes under `fields` only; the
+  aggregates and calculations declared on `Patient` and `Appointment` did
+  not appear anywhere. Now they are first-class blocks in the output.
+- An action **argument** used to carry no `constraints`, though an attribute
+  did — an agent could only find the four valid `urgency` atoms by sending a
+  fifth and reading `"is invalid"`. Now arguments carry constraints, and
+  `validate`'s `expected` block shows them for optional inputs (tour
+  step 3).
+
+The gap log keeps the dated record of all of it, including the one
+`ash_agent_tools` question the Mix-task surface still cannot ask: there is
+no Mix task for `explain_forbidden/2` (`bin/ash-agent` works around it with
+`mix run`; the MCP daemon exposes `ash_forbidden` as an ordinary tool).
 
 ### ash_bpmn
 
@@ -700,8 +760,11 @@ hid them would be a worse demo.
 ```
 usage-rules.md                     this project's conventions, in the form a
                                    dependency ships them
+docs/storyline.md                  the public narrative, and the retrospective
 docs/agents.md                     the two-server agent wiring, and its waits
+docs/evidence/                     captured transcripts for every claim above
 bin/ash-agent                      ash_agent_tools as one command
+mix ash_agent.serve                ash_agent_tools as an MCP daemon, port 4100
 bin/serena-mcp                     Serena, pointed at our Expert build
 bin/expert-smoke.exs               a hand-written LSP conversation, to prove it
 .mcp.json .serena/project.yml      the wiring itself, for Claude Code and Serena
