@@ -1,0 +1,2 @@
+2026-09-21T04:33Z  describe_action reports "code_interfaces": [] for actions whose interfaces are defined on the domain. Ash 3.33 stores them at Ash.Domain.Info.resource_references/1 -> reference.definitions; ash_agent_tools reads reference.define.
+2026-09-21T04:34Z  describe_resource "fields" lists attributes only. Aggregates and calculations declared on the resource do not appear anywhere in the output.
