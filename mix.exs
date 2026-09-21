@@ -75,6 +75,17 @@ defmodule ClinicDemo.MixProject do
       {:ash, "~> 3.0"},
       {:ash_postgres, "~> 2.0"},
 
+      # Decisions and process, the two halves of the rules layer. A DMN table
+      # says how urgent an appointment is; a BPMN graph says what happens to it
+      # between booking and discharge. Both are runtime dependencies — they are
+      # the application, not a tool pointed at it.
+      {:ash_decisions, github: "lukegalea/ash_decisions"},
+      {:ash_bpmn, github: "lukegalea/ash_bpmn"},
+
+      # The process engine's jobs. `oban_testing: :inline` means this demo never
+      # starts a queue, but the shim still expects the modules to be loadable.
+      {:oban, "~> 2.0"},
+
       # The tool under demonstration. Dev-only and `runtime: false`: it is a
       # read-only introspection layer for agents, never part of the running
       # application.
