@@ -1,0 +1,13 @@
+{
+  "id": 5,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"resource\":\"Elixir.ClinicDemo.Scheduling.Appointment\",\"errors\":[{\"message\":\"is invalid\",\"path\":\"patient_id\",\"source\":{\"line\":157,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex\"}},{\"message\":\"unknown input \\\"clinicianId\\\" for action :book; Ash says: No such attribute on ClinicDemo.Scheduling.Appointment, or argument on ClinicDemo.Scheduling.Appointment.book | Did you mean: | * clinician_id | Valid Inputs: | * reason | * severity | * patient_id | * scheduled_at | * clinician_id | * duration_minutes\",\"path\":\"clinicianId\",\"source\":null,\"did_you_mean\":[\"clinician_id\"]},{\"message\":\"is required\",\"path\":\"clinician_id\",\"source\":null,\"did_you_mean\":null},{\"message\":\"is required\",\"path\":\"scheduled_at\",\"source\":null,\"did_you_mean\":null},{\"message\":\"Invalid value provided for reason: length must be greater than or equal to 3.\\n\\nValue: \\\"Hi\\\"\\n\",\"path\":null,\"source\":null,\"did_you_mean\":null,\"ash_hint\":null,\"ash_input_key\":null},{\"message\":\"Invalid value provided for duration_minutes: must be greater than or equal to 5.\\n\\nValue: \\\"3\\\"\\n\",\"path\":null,\"source\":null,\"did_you_mean\":null,\"ash_hint\":null,\"ash_input_key\":null}],\"action\":\"book\",\"valid?\":false,\"expected\":{\"private\":[],\"arguments\":[{\"default\":null,\"name\":\"patient_id\",\"type\":\"uuid\",\"description\":\"An existing patient. Booking does not create one.\",\"source\":{\"line\":157,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex\"},\"required?\":true,\"constraints\":{},\"public?\":true,\"allow_nil?\":false},{\"default\":null,\"name\":\"clinician_id\",\"type\":\"uuid\",\"description\":\"An existing, active clinician.\",\"source\":{\"line\":162,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex\"},\"required?\":true,\"constraints\":{},\"public?\":true,\"allow_nil?\":false}],\"required\":[\"patient_id\",\"clinician_id\",\"scheduled_at\",\"reason\"],\"optional\":[{\"name\":\"duration_minutes\",\"type\":\"integer\",\"constraints\":{\"max\":240,\"min\":5}},{\"name\":\"severity\",\"type\":\"integer\",\"constraints\":{\"max\":5,\"min\":1}}]},\"action_type\":\"create\",\"normalized_inputs\":{\"duration_minutes\":3,\"reason\":\"Hi\"}}"
+      }
+    ],
+    "isError": false
+  },
+  "jsonrpc": "2.0"
+}

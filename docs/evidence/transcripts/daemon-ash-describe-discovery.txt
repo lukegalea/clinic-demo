@@ -1,0 +1,13 @@
+{
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"resources\":[\"ClinicDemo.Decisions.Definition\",\"ClinicDemo.Decisions.Evaluation\",\"ClinicDemo.Scheduling.Appointment\",\"ClinicDemo.Scheduling.Clinician\",\"ClinicDemo.Scheduling.Patient\",\"ClinicDemo.Visits.Definition\",\"ClinicDemo.Visits.HumanTask\",\"ClinicDemo.Visits.Instance\",\"ClinicDemo.Visits.ProcessEvent\",\"ClinicDemo.Visits.TaskCandidate\",\"ClinicDemo.Visits.Token\"],\"domain_count\":3,\"domains\":[\"ClinicDemo.Decisions\",\"ClinicDemo.Scheduling\",\"ClinicDemo.Visits\"],\"resource_count\":11}"
+      }
+    ],
+    "isError": false
+  },
+  "jsonrpc": "2.0"
+}

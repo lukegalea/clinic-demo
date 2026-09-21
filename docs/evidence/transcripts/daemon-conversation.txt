@@ -1,0 +1,26 @@
+# Verbatim MCP-over-HTTP conversation with the ash_agent daemon
+# mix ash_agent.serve --port 4100   (boot transcript: daemon-boot.txt)
+# Each request is one POST to http://127.0.0.1:4100 (the root path; the
+# daemon mounts its Plug at /). Responses are one JSON-RPC line.
+
+## initialize (client requests 2024-11-05; the daemon negotiates down to it)
+$ curl -s -X POST http://127.0.0.1:4100 \
+    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{...}}'
+{"id":1,"result":{"capabilities":{"tools":{"listChanged":false}},"protocolVersion":"2024-11-05","serverInfo":{"name":"ash_agent_tools","version":"0.1.0"}},"jsonrpc":"2.0"}
+
+## notifications/initialized  ->  202 Accepted, empty body
+$ curl -s -o /dev/null -w "%{http_code} %{size_download}" -X POST ... -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+
+202 0
+
+## tools/list
+{"id":2,"tools":["ash_describe","ash_validate","ash_search","ash_context","ash_forbidden","ash_daemon_status","ash_reload"]}
+
+## tools/call ash_describe — the `complete` contract (the daemon answer for the same question 03 asks through bin/ash-agent)
+{"input":{"private":[],"arguments":[{"default":null,"name":"notes","type":"string","description":"What was found and what was done.","source":{"line":215,"file":"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"},"required?":true,"constraints":{"max_length":4000,"trim?":true,"allow_empty?":false,"min_length":10},"public?":true,"allow_nil?":false}],"required":["notes"],"optional":[]},"name":"complete","type":"update","accept":[],"description":"The visit happened. Clinical notes are mandatory.","arguments":[{"default":null,"name":"notes","type":"string","description":"What was found and what was done.","source":{"line":215,"file":"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"},"required?":true,"constraints":{"max_length":4000,"trim?":true,"allow_empty?":false,"min_length":10},"public?":true,"allow_nil?":false}],"resource":"Elixir.ClinicDemo.Scheduling.Appointment","source":{"line":208,"file":"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"},"returns":{"type":"Elixir.ClinicDemo.Scheduling.Appointment","kind":"record"},"code_interfaces":[{"args":["notes"],"name":"complete_appointment","domain":"Elixir.ClinicDemo.Scheduling","get?":false,"get_by":null,"on_resource?":false}]}
+
+## tools/call ash_validate — the same four-mistakes input 03 puts to the Mix task
+{"id":5,"result":{"content":[{"type":"text","text":"{\"resource\":\"Elixir.ClinicDemo.Scheduling.Appointment\",\"errors\":[{\"message\":\"is invalid\",\"path\":\"patient_id\",\"source\":{\"line\":157,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex\"}},{\"message\":\"unknown input \\\"clinicianId\\\" for action :book; Ash says: No such attribute on ClinicDemo.Scheduling.Appointment, or argument on ClinicDemo.Scheduling.Appointment.book | Did you mean: | * clinician_id | Valid Inputs: | * reason | * severity | * patient_id | * scheduled_at | * clinician_id | * duration_minutes\",\"path\":\"clinicianId\",\"source\":null,\"did_you_mean\":[\"clinician_id\"]},{\"message\":\"is required\",\"path\":\"clinician_id\",\"source\":null,\"did_you_mean\":null},{\"message\":\"is required\",\"path\":\"scheduled_at\",\"source\":null,\"did_you_mean\":null},{\"message\":\"Invalid value provided for reason: length must be greater than or equal to 3.\\n\\nValue: \\\"Hi\\\"\\n\",\"path\":null,\"source\":null,\"did_you_mean\":null,\"ash_hint\":null,\"ash_input_key\":null},{\"message\":\"Invalid value provided for duration_minutes: must be greater than or equal to 5.\\n\\nValue: \\\"3\\\"\\n\",\"path\":null,\"source\":null,\"did_you_mean\":null,\"ash_hint\":null,\"ash_input_key\":null}],\"action\":\"book\",\"valid?\":false,\"expected\":{\"private\":[],\"arguments\":[{\"default\":null,\"name\":\"patient_id\",\"type\":\"uuid\",\"description\":\"An existing patient. Booking does not create one.\",\"source\":{\"line\":157,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex\"},\"required?\":true,\"constraints\":{},\"public?\":true,\"allow_nil?\":false},{\"default\":null,\"name\":\"clinician_id\",\"type\":\"uuid\",\"description\":\"An existing, active clinician.\",\"source\":{\"line\":162,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex\"},\"required?\":true,\"constraints\":{},\"public?\":true,\"allow_nil?\":false}],\"required\":[\"patient_id\",\"clinician_id\",\"scheduled_at\",\"reason\"],\"optional\":[{\"name\":\"duration_minutes\",\"type\":\"integer\",\"constraints\":{\"max\":240,\"min\":5}},{\"name\":\"severity\",\"type\":\"integer\",\"constraints\":{\"max\":5,\"min\":1}}]},\"action_type\":\"create\",\"normalized_inputs\":{\"duration_minutes\":3,\"reason\":\"Hi\"}}"}],"isError":false},"jsonrpc":"2.0"}
+
+## tools/call ash_daemon_status — the boot-once ledger
+{"status":"ready","domain_count":3,"resource_count":11,"booted_at":"2026-09-21T07:22:22.858694Z","compiled_at":"2026-09-21T07:22:22.861233Z","reloads":0,"beam_memory_bytes":93389696,"cache_entries":3}

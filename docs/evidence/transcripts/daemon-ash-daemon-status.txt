@@ -1,0 +1,13 @@
+{
+  "id": 6,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"status\":\"ready\",\"domain_count\":3,\"resource_count\":11,\"booted_at\":\"2026-09-21T07:22:22.858694Z\",\"compiled_at\":\"2026-09-21T07:22:22.861233Z\",\"reloads\":0,\"beam_memory_bytes\":96743944,\"cache_entries\":1}"
+      }
+    ],
+    "isError": false
+  },
+  "jsonrpc": "2.0"
+}

@@ -1,0 +1,147 @@
+{
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "ash_describe",
+        "description": "Describe Ash resources and actions: fields, relationships, actions, the arguments and input contract each action accepts, types, and source locations. With no arguments, returns the discovery summary (loaded domains and resources). Read-only.",
+        "inputSchema": {
+          "type": "object",
+          "required": [],
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action name to describe a single action's input contract."
+            },
+            "resource": {
+              "type": "string",
+              "description": "Resource module name, e.g. \"MyApp.Post\". Omit for the discovery summary."
+            }
+          }
+        }
+      },
+      {
+        "name": "ash_validate",
+        "description": "Validate params against an Ash resource action WITHOUT executing it: casts every value the way Ash does, reports unknown/missing keys and cast errors. Nothing runs, nothing touches a data layer.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "resource",
+            "action"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action name, e.g. \"create\"."
+            },
+            "params": {
+              "type": "object",
+              "description": "The input to validate (JSON object). Defaults to {}.",
+              "additionalProperties": true
+            },
+            "resource": {
+              "type": "string",
+              "description": "Resource module name, e.g. \"MyApp.Post\"."
+            }
+          }
+        }
+      },
+      {
+        "name": "ash_search",
+        "description": "Search attributes, actions, calculations, and relationships across all loaded Ash resources by name substring (case-insensitive).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "term"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kinds": {
+              "type": "array",
+              "description": "Restrict the search to these symbol kinds.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "attribute",
+                  "action",
+                  "calculation",
+                  "relationship"
+                ]
+              }
+            },
+            "term": {
+              "type": "string",
+              "description": "Name substring to search for."
+            }
+          }
+        }
+      },
+      {
+        "name": "ash_context",
+        "description": "The Ash context for a file position: which loaded Ash resource/domain declares there, which symbol's span covers the line, and what references it. One call replaces the grep → read → re-grep loop.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "file",
+            "line"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "Repo-relative (or absolute) file path."
+            },
+            "line": {
+              "type": "integer",
+              "description": "1-based line number."
+            }
+          }
+        }
+      },
+      {
+        "name": "ash_forbidden",
+        "description": "Explain what could forbid an Ash action: the resource's authorization policies in human-readable form. Guidance, not verdicts — use Ash.can? with a real actor for an actual decision.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "resource"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action name (optional; all policies when omitted)."
+            },
+            "resource": {
+              "type": "string",
+              "description": "Resource module name."
+            }
+          }
+        }
+      },
+      {
+        "name": "ash_daemon_status",
+        "description": "The daemon's own status: boot/compile times, reload count, loaded domain and resource counts, describe-cache size, BEAM memory.",
+        "inputSchema": {
+          "type": "object",
+          "required": [],
+          "additionalProperties": false,
+          "properties": {}
+        }
+      },
+      {
+        "name": "ash_reload",
+        "description": "Manually reload the compiled context: re-run the compile-only boot, refresh discovery, invalidate caches. The backstop when the file watcher missed a change.",
+        "inputSchema": {
+          "type": "object",
+          "required": [],
+          "additionalProperties": false,
+          "properties": {}
+        }
+      }
+    ]
+  },
+  "jsonrpc": "2.0"
+}

@@ -1,0 +1,82 @@
+
+07:22:22.877 [error] `inotify-tools` is needed to run `file_system` for your system, check https://github.com/rvoicilas/inotify-tools/wiki for more information about how to install it. If it's already installed but not be found, appoint executable file with `config.exs` or `FILESYSTEM_FSINOTIFY_EXECUTABLE_FILE` env.
+
+07:22:22.887 [warning] Not able to start file_system worker, reason: {:error, :fs_inotify_bootstrap_error}
+
+07:22:22.887 [warning] ash_agent daemon: file_system backend unavailable — hot reload disabled; use the ash_reload tool as the manual backstop
+
+07:22:22.910 [info] Running AshAgentTools.Mcp.Plug with Bandit 1.12.5 at 127.0.0.1:4100 (http)
+ash_agent daemon listening on http://127.0.0.1:4100 (POST-only MCP, read-only)
+
+  boot:   compile-only (application not started)
+  watch:  hot reload on lib/ + config/ changes
+  loaded: 3 domain(s), 11 resource(s)
+
+  tools:  ash_describe, ash_validate, ash_search, ash_context, ash_forbidden, ash_daemon_status, ash_reload
+
+Point your MCP client at http://127.0.0.1:4100 (e.g. a "type": "http" .mcp.json entry).
+Press Ctrl-C to stop.
+
+
+07:22:23.027 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.041 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.051 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.066 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.077 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.104 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.245 [debug] ash_agent tool gap: :validate/:unknown_input — ClinicDemo.Scheduling.Appointment.book
+
+07:22:23.245 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.256 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.268 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.278 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.285 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.294 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.304 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:23.314 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:22:58.545 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:23:21.283 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.850 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.864 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.876 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.890 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.908 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.933 [debug] ash_agent tool gap: :validate/:unknown_input — ClinicDemo.Scheduling.Appointment.book
+
+07:27:22.934 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.953 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.970 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:22.989 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:23.011 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:23.031 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:23.045 [warning] Header timestamp couldn't be fetched from ETS cache
+
+07:27:29.155 [notice] SIGTERM received - shutting down
+

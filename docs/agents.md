@@ -6,7 +6,7 @@ neither tool can answer the other's.
 | Server | Answers | Reached by |
 |---|---|---|
 | [Serena](https://github.com/oraios/serena) | Where is this function, who calls it, rename it everywhere, is it safe to delete | `bin/serena-mcp`, over an Elixir language server |
-| `ash_agent_tools` | What does this action accept, what are this attribute's constraints, what is declared at this line, what could forbid this call | `bin/ash-agent`, over the Mix tasks |
+| `ash_agent_tools` | What does this action accept, what are this attribute's constraints, what is declared at this line, what could forbid this call | the MCP daemon (`mix ash_agent.serve`, port 4100), or `bin/ash-agent` in a shell |
 
 ## Why two
 
@@ -166,8 +166,8 @@ allowlists `bin/ash-agent` so the other half runs without a prompt.
 `agent` context rather than its `claude-code` one, since opencode's built-in
 tools are not the ones the `claude-code` context is written against.
 
-Both files carry a disabled entry for the `ash_agent` MCP daemon. See
-**The daemon slot**, below.
+Both files also register the `ash_agent` MCP daemon — live in `.mcp.json`,
+`"enabled": true` in `opencode.json`. See **The daemon slot**, below.
 
 `uvx` must be on PATH; `bin/serena-mcp` installs and runs Serena with it and
 does not vendor it.
@@ -281,26 +281,53 @@ is logged in `.agents/logs/tool-gaps.log`.
 
 ## The daemon slot
 
-`ash_agent_tools` is not an MCP server today. `mix ash_agent.serve` — a
-read-only, supervised MCP-over-HTTP daemon on `127.0.0.1:4100`, started by its
-own Mix task rather than mounted in an application — is being built in a
-parallel lane. When it lands, the swap is:
+`ash_agent_tools` ships an MCP daemon: `mix ash_agent.serve` boots a
+read-only, supervised MCP-over-HTTP server on `127.0.0.1:4100`, started by
+its own Mix task rather than mounted in this application. The boot contract
+is the same one the introspection tasks use — **compile, don't start**: the
+configured domains are loaded, but no Phoenix endpoint and no Oban queues,
+because an introspection tool has no business owning them.
 
-1. add to `.mcp.json`, under `mcpServers`:
+Start it by hand from the repository root:
+
+```sh
+mix ash_agent.serve --port 4100
+```
+
+Until it is listening, the clients show the server as disconnected; that is
+the design, not a failure. Loopback only, POST only, no auth — a dev tool
+with an Origin check against DNS rebinding, and nothing that should ever be
+exposed past `127.0.0.1`.
+
+What it changes is arithmetic, not the answers. Every `bin/ash-agent` call is
+a fresh Mix process and pays the boot every time (one to two seconds warm,
+10–15 cold); the daemon pays it once and answers each call from in-memory
+compiled state in single-digit milliseconds. Same JSON either way, which is
+what [07 in `docs/evidence/`](evidence/07-daemon-slot.md) demonstrates: the
+same `describe`/`validate` questions put to both paths, transcripts from
+each, and the clock to compare them.
+
+The wiring is live in both clients:
+
+1. `.mcp.json`, under `mcpServers`:
 
    ```json
-   "ash_agent": { "type": "http", "url": "http://localhost:4100/mcp" }
+   "ash_agent": { "type": "http", "url": "http://127.0.0.1:4100" }
    ```
 
-2. flip `enabled` to `true` in `opencode.json`
-3. delete the `bin/ash-agent` entries from `.claude/settings.json`
+   (the root path — the daemon mounts its Plug at `/`, not `/mcp`)
 
-Confirm the port and the mount path against the daemon as shipped: `4100` is
-from its design brief, and the path is not fixed there.
+2. `"enabled": true` on the `ash_agent` entry in `opencode.json`, with the
+   same URL.
+
+If you move the port — `--port`, or
+`config :ash_agent_tools, :daemon, port: ...` — change both entries to match.
 
 The tool surface is the same either way — describe, validate, search,
-context, laws — so nothing else in this document changes. `bin/ash-agent`
-stays useful regardless: it is what a shell, a CI job or a person uses.
+context, forbidden, status, reload — so nothing else in this document
+changes. `bin/ash-agent` stays useful regardless: it is what a shell, a CI
+job or a person uses, and its allowlist entries in `.claude/settings.json`
+are kept for exactly that reason.
 
 ## Why `tidewave` and `ash_ai_dev` are not here
 
@@ -358,6 +385,10 @@ Verified headlessly, on this machine, 2026-09-21:
   server still up
 - `mix precommit`, green: 43 tests, no warnings-as-errors, once `xmllint`
   is on PATH
+- the `ash_agent` MCP daemon (`mix ash_agent.serve --port 4100`) —
+  `initialize`, `tools/list`, and `ash_describe`/`ash_validate` round trips
+  over HTTP, with boot-once vs per-call timing against `bin/ash-agent`
+  ([docs/evidence/07](evidence/07-daemon-slot.md))
 
 Not verified headlessly: Serena itself. It needs an MCP client session, and
 the tools worth seeing — `find_symbol`, `find_referencing_symbols`,

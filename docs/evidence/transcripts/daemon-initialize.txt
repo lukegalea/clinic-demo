@@ -1,0 +1,16 @@
+{
+  "id": 1,
+  "result": {
+    "capabilities": {
+      "tools": {
+        "listChanged": false
+      }
+    },
+    "protocolVersion": "2024-11-05",
+    "serverInfo": {
+      "name": "ash_agent_tools",
+      "version": "0.1.0"
+    }
+  },
+  "jsonrpc": "2.0"
+}

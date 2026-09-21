@@ -1,0 +1,15 @@
+# Timing: the daemon vs the Mix task, same machine, same minute (2026-09-21)
+# Boot (paid once): see daemon-boot.txt; port answered within ~1.2s of launch
+# (100ms poll granularity, project already compiled).
+
+## five tools/call round trips over HTTP (ash_describe discovery):
+call 1: 0.002425s
+call 2: 0.001125s
+call 3: 0.010371s
+call 4: 0.002899s
+call 5: 0.001244s
+
+## three bin/ash-agent calls (fresh mix boot every time):
+call 1: 2.36s
+call 2: 1.95s
+call 3: 1.78s
