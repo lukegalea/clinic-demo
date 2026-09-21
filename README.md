@@ -142,6 +142,32 @@ The `ash_agent_tools` dependency is declared `only: :dev, runtime: false`. It
 is an introspection tool, never part of the running application.
 `ash_decisions` and `ash_bpmn` are not: they are the application.
 
+## Two servers, and which one to ask
+
+The repository is wired for two MCP servers, because an agent asks two kinds
+of question and neither tool answers the other's.
+
+[Serena](https://github.com/oraios/serena), over an Elixir language server,
+handles symbols: where is this function, who calls it, rename it everywhere.
+`ash_agent_tools`, via `bin/ash-agent`, handles declarations: what does this
+action accept, what are this attribute's constraints, what could forbid this
+call.
+
+The boundary is structural rather than a matter of taste. `find_symbol` for
+`complete` returns nothing, because there is no symbol called `complete` —
+there is an `update :complete do` block, which is data in a DSL that the
+compiler turns into introspectable state. A language server reads Elixir; it
+does not read Ash.
+
+Serena's Elixir backend *is* Expert, so this repository drives it with a build
+of the fork carrying the `documentSymbol` crash fix rather than the release
+Serena would download. Two things that look like hangs and are not: Serena
+answers from `_build`, so the project must be compiled first, and cross-file
+answers need about ten seconds of indexing after that.
+
+`docs/agents.md` has the setup, the expected waits, a walkthrough of all
+three tools, and the GPL boundary the Serena integration is kept inside.
+
 ## Guided tour
 
 Every command below runs against this repository as checked out. Output is
@@ -674,6 +700,12 @@ hid them would be a worse demo.
 ```
 usage-rules.md                     this project's conventions, in the form a
                                    dependency ships them
+docs/agents.md                     the two-server agent wiring, and its waits
+bin/ash-agent                      ash_agent_tools as one command
+bin/serena-mcp                     Serena, pointed at our Expert build
+bin/expert-smoke.exs               a hand-written LSP conversation, to prove it
+.mcp.json .serena/project.yml      the wiring itself, for Claude Code and Serena
+opencode.json
 lib/clinic_demo/
   repo.ex                          AshPostgres repo
   rules.ex                         publishes both documents from priv/, in order

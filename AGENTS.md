@@ -23,6 +23,30 @@ If a tool cannot answer what you need, fall back to grep and append one line
 to `.agents/logs/tool-gaps.log` (timestamp plus the question you could not
 answer). That log is the input to the next round of tool work.
 
+## Two servers, and which one to ask
+
+This repository wires two MCP servers, because there are two kinds of question:
+
+- **Serena**, over an Elixir language server, for anything that is a symbol —
+  where is this function, who calls it, rename it everywhere, is it safe to
+  delete. Started by `bin/serena-mcp`.
+- **`ash_agent_tools`**, via `bin/ash-agent`, for anything that is a
+  declaration — what does this action accept, what are this attribute's
+  constraints, what is at this line, what could forbid this call.
+
+The boundary is not a preference. An Ash action is not a symbol: `find_symbol`
+for `complete` returns nothing, because `complete` is data in a DSL, not a
+function. Ask Serena for symbols and `ash_agent` for declarations, and neither
+tool will lie to you by being unable to see the question.
+
+Two things that look like hangs and are not: Serena's answers come from
+`_build`, so the project must be **compiled** first (`.serena/project.yml`
+runs `mix compile` on activation), and cross-file answers need about ten
+seconds of indexing after that before they are correct.
+
+`docs/agents.md` is the setup, the waits, the walkthrough and the GPL
+boundary. Read it before changing any of the wiring.
+
 ## This project's own rules
 
 `usage-rules.md` in the repository root is this application's conventions, in

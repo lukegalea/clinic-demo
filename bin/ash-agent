@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+#
+# ash_agent_tools, as one command.
+#
+# The DSL half of this repository's agent wiring. `ash_agent_tools` is not an
+# MCP server yet -- it is a family of Mix tasks -- so an agent reaches it the
+# way a person does, by running a command and parsing the JSON on stdout.
+# This wrapper exists so that the command is the same from any working
+# directory, and so that the allowlist entry a harness needs is one line
+# (`bin/ash-agent`) rather than nine.
+#
+# When `mix ash_agent.serve` lands it will replace this with a daemon; see the
+# TODO slot in .mcp.json. Until then the contract here is the contract there:
+# subcommand, arguments, JSON on stdout.
+#
+#   bin/ash-agent describe ClinicDemo.Scheduling.Appointment book --pretty
+#   bin/ash-agent validate ClinicDemo.Scheduling.Appointment book '{"reason":"Hi"}'
+#   bin/ash-agent search urgency
+#   bin/ash-agent context lib/clinic_demo/scheduling/appointment.ex:208
+#   bin/ash-agent laws lib/clinic_demo/rules.ex --min-tier review
+#   bin/ash-agent forbidden ClinicDemo.Scheduling.Appointment discharge
+#
+# Elixir must be on PATH, or ELIXIR_BIN_DIR must name the directory holding it.
+# The first call in a shell pays a Mix boot of ten to fifteen seconds, so batch
+# your questions.
+
+set -euo pipefail
+
+# The Mix tasks introspect *this* project, so they must run in its root.
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$root"
+
+if [ -n "${ELIXIR_BIN_DIR:-}" ]; then
+  PATH="$ELIXIR_BIN_DIR:$PATH"
+  export PATH
+fi
+
+# ash_agent_tools is declared `only: :dev, runtime: false`. Anything else and
+# the tasks are not compiled, and the failure is an unhelpful "task not found".
+export MIX_ENV="${MIX_ENV:-dev}"
+
+# Every task ash_agent_tools ships. Named rather than interpolated, so this
+# script cannot be used to run an arbitrary Mix task.
+subcommands=(context describe diff edit gaps laws runtime search validate)
+
+# `forbidden` is handled separately: AshAgentTools.explain_forbidden/2 exists
+# as a library function but ash_agent_tools ships no Mix task for it, so this
+# is a one-line `mix run` around the function. Logged in
+# .agents/logs/tool-gaps.log; delete this branch when the task lands.
+#
+# --no-compile on purpose. The real tasks route compilation output away from
+# stdout so that stdout is pure JSON; `mix run` does not, so a stale build
+# would print "Compiling 3 files" ahead of the JSON and break every parser
+# downstream. Compiling first is your job here, and the error if you have not
+# says so.
+run_forbidden() {
+  local resource="${1:-}"
+  local action="${2:-}"
+
+  if [ -z "$resource" ]; then
+    echo "usage: bin/ash-agent forbidden RESOURCE [ACTION]" >&2
+    exit 64
+  fi
+
+  local action_term="nil"
+  [ -n "$action" ] && action_term=":$action"
+
+  exec mix run --no-start --no-compile -e "
+    module = Module.concat([\"$resource\"])
+    Code.ensure_loaded(module)
+    module |> AshAgentTools.explain_forbidden($action_term) |> Jason.encode!() |> IO.puts()
+  "
+}
+
+usage() {
+  cat >&2 <<USAGE
+usage: bin/ash-agent <subcommand> [args...]
+
+subcommands:
+  describe [RESOURCE [ACTION]]   the input contract: required, optional, types, source
+  validate RESOURCE ACTION JSON  cast params against that contract, running nothing
+  search TERM                    find a name fragment across every loaded resource
+  context FILE:LINE              what is declared at a position, and what refers to it
+  laws SOURCE...                 judge source against the 26 Iron Laws
+  forbidden RESOURCE [ACTION]    the policies that can deny an action
+  diff                           ash_agent.diff
+  edit                           a semantic DSL edit addressed by name path
+  runtime snapshot|top|tree      read-only BEAM introspection
+  gaps                           questions the tools could not answer
+
+Output is JSON on stdout. Add --pretty when a human is looking.
+See docs/agents.md.
+USAGE
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  "" | -h | --help | help)
+    usage
+    [ -z "$cmd" ] && exit 64 || exit 0
+    ;;
+esac
+
+if [ "$cmd" = "forbidden" ]; then
+  shift
+  run_forbidden "$@"
+fi
+
+for known in "${subcommands[@]}"; do
+  if [ "$cmd" = "$known" ]; then
+    shift
+    exec mix "ash_agent.$cmd" "$@"
+  fi
+done
+
+echo "bin/ash-agent: unknown subcommand '$cmd'" >&2
+usage
+exit 64

@@ -1,0 +1,52 @@
+{
+  "_comment": [
+    "Project-scoped MCP servers for this repository. Two of them, and they do",
+    "different jobs -- see docs/agents.md for why, and for the walkthrough.",
+    "",
+    "serena: generic symbol operations -- find_symbol, find_referencing_symbols,",
+    "  rename_symbol, safe_delete_symbol -- over an Elixir language server.",
+    "  Serena is GPL-3.0+ and is not linked, imported or vendored here; this is a",
+    "  path handed to a separate published process. bin/serena-mcp starts it,",
+    "  and puts our Expert build ahead of the version Serena would download.",
+    "  Two things it needs that are easy to miss: the project must be COMPILED",
+    "  (.serena/project.yml runs `mix compile` on activation), and cross-file",
+    "  answers need about ten seconds of indexing after that before they are",
+    "  right.",
+    "",
+    "ash_agent_tools: the DSL half -- the input contract for an action, the",
+    "  constraints on an attribute, what is declared at a file position. A",
+    "  language server cannot answer any of those, because Ash declarations are",
+    "  data in a DSL rather than named symbols. It is NOT an MCP server yet: it",
+    "  is reached by running bin/ash-agent, which wraps the Mix tasks and prints",
+    "  JSON. .claude/settings.json allowlists it so it runs without a prompt.",
+    "",
+    "  TODO(mix ash_agent.serve): an MCP daemon for these tools is being built",
+    "  in a parallel lane -- a supervised Bandit on 127.0.0.1:4100, read-only,",
+    "  started by its own Mix task rather than mounted in this application.",
+    "  When it lands, start it, delete the bin/ash-agent entries from",
+    "  .claude/settings.json, and add here, under mcpServers:",
+    "",
+    "      \"ash_agent\": { \"type\": \"http\", \"url\": \"http://localhost:4100/mcp\" }",
+    "",
+    "  Confirm the port and the mount path against the daemon as shipped; 4100",
+    "  is from its design brief and the path is not fixed there. The tool",
+    "  surface is the same either way -- describe, validate, search, context,",
+    "  laws -- so nothing else about this wiring changes.",
+    "",
+    "tidewave and ash_ai_dev are deliberately absent. Both attach to a running",
+    "  dev server, and both are dependencies this demo does not have: it is a",
+    "  standalone application, not the ash_enterprise reference app. Add them",
+    "  only if you add the dependencies.",
+    "",
+    "${CLAUDE_PROJECT_DIR:-.} covers the two ways a client launches a project",
+    "  server. If yours does neither, replace it with an absolute path."
+  ],
+  "mcpServers": {
+    "serena": {
+      "type": "stdio",
+      "command": "${CLAUDE_PROJECT_DIR:-.}/bin/serena-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

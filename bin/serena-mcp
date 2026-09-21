@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#
+# Serena's MCP server, pointed at our Expert build.
+#
+# Serena (oraios/serena) is GPL-3.0+. Nothing in this repository links to it,
+# imports it or vendors it: this script starts the published tool as a separate
+# process and hands it a path. That is the whole integration, and it is
+# deliberately the whole integration.
+#
+# Serena's Elixir backend *is* Expert. It resolves the binary in this order:
+#
+#   1. an `expert` executable already on PATH   <- what this script arranges
+#   2. otherwise, a download of the version it pins (currently v0.1.0-rc.6)
+#
+# There is no `ls_path` setting for Elixir -- solidlsp's Elixir backend
+# implements its own dependency setup and only reads `expert_version`. PATH is
+# the supported override, so PATH is what this script sets, and it sets it
+# through a directory containing nothing but `expert` so that no other command
+# is shadowed.
+#
+# Why our build and not the pinned release: v0.1.0-rc.6 crashes with a
+# FunctionClauseError in Expert.EngineApi.document_symbols/2 when the
+# documentSymbol handler cannot resolve the document -- which is every file
+# Serena indexes without opening first. Serena's own test suite carries an
+# xfail for it. The fix is commit 537338b of our fork, which returns an empty
+# symbol list instead of crashing.
+#
+# Environment:
+#   EXPERT_BIN        the Expert executable (default: ~/.local/bin/expert)
+#   ELIXIR_BIN_DIR    prepended to PATH; Serena refuses to start without elixir
+#   SERENA_REF        what uvx installs (default: the upstream git repository)
+#   SERENA_CONTEXT    Serena context (default: claude-code)
+
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+: "${EXPERT_BIN:=$HOME/.local/bin/expert}"
+: "${SERENA_REF:=git+https://github.com/oraios/serena}"
+: "${SERENA_CONTEXT:=claude-code}"
+
+if [ -n "${ELIXIR_BIN_DIR:-}" ]; then
+  PATH="$ELIXIR_BIN_DIR:$PATH"
+fi
+
+if [ ! -x "$EXPERT_BIN" ]; then
+  cat >&2 <<MSG
+serena-mcp: no Expert binary at $EXPERT_BIN
+
+Build it from the fork that carries the documentSymbol fix:
+
+  cd ~/ast-forks/expert
+  MIX_ENV=prod mix release plain --overwrite   # in apps/expert, after deps.get
+  mkdir -p ~/.local/bin ~/.local/libexec
+  cp -a apps/expert/_build/prod/rel/plain ~/.local/libexec/expert
+  ln -sf ../libexec/expert/bin/start_expert ~/.local/bin/expert
+
+or set EXPERT_BIN to one you already have. See docs/agents.md.
+MSG
+  exit 1
+fi
+
+if ! command -v elixir >/dev/null 2>&1; then
+  echo "serena-mcp: elixir is not on PATH; set ELIXIR_BIN_DIR. See docs/agents.md." >&2
+  exit 1
+fi
+
+if ! command -v uvx >/dev/null 2>&1; then
+  echo "serena-mcp: uvx is not on PATH; install uv (https://docs.astral.sh/uv/)." >&2
+  exit 1
+fi
+
+# A directory holding only `expert`, so prepending it to PATH overrides exactly
+# one command. Serena looks the binary up with shutil.which at startup.
+shim="${XDG_CACHE_HOME:-$HOME/.cache}/clinic-demo/expert-shim"
+mkdir -p "$shim"
+ln -sfn "$EXPERT_BIN" "$shim/expert"
+PATH="$shim:$PATH"
+export PATH
+
+exec uvx --from "$SERENA_REF" serena start-mcp-server \
+  --context "$SERENA_CONTEXT" \
+  --project "$root" \
+  --transport stdio \
+  "$@"

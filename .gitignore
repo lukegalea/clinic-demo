@@ -35,3 +35,9 @@ clinic_demo-*.tar
 npm-debug.log
 /assets/node_modules/
 
+
+# Serena's per-project scratch: language-server caches and local config
+# overrides. .serena/project.yml is the wiring and is versioned; these are not.
+/.serena/cache/
+/.serena/project.local.yml
+/.serena/memories/

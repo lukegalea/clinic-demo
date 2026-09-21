@@ -1,0 +1,59 @@
+# Serena's view of this repository.
+#
+# Serena is a separate, GPL-3.0+ tool. This file is configuration handed to it,
+# not code linked against it. See docs/agents.md for the two-server story and
+# bin/serena-mcp for how the Elixir language server is chosen.
+
+project_name: "clinic_demo"
+
+# Expert. Serena downloads v0.1.0-rc.6 unless an `expert` executable is already
+# on PATH, which is what bin/serena-mcp arranges -- rc.6 crashes on
+# documentSymbol for any file Serena indexes without opening it first.
+language_servers: ["elixir"]
+
+encoding: "utf-8"
+
+# Expert indexes the build, not the source. Without this, find_symbol answers
+# for whatever was last compiled, which after a branch switch is the wrong
+# thing. Serena runs this in the project root before starting the language
+# server, and only if the project is trusted -- see trusted_project_path_patterns
+# in ~/.serena/serena_config.yml.
+activation_command: "mix compile"
+
+# A cold `mix compile` on this project with empty deps is minutes, not seconds.
+activation_command_timeout: 600
+
+ignore_all_files_in_gitignore: true
+
+# _build, deps, node_modules, .elixir_ls, .expert and cover are already ignored
+# by Serena's Elixir backend. These are this repository's own additions:
+# the two rule documents are XML that Serena has no symbols for, and reading
+# them is what ash_agent and the BPMN/DMN tooling are for.
+ignored_paths:
+  - "priv/static/**"
+  - "assets/node_modules/**"
+
+# Only `expert_version` is honoured here for Elixir. `ls_path`, which most of
+# Serena's other backends accept, is not implemented by the Elixir backend --
+# PATH is the supported override. Leaving this empty keeps the version pin
+# Serena ships; our fork is selected by PATH, not by version.
+ls_specific_settings: {}
+
+ls_workspace_folders: ["."]
+ls_additional_workspace_folders: []
+
+read_only: false
+excluded_tools: []
+included_optional_tools: []
+
+initial_prompt: |
+  This repository pairs Serena with a second tool. Serena knows Elixir modules
+  and functions. It does not know Ash: an action's inputs, an attribute's
+  constraints, why a policy forbade something, are all invisible to a language
+  server, because they are data in a DSL rather than named symbols.
+
+  For anything shaped like "what does this action accept", "where is this
+  attribute declared", "what does this line belong to", or "will this call
+  work", use bin/ash-agent (describe / validate / search / context). For
+  anything shaped like "rename this function", "who calls this", "delete this
+  module safely", use Serena.

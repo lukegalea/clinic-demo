@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./bin/ash-agent:*)",
+      "Bash(bin/ash-agent:*)",
+      "Bash(mix ash_agent.describe:*)",
+      "Bash(mix ash_agent.validate:*)",
+      "Bash(mix ash_agent.search:*)",
+      "Bash(mix ash_agent.context:*)",
+      "Bash(mix ash_agent.laws:*)",
+      "Bash(mix ash_agent.gaps:*)",
+      "Bash(mix compile:*)"
+    ]
+  }
+}
