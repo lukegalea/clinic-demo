@@ -1,0 +1,69 @@
+$ bin/ash-agent describe ClinicDemo.Scheduling.Appointment book --pretty
+{
+  "input": {
+    "private": [],
+    "required": [
+      "patient_id",
+      "clinician_id",
+      "scheduled_at",
+      "reason"
+    ],
+    "optional": [
+      {
+        "name": "duration_minutes",
+        "type": "integer"
+      },
+      {
+        "name": "severity",
+        "type": "integer"
+      }
+    ]
+  },
+  "name": "book",
+  "type": "create",
+  "accept": [
+    "scheduled_at",
+    "duration_minutes",
+    "reason",
+    "severity"
+  ],
+  "description": "Put a new appointment on the schedule.",
+  "arguments": [
+    {
+      "default": null,
+      "name": "patient_id",
+      "type": "uuid",
+      "description": "An existing patient. Booking does not create one.",
+      "source": {
+        "line": 157,
+        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+      },
+      "required?": true,
+      "public?": true,
+      "allow_nil?": false
+    },
+    {
+      "default": null,
+      "name": "clinician_id",
+      "type": "uuid",
+      "description": "An existing, active clinician.",
+      "source": {
+        "line": 162,
+        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+      },
+      "required?": true,
+      "public?": true,
+      "allow_nil?": false
+    }
+  ],
+  "resource": "Elixir.ClinicDemo.Scheduling.Appointment",
+  "source": {
+    "line": 152,
+    "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+  },
+  "returns": {
+    "type": "Elixir.ClinicDemo.Scheduling.Appointment",
+    "kind": "record"
+  },
+  "code_interfaces": []
+}

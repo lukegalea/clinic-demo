@@ -1,0 +1,33 @@
+# A real edit (not a touch -- Elixir 1.19 recompiles by checksum), then the
+# first bin/ash-agent call: the boot now includes the compile. This is where
+# the documented 'ten to fifteen seconds' wait comes from; on this machine it
+# is smaller because the build tree and disk cache are warm.
+$ echo "# scratch edit ..." >> lib/clinic_demo/decisions/resolver.ex
+$ bin/ash-agent describe --pretty
+Compiling 1 file (.ex)
+Generated clinic_demo app
+{
+  "domains": [
+    "ClinicDemo.Decisions",
+    "ClinicDemo.Scheduling",
+    "ClinicDemo.Visits"
+  ],
+  "resources": [
+    "ClinicDemo.Decisions.Definition",
+    "ClinicDemo.Decisions.Evaluation",
+    "ClinicDemo.Scheduling.Appointment",
+    "ClinicDemo.Scheduling.Clinician",
+    "ClinicDemo.Scheduling.Patient",
+    "ClinicDemo.Visits.Definition",
+    "ClinicDemo.Visits.HumanTask",
+    "ClinicDemo.Visits.Instance",
+    "ClinicDemo.Visits.ProcessEvent",
+    "ClinicDemo.Visits.TaskCandidate",
+    "ClinicDemo.Visits.Token"
+  ]
+}
+
+real	0m1.453s
+user	0m2.866s
+sys	0m1.032s
+--- stderr (the compiler output, routed away from stdout by the task):

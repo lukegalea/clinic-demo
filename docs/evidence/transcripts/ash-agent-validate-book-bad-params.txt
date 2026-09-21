@@ -1,0 +1,77 @@
+$ bin/ash-agent validate ClinicDemo.Scheduling.Appointment book \
+    '{"reason":"Hi","duration_minutes":"3","patient_id":"not-a-uuid","clinicianId":"x"}' --pretty
+{
+  "resource": "Elixir.ClinicDemo.Scheduling.Appointment",
+  "errors": [
+    {
+      "message": "is invalid",
+      "path": "patient_id",
+      "source": {
+        "line": 157,
+        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+      }
+    },
+    {
+      "message": "unknown input \"clinicianId\" for action :book; Ash says: No such attribute on ClinicDemo.Scheduling.Appointment, or argument on ClinicDemo.Scheduling.Appointment.book | Did you mean: | * clinician_id | Valid Inputs: | * reason | * severity | * clinician_id | * duration_minutes | * patient_id | * scheduled_at",
+      "path": "clinicianId",
+      "source": null,
+      "did_you_mean": [
+        "clinician_id"
+      ]
+    },
+    {
+      "message": "is required",
+      "path": "clinician_id",
+      "source": null,
+      "did_you_mean": null
+    },
+    {
+      "message": "is required",
+      "path": "scheduled_at",
+      "source": null,
+      "did_you_mean": null
+    },
+    {
+      "message": "Invalid value provided for reason: length must be greater than or equal to 3.\n\nValue: \"Hi\"\n",
+      "path": null,
+      "source": null,
+      "did_you_mean": null,
+      "ash_hint": null,
+      "ash_input_key": null
+    },
+    {
+      "message": "Invalid value provided for duration_minutes: must be greater than or equal to 5.\n\nValue: \"3\"\n",
+      "path": null,
+      "source": null,
+      "did_you_mean": null,
+      "ash_hint": null,
+      "ash_input_key": null
+    }
+  ],
+  "action": "book",
+  "valid?": false,
+  "expected": {
+    "private": [],
+    "required": [
+      "patient_id",
+      "clinician_id",
+      "scheduled_at",
+      "reason"
+    ],
+    "optional": [
+      {
+        "name": "duration_minutes",
+        "type": "integer"
+      },
+      {
+        "name": "severity",
+        "type": "integer"
+      }
+    ]
+  },
+  "action_type": "create",
+  "normalized_inputs": {
+    "duration_minutes": 3,
+    "reason": "Hi"
+  }
+}

@@ -1,0 +1,43 @@
+$ bin/ash-agent describe ClinicDemo.Scheduling.Appointment complete --pretty   # second call, same shell
+{
+  "input": {
+    "private": [],
+    "required": [
+      "notes"
+    ],
+    "optional": []
+  },
+  "name": "complete",
+  "type": "update",
+  "accept": [],
+  "description": "The visit happened. Clinical notes are mandatory.",
+  "arguments": [
+    {
+      "default": null,
+      "name": "notes",
+      "type": "string",
+      "description": "What was found and what was done.",
+      "source": {
+        "line": 215,
+        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+      },
+      "required?": true,
+      "public?": true,
+      "allow_nil?": false
+    }
+  ],
+  "resource": "Elixir.ClinicDemo.Scheduling.Appointment",
+  "source": {
+    "line": 208,
+    "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+  },
+  "returns": {
+    "type": "Elixir.ClinicDemo.Scheduling.Appointment",
+    "kind": "record"
+  },
+  "code_interfaces": []
+}
+
+real	0m1.680s
+user	0m2.729s
+sys	0m1.153s

@@ -1,0 +1,22 @@
+$ elixir bin/expert-smoke.exs ~/.local/bin/expert
+binary   /home/lukegalea/.local/bin/expert
+root     /home/lukegalea/capstone-demo
+file     lib/clinic_demo/scheduling/appointment.ex
+initialize sent, waiting (Expert compiles the project on first contact)
+initialize ok
+documentSymbol is still empty; waiting 10s (11 left)
+documentSymbol is still empty; waiting 10s (10 left)
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+Mix requires the Hex package manager to fetch dependencies
+documentSymbol returned 1 top-level symbol(s):
+  ClinicDemo.Scheduling.Appointment (0 children)
+OK
+
+real	0m23.250s
+user	0m1.769s
+sys	0m0.733s
