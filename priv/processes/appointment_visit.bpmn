@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The appointment lifecycle: booked -> triaged -> checked in -> seen -> (labs)
+  -> discharged.
+
+  Three things to notice, in the order the token meets them.
+
+  1. `Triage` is a businessRuleTask. It carries a reference to the decision and
+     nothing else: no thresholds, no species list, no FEEL. Asking is the whole
+     of what the graph does with a rule.
+  2. `HowUrgent` routes on `routing.urgency`, the signal the decision promoted
+     onto the token. A gateway never dereferences a decision itself; that would
+     put the rule back inside the graph.
+  3. `AwaitLabResults` is the wait. A token reaching it stops, and the instance
+     sits there for hours, in a real clinic, until the lab completes the task.
+     Nothing is polled and no process is held open; the token is a row.
+
+  This file is deliberately ASCII-only, including its comments. ash_bpmn's XML
+  reader hands xmerl codepoints rather than octets, and xmerl rejects anything
+  above 127 as an illegal character even in a document that declares UTF-8. See
+  .agents/logs/tool-gaps.log.
+-->
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:ash="https://github.com/lukegalea/ash_bpmn/ns"
+                   id="Definitions_appointment_visit"
+                   targetNamespace="https://github.com/lukegalea/ash_bpmn/ns">
+  <bpmn2:process id="Process_appointment_visit" name="Appointment visit" isExecutable="true">
+
+    <bpmn2:startEvent id="Start_booked" name="Appointment booked">
+      <bpmn2:outgoing>Flow_to_triage</bpmn2:outgoing>
+    </bpmn2:startEvent>
+
+    <!-- Ask how urgent this is. `ash:load` is what makes the patient reachable:
+         the subject is read live on every advance, and an undeclared path is
+         honestly null rather than quietly fetched. -->
+    <bpmn2:businessRuleTask id="Triage" name="Triage">
+      <bpmn2:extensionElements>
+        <ash:decision ref="appointment.triage" binding="latest"/>
+        <ash:load>
+          <ash:path name="patient.age_band"/>
+        </ash:load>
+        <ash:inputs>
+          <ash:input name="severity" from="subject.severity"/>
+          <ash:input name="ageBand" from="subject.patient.age_band"/>
+          <ash:input name="species" from="subject.patient.species"/>
+        </ash:inputs>
+        <ash:promote>
+          <ash:signal name="urgency" required="true"/>
+        </ash:promote>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_to_triage</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_triaged</bpmn2:outgoing>
+    </bpmn2:businessRuleTask>
+
+    <bpmn2:serviceTask id="RecordUrgency" name="Record urgency">
+      <bpmn2:extensionElements>
+        <ash:taskConfig action="record_triage"/>
+        <ash:inputs>
+          <ash:input name="urgency" from="routing.urgency"/>
+        </ash:inputs>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_triaged</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_recorded</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+
+    <bpmn2:exclusiveGateway id="HowUrgent" name="Emergency?" default="Flow_ordinary">
+      <bpmn2:incoming>Flow_recorded</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_emergency</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_ordinary</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <bpmn2:serviceTask id="AlertEmergencyTeam" name="Alert the emergency team">
+      <bpmn2:extensionElements>
+        <ash:taskConfig action="alert_emergency_team"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_emergency</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_alerted</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+
+    <!-- Wait one: the animal has to turn up. -->
+    <bpmn2:userTask id="CheckIn" name="Check the animal in">
+      <bpmn2:extensionElements>
+        <ash:taskConfig>
+          <ash:candidates>
+            <ash:candidate kind="role" of="nurse"/>
+          </ash:candidates>
+          <ash:outcomes>
+            <ash:outcome name="arrived"/>
+            <ash:outcome name="no_show"/>
+          </ash:outcomes>
+        </ash:taskConfig>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_ordinary</bpmn2:incoming>
+      <bpmn2:incoming>Flow_alerted</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_front_desk</bpmn2:outgoing>
+    </bpmn2:userTask>
+
+    <bpmn2:exclusiveGateway id="Arrived" name="Arrived?" default="Flow_absent">
+      <bpmn2:incoming>Flow_front_desk</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_present</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_absent</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <bpmn2:serviceTask id="MarkNoShow" name="Mark as a no-show">
+      <bpmn2:extensionElements>
+        <ash:taskConfig action="mark_no_show"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_absent</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_to_end_no_show</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+
+    <bpmn2:serviceTask id="MarkCheckedIn" name="Check in">
+      <bpmn2:extensionElements>
+        <ash:taskConfig action="check_in"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_present</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_to_consult</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+
+    <!-- Wait two: the visit itself. The vet writes the appointment up through
+         the ordinary `:complete` action; completing this task says they have. -->
+    <bpmn2:userTask id="Consult" name="See the patient">
+      <bpmn2:extensionElements>
+        <ash:taskConfig>
+          <ash:candidates>
+            <ash:candidate kind="booked_clinician" of="subject.clinician_id"/>
+          </ash:candidates>
+          <ash:outcomes>
+            <ash:outcome name="written_up"/>
+            <ash:outcome name="labs_pending"/>
+          </ash:outcomes>
+        </ash:taskConfig>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_to_consult</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_seen</bpmn2:outgoing>
+    </bpmn2:userTask>
+
+    <bpmn2:exclusiveGateway id="LabsPending" name="Bloods sent?" default="Flow_no_labs">
+      <bpmn2:incoming>Flow_seen</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_labs</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_no_labs</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Wait three, and the interesting one: the instance stops here until the
+         lab reports. The escalate timer is what a clinic actually wants from a
+         wait state: a nudge at four hours, not a stuck row nobody notices. -->
+    <bpmn2:userTask id="AwaitLabResults" name="Await lab results">
+      <bpmn2:extensionElements>
+        <ash:taskConfig>
+          <ash:candidates>
+            <ash:candidate kind="role" of="technician"/>
+          </ash:candidates>
+          <ash:outcomes>
+            <ash:outcome name="results_in"/>
+          </ash:outcomes>
+          <ash:timers>
+            <ash:timer kind="escalate" hours="4"/>
+          </ash:timers>
+        </ash:taskConfig>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_labs</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_results_in</bpmn2:outgoing>
+    </bpmn2:userTask>
+
+    <bpmn2:serviceTask id="Discharge" name="Discharge">
+      <bpmn2:extensionElements>
+        <ash:taskConfig action="discharge"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_no_labs</bpmn2:incoming>
+      <bpmn2:incoming>Flow_results_in</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_discharged</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+
+    <bpmn2:endEvent id="End_discharged" name="Discharged">
+      <bpmn2:extensionElements>
+        <ash:taskConfig outcome="discharged"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_discharged</bpmn2:incoming>
+    </bpmn2:endEvent>
+
+    <bpmn2:endEvent id="End_no_show" name="Never arrived">
+      <bpmn2:extensionElements>
+        <ash:taskConfig outcome="no_show"/>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_to_end_no_show</bpmn2:incoming>
+    </bpmn2:endEvent>
+
+    <bpmn2:sequenceFlow id="Flow_to_triage" sourceRef="Start_booked" targetRef="Triage"/>
+    <bpmn2:sequenceFlow id="Flow_triaged" sourceRef="Triage" targetRef="RecordUrgency"/>
+    <bpmn2:sequenceFlow id="Flow_recorded" sourceRef="RecordUrgency" targetRef="HowUrgent"/>
+    <bpmn2:sequenceFlow id="Flow_emergency" name="emergency" sourceRef="HowUrgent" targetRef="AlertEmergencyTeam">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
+                                 language="feel">routing.urgency = "emergency"</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="Flow_ordinary" name="ordinary" sourceRef="HowUrgent" targetRef="CheckIn"/>
+    <bpmn2:sequenceFlow id="Flow_alerted" sourceRef="AlertEmergencyTeam" targetRef="CheckIn"/>
+    <bpmn2:sequenceFlow id="Flow_front_desk" sourceRef="CheckIn" targetRef="Arrived"/>
+    <bpmn2:sequenceFlow id="Flow_present" name="arrived" sourceRef="Arrived" targetRef="MarkCheckedIn">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
+                                 language="feel">task.outcome = "arrived"</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="Flow_absent" name="no show" sourceRef="Arrived" targetRef="MarkNoShow"/>
+    <bpmn2:sequenceFlow id="Flow_to_end_no_show" sourceRef="MarkNoShow" targetRef="End_no_show"/>
+    <bpmn2:sequenceFlow id="Flow_to_consult" sourceRef="MarkCheckedIn" targetRef="Consult"/>
+    <bpmn2:sequenceFlow id="Flow_seen" sourceRef="Consult" targetRef="LabsPending"/>
+    <bpmn2:sequenceFlow id="Flow_labs" name="bloods sent" sourceRef="LabsPending" targetRef="AwaitLabResults">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
+                                 language="feel">task.outcome = "labs_pending"</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="Flow_no_labs" name="written up" sourceRef="LabsPending" targetRef="Discharge"/>
+    <bpmn2:sequenceFlow id="Flow_results_in" sourceRef="AwaitLabResults" targetRef="Discharge"/>
+    <bpmn2:sequenceFlow id="Flow_discharged" sourceRef="Discharge" targetRef="End_discharged"/>
+  </bpmn2:process>
+</bpmn2:definitions>

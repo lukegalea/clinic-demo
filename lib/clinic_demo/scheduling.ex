@@ -35,6 +35,9 @@ defmodule ClinicDemo.Scheduling do
       define :check_in_appointment, action: :check_in
       define :complete_appointment, action: :complete, args: [:notes]
       define :cancel_appointment, action: :cancel, args: [:reason]
+      define :record_appointment_triage, action: :record_triage, args: [:urgency]
+      define :mark_appointment_no_show, action: :mark_no_show
+      define :discharge_appointment, action: :discharge
     end
   end
 end

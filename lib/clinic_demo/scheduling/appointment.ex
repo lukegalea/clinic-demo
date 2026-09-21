@@ -12,6 +12,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer]
 
+  alias ClinicDemo.Scheduling.Changes.StartVisitProcess
   alias ClinicDemo.Scheduling.Validations.CurrentStatusIn
   alias ClinicDemo.Scheduling.Validations.NotInThePast
 
@@ -57,10 +58,38 @@ defmodule ClinicDemo.Scheduling.Appointment do
       constraints one_of: [:scheduled, :checked_in, :completed, :cancelled, :no_show]
     end
 
+    attribute :severity, :integer do
+      description """
+      How bad the presenting sign sounded when the owner rang, 1 (a nail trim)
+      to 5 (collapse). One of the three inputs to the triage decision.
+      """
+
+      allow_nil? false
+      public? true
+      default 2
+      constraints min: 1, max: 5
+    end
+
+    attribute :triage_urgency, :atom do
+      description """
+      What the `appointment.triage` decision answered. Nil until the visit
+      process has asked, and never accepted as input — the rule decides this,
+      not the caller.
+      """
+
+      public? true
+      constraints one_of: [:emergency, :urgent, :soon, :routine]
+    end
+
     attribute :notes, :string do
       description "Clinical notes, written at completion."
       public? true
       constraints max_length: 4000
+    end
+
+    attribute :discharged_at, :utc_datetime do
+      description "When the animal went home. Set by :discharge, after the visit is written up."
+      public? true
     end
 
     attribute :cancellation_reason, :string do
@@ -123,7 +152,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     create :book do
       description "Put a new appointment on the schedule."
 
-      accept [:scheduled_at, :duration_minutes, :reason]
+      accept [:scheduled_at, :duration_minutes, :reason, :severity]
 
       argument :patient_id, :uuid do
         description "An existing patient. Booking does not create one."
@@ -137,6 +166,11 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       change manage_relationship(:patient_id, :patient, type: :append)
       change manage_relationship(:clinician_id, :clinician, type: :append)
+
+      # Booking is what starts the visit process. Everything the appointment
+      # goes through after this -- triage, check-in, the lab wait, discharge --
+      # is a token walking `priv/processes/appointment_visit.bpmn`.
+      change StartVisitProcess
 
       validate {NotInThePast, attribute: :scheduled_at}
     end
@@ -206,6 +240,62 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       change set_attribute(:cancellation_reason, arg(:reason))
       change set_attribute(:status, :cancelled)
+    end
+
+    update :record_triage do
+      description """
+      Write down how urgent the triage decision said this is.
+
+      The decision decides; this action acts. Splitting them that way is what
+      keeps the rule in one place: every caller that wants an urgency written
+      comes through here, and the only thing that knows how to work one out is
+      the DMN table in `priv/decisions/appointment_triage.dmn`.
+      """
+
+      require_atomic? false
+
+      accept []
+
+      argument :urgency, :atom do
+        description "The decision's answer, not the caller's opinion."
+        allow_nil? false
+        constraints one_of: [:emergency, :urgent, :soon, :routine]
+      end
+
+      validate {CurrentStatusIn, from: [:scheduled, :checked_in]}
+
+      change set_attribute(:triage_urgency, arg(:urgency))
+    end
+
+    update :mark_no_show do
+      description "The slot came and went and nobody arrived."
+
+      require_atomic? false
+
+      accept []
+
+      validate {CurrentStatusIn, from: [:scheduled]}
+
+      change set_attribute(:status, :no_show)
+    end
+
+    update :discharge do
+      description """
+      The animal has gone home.
+
+      Only a written-up visit can be discharged, and that guard is the point:
+      the visit process calls this action like any other caller and is refused
+      by the same rule. A process that could set `discharged_at` on an
+      unfinished visit would be a second way to close one.
+      """
+
+      require_atomic? false
+
+      accept []
+
+      validate {CurrentStatusIn, from: [:completed]}
+
+      change set_attribute(:discharged_at, &DateTime.utc_now/0)
     end
   end
 

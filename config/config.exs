@@ -9,7 +9,7 @@ import Config
 
 config :clinic_demo,
   ecto_repos: [ClinicDemo.Repo],
-  ash_domains: [ClinicDemo.Scheduling],
+  ash_domains: [ClinicDemo.Scheduling, ClinicDemo.Decisions, ClinicDemo.Visits],
   generators: [timestamp_type: :utc_datetime]
 
 # Ash reads `:ash_domains` above to find the domains it should know about.
@@ -24,6 +24,22 @@ config :ash,
   include_embedded_source_by_default?: false,
   default_page_type: :keyset,
   policies: [no_filter_static_forbidden_reads?: false]
+
+# The process engine's three host seams. `ash_bpmn` never guesses any of them:
+# a diagram with a business rule task will not even compile without a decision
+# resolver configured, and the error names this key.
+config :ash_bpmn,
+  ash_domains: [ClinicDemo.Visits],
+  assignment_resolver: ClinicDemo.Visits.Roster,
+  action_invoker: ClinicDemo.Visits.Invoker,
+  decision_resolver: ClinicDemo.Decisions.Resolver,
+  queue: :bpmn,
+  max_attempts: 5
+
+# This demo runs no Oban queue. The engine's shim executes advance jobs inline
+# and parks timers in ETS, which keeps `mix phx.server` a single process with
+# nothing to babysit. A real clinic runs real Oban and deletes this line.
+config :ash_bpmn, oban_testing: :inline
 
 # Configure the endpoint
 config :clinic_demo, ClinicDemoWeb.Endpoint,
