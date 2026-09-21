@@ -23,6 +23,21 @@ If a tool cannot answer what you need, fall back to grep and append one line
 to `.agents/logs/tool-gaps.log` (timestamp plus the question you could not
 answer). That log is the input to the next round of tool work.
 
+## This project's own rules
+
+`usage-rules.md` in the repository root is this application's conventions, in
+the same form a dependency ships them: how the domain, the DMN decision and the
+BPMN process relate, and what you may not do to any of them. Read it before
+adding an action, a rule or a node.
+
+It also states the two standing dispositions on the iron laws, so nobody
+re-argues them. Judge your own change before you claim it is done:
+
+```sh
+git diff main | mix ash_agent.laws - --diff
+mix ash_agent.laws lib/clinic_demo/visits/invoker.ex --min-tier review --pretty
+```
+
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
@@ -78,6 +93,7 @@ usage rules to understand the correct patterns, conventions, and best practices.
 
 
 <!-- phoenix:elixir-start -->
+## phoenix:elixir usage
 ## Elixir guidelines
 
 - Elixir lists **do not support index based access via the access syntax**
@@ -132,9 +148,12 @@ usage rules to understand the correct patterns, conventions, and best practices.
       assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
 
    - Instead of sleeping to synchronize before the next call, **always** use `_ = :sys.get_state/1` to ensure the process has handled prior messages
+
+
 <!-- phoenix:elixir-end -->
 
 <!-- phoenix:phoenix-start -->
+## phoenix:phoenix usage
 ## Phoenix guidelines
 
 - Remember Phoenix router `scope` blocks include an optional alias which is prefixed for all routes within the scope. **Always** be mindful of this when creating routes within a scope to avoid duplicate module prefixes.
@@ -150,9 +169,11 @@ usage rules to understand the correct patterns, conventions, and best practices.
   the UserLive route would point to the `AppWeb.Admin.UserLive` module
 
 - `Phoenix.View` no longer is needed or included with Phoenix, don't use it
+
 <!-- phoenix:phoenix-end -->
 
 <!-- phoenix:ecto-start -->
+## phoenix:ecto usage
 ## Ecto Guidelines
 
 - **Always** preload Ecto associations in queries when they'll be accessed in templates, ie a message that needs to reference the `message.user.email`
@@ -162,9 +183,11 @@ usage rules to understand the correct patterns, conventions, and best practices.
 - You **must** use `Ecto.Changeset.get_field(changeset, :field)` to access changeset fields
 - Fields which are set programmatically, such as `user_id`, must not be listed in `cast` calls or similar for security purposes. Instead they must be explicitly set when creating the struct
 - **Always** invoke `mix ecto.gen.migration migration_name_using_underscores` when generating migration files, so the correct timestamp and conventions are applied
+
 <!-- phoenix:ecto-end -->
 
 <!-- phoenix:html-start -->
+## phoenix:html usage
 ## Phoenix HTML guidelines
 
 - Phoenix templates **always** use `~H` or .html.heex files (known as HEEx), **never** use `~E`
@@ -241,9 +264,11 @@ usage rules to understand the correct patterns, conventions, and best practices.
         {if @invalid_block_construct do}
         {end}
       </div>
+
 <!-- phoenix:html-end -->
 
 <!-- phoenix:liveview-start -->
+## phoenix:liveview usage
 ## Phoenix LiveView guidelines
 
 - **Never** use the deprecated `live_redirect` and `live_patch` functions, instead **always** use the `<.link navigate={href}>` and  `<.link patch={href}>` in templates, and `push_navigate` and `push_patch` functions LiveViews
@@ -475,6 +500,7 @@ And **never** do this:
 
 - You are FORBIDDEN from accessing the changeset in the template as it will cause errors
 - **Never** use `<.form let={f} ...>` in the template, instead **always use `<.form for={@form} ...>`**, then drive all form references from the form assign as in `@form[:field]`. The UI should **always** be driven by a `to_form/2` assigned in the LiveView module that is derived from a changeset
+
 <!-- phoenix:liveview-end -->
 
 <!-- ash-start -->
@@ -503,4 +529,23 @@ _A dev tool for Elixir projects to gather LLM usage rules from dependencies_
 
 [usage_rules usage rules](deps/usage_rules/usage-rules.md)
 <!-- usage_rules-end -->
+<!-- ash_agent_tools:iron-laws-start -->
+## ash_agent_tools:iron-laws usage
+[ash_agent_tools:iron-laws usage rules](deps/ash_agent_tools/usage-rules/iron-laws.md)
+<!-- ash_agent_tools:iron-laws-end -->
+<!-- ash_decisions-start -->
+## ash_decisions usage
+_DMN decisions as versioned Ash resources: a DMN document compiled and verified into an
+immutable snapshot, evaluated by a native FEEL engine, with a dmn-js designer._
+
+[ash_decisions usage rules](deps/ash_decisions/usage-rules.md)
+<!-- ash_decisions-end -->
+<!-- ash_bpmn-start -->
+## ash_bpmn usage
+_BPMN-designed, Ash-executed business processes: an embedded bpmn-js designer, a
+compiler from BPMN XML to an immutable graph snapshot, and a durable token
+interpreter over Postgres and Oban._
+
+[ash_bpmn usage rules](deps/ash_bpmn/usage-rules.md)
+<!-- ash_bpmn-end -->
 <!-- usage-rules-end -->
