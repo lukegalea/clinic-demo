@@ -11,7 +11,9 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
 
   alias ClinicDemo.Scheduling
 
-  @staff %{id: "test-staff", role: :veterinarian}
+  # A UUID, because booking starts a visit process and the instance records
+  # who started it in a uuid column.
+  @staff %{id: "00000000-0000-0000-0000-0000000000bb", role: :veterinarian}
 
   defp fixtures do
     {:ok, vet} =

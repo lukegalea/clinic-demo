@@ -6,8 +6,22 @@
 alias ClinicDemo.Scheduling
 
 # The appointment policies require an actor; any signed-in staff member will
-# do. This demo has no authentication, so a bare map stands in for one.
-staff = %{id: "seed", role: :veterinarian}
+# do. This demo has no authentication, so a bare map stands in for one. The id
+# is a UUID because the process records who started an instance in a uuid
+# column, and a seed that could not be attributed would not be much of a trail.
+staff = %{id: "00000000-0000-0000-0000-0000000000aa", role: :veterinarian}
+
+# The rules first, and in this order: the visit process will not compile until
+# the decision it references is published. Booking an appointment below starts
+# an instance of that process, so nothing after this line would work without
+# it.
+%{decision: decision, process: process} = ClinicDemo.Rules.install!()
+
+IO.puts("""
+Published:
+  #{decision.key} v#{decision.version} (#{decision.status})
+  #{process.key} v#{process.version} (#{process.status})
+""")
 
 {:ok, vet} =
   Scheduling.hire_clinician(%{
@@ -18,6 +32,10 @@ staff = %{id: "seed", role: :veterinarian}
 
 {:ok, tech} =
   Scheduling.hire_clinician(%{full_name: "Jonah Reyes", role: :technician})
+
+# The front desk. `CheckIn` in the visit process is assigned to every active
+# nurse, resolved out of this table rather than out of the diagram.
+{:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Ruth Vance", role: :nurse})
 
 patients =
   for attrs <- [
@@ -63,7 +81,8 @@ end
       clinician_id: vet.id,
       scheduled_at: tomorrow_at.(9),
       duration_minutes: 30,
-      reason: "Limping on the right foreleg since Saturday"
+      reason: "Limping on the right foreleg since Saturday",
+      severity: 2
     },
     actor: staff
   )
@@ -75,26 +94,55 @@ end
       clinician_id: vet.id,
       scheduled_at: tomorrow_at.(10),
       duration_minutes: 20,
-      reason: "Annual vaccination"
+      reason: "Annual vaccination",
+      severity: 1
     },
     actor: staff
   )
 
-{:ok, _} =
+{:ok, clover_visit} =
   Scheduling.book_appointment(
     %{
       patient_id: clover.id,
       clinician_id: tech.id,
       scheduled_at: tomorrow_at.(11),
       duration_minutes: 15,
-      reason: "Nail trim"
+      reason: "Off her food and quieter than usual",
+      severity: 3
     },
     actor: staff
   )
 
-# Walk one appointment through its whole lifecycle so the data is not all in
-# the same state.
-{:ok, pepper_visit} = Scheduling.check_in_appointment(pepper_visit, actor: staff)
+# ── Walking two visits through the process ─────────────────────────────────
+#
+# Every appointment above already has an instance: booking started one. What
+# follows moves two of them along, so the seeded data is not three identical
+# rows sitting on the same node.
+#
+# Nothing here reaches into the engine. Each step is a person completing the
+# work item in front of them, and the process does the rest.
+
+require Ash.Query
+
+open_task = fn appointment, node_id ->
+  ClinicDemo.Visits.HumanTask
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(node_id == ^node_id and status in [:open, :claimed])
+  |> Ash.read!()
+  |> Enum.find(fn task ->
+    instance = Ash.get!(ClinicDemo.Visits.Instance, task.instance_id)
+    instance.subject_id == appointment.id
+  end)
+end
+
+# Pepper: in, seen, written up, out.
+{:ok, _} =
+  AshBpmn.complete_task(open_task.(pepper_visit, "CheckIn"),
+    outcome: :arrived,
+    actor: %{id: nurse.id}
+  )
+
+pepper_visit = Scheduling.get_appointment!(pepper_visit.id)
 
 {:ok, _} =
   Scheduling.complete_appointment(
@@ -103,11 +151,54 @@ end
     actor: staff
   )
 
+{:ok, _} =
+  AshBpmn.complete_task(open_task.(pepper_visit, "Consult"),
+    outcome: :written_up,
+    comment: "Nothing else to follow up.",
+    actor: %{id: vet.id}
+  )
+
+# Clover: in, seen, bloods sent. This instance is parked on `AwaitLabResults`,
+# which is the wait state, and it will stay there until somebody in the lab
+# completes that task.
+{:ok, _} =
+  AshBpmn.complete_task(open_task.(clover_visit, "CheckIn"),
+    outcome: :arrived,
+    actor: %{id: nurse.id}
+  )
+
+clover_visit = Scheduling.get_appointment!(clover_visit.id)
+
+{:ok, _} =
+  Scheduling.complete_appointment(
+    clover_visit,
+    "Reduced gut sounds. Bloods sent; holding discharge until they are back.",
+    actor: staff
+  )
+
+{:ok, _} =
+  AshBpmn.complete_task(open_task.(clover_visit, "Consult"),
+    outcome: :labs_pending,
+    comment: "Biochem and PCV requested.",
+    actor: %{id: tech.id}
+  )
+
 {:ok, _} = Scheduling.record_weight(pepper, Decimal.new("4.35"))
+
+waiting =
+  ClinicDemo.Visits.HumanTask
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(status in [:open, :claimed])
+  |> Ash.read!()
 
 IO.puts("""
 Seeded:
   #{length(Scheduling.list_clinicians!())} clinicians
   #{length(Scheduling.list_patients!())} patients
   #{length(Scheduling.list_appointments!())} appointments
+  #{length(Scheduling.list_appointments!())} visit instances
+  #{length(waiting)} work items waiting: #{waiting |> Enum.map(& &1.node_id) |> Enum.sort() |> Enum.join(", ")}
+
+Triage decided:
+#{Scheduling.list_appointments!() |> Enum.map_join("\n", fn a -> "  #{a.reason} -> #{a.triage_urgency}" end)}
 """)
