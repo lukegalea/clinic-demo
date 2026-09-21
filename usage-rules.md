@@ -136,18 +136,24 @@ means nobody tried.
     codepoints rather than octets, so anything above 127 — an em dash in a
     comment, an accented name — fails the parse. Recorded in
     `.agents/logs/tool-gaps.log`.
+20. **Do not read a completed human task.** `HumanTask.outcome` is an untyped
+    atom, so a value written to the column cannot be loaded back, and any query
+    that touches a completed task raises. Filter on
+    `status in [:open, :claimed]`, and read tokens and process events rather
+    than `AshBpmn.instance_report/2` when the instance has finished a task.
+    Also recorded in the gap log; delete this rule when the package fixes it.
 
 ### Tests
 
-20. **The rules are installed once, in `test/test_helper.exs`,** before the
+21. **The rules are installed once, in `test/test_helper.exs`,** before the
     sandbox goes manual, so they are committed rows every test can see.
     Publishing costs an `xmllint` spawn and a compile; that is not a per-test
     price.
-21. **Test the negative paths.** A process suite that only walks the happy path
+22. **Test the negative paths.** A process suite that only walks the happy path
     is testing a distributed system for the absence of its defining property.
     The no-show branch and the refused discharge are both covered; keep it that
     way.
-22. **`mix precommit` before you claim you are done.** Compile with warnings as
+23. **`mix precommit` before you claim you are done.** Compile with warnings as
     errors, unused deps, format, test.
 
 ## Layout
