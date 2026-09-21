@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  How urgently an animal needs to be seen.
+
+  Three things the clinic knows at the moment of booking: how bad the presenting
+  sign sounded on the phone, how old the animal is, and what it is. This table is
+  the whole of the rule, and it is here rather than in Elixir because a head vet
+  changes it on a Tuesday afternoon and nobody deploys.
+
+  Hit policy is PRIORITY: several rules match most cases, and the most urgent
+  answer wins by the order declared in the output's `outputValues`, not by the
+  order the rules happen to sit in the document.
+-->
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="appointment_triage_definitions"
+             name="Appointment triage"
+             namespace="https://clinic-demo.example/decisions/appointment-triage"
+             expressionLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/"
+             typeLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/">
+
+  <inputData id="input_severity" name="severity">
+    <variable id="var_severity" name="severity" typeRef="number"/>
+  </inputData>
+  <inputData id="input_age_band" name="ageBand">
+    <variable id="var_age_band" name="ageBand" typeRef="string"/>
+  </inputData>
+  <inputData id="input_species" name="species">
+    <variable id="var_species" name="species" typeRef="string"/>
+  </inputData>
+
+  <decision id="decision_appointment_triage" name="AppointmentTriage">
+    <variable id="var_urgency" name="AppointmentTriage" typeRef="string"/>
+    <informationRequirement id="req_severity">
+      <requiredInput href="#input_severity"/>
+    </informationRequirement>
+    <informationRequirement id="req_age_band">
+      <requiredInput href="#input_age_band"/>
+    </informationRequirement>
+    <informationRequirement id="req_species">
+      <requiredInput href="#input_species"/>
+    </informationRequirement>
+
+    <decisionTable id="table_appointment_triage" hitPolicy="PRIORITY" outputLabel="Urgency">
+      <input id="clause_severity" label="Presenting severity">
+        <inputExpression id="expr_severity" typeRef="number">
+          <text>severity</text>
+        </inputExpression>
+        <inputValues id="values_severity"><text>[1..5]</text></inputValues>
+      </input>
+      <input id="clause_age_band" label="Age band">
+        <inputExpression id="expr_age_band" typeRef="string">
+          <text>ageBand</text>
+        </inputExpression>
+        <inputValues id="values_age_band"><text>"neonate", "juvenile", "adult", "senior"</text></inputValues>
+      </input>
+      <input id="clause_species" label="Species">
+        <inputExpression id="expr_species" typeRef="string">
+          <text>species</text>
+        </inputExpression>
+        <inputValues id="values_species"><text>"dog", "cat", "rabbit", "ferret", "bird", "reptile"</text></inputValues>
+      </input>
+
+      <output id="clause_urgency" name="urgency" label="Urgency" typeRef="string">
+        <outputValues id="values_urgency"><text>"emergency", "urgent", "soon", "routine"</text></outputValues>
+      </output>
+
+      <!-- Collapse, haemorrhage, seizure. Nothing else about the animal matters. -->
+      <rule id="rule_critical">
+        <inputEntry id="rule_critical_0"><text>&gt;= 4</text></inputEntry>
+        <inputEntry id="rule_critical_1"><text>-</text></inputEntry>
+        <inputEntry id="rule_critical_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_critical_3"><text>"emergency"</text></outputEntry>
+      </rule>
+
+      <!-- The very young and the very old have no reserve to spend. -->
+      <rule id="rule_fragile_age">
+        <inputEntry id="rule_fragile_age_0"><text>&gt;= 3</text></inputEntry>
+        <inputEntry id="rule_fragile_age_1"><text>"neonate", "senior"</text></inputEntry>
+        <inputEntry id="rule_fragile_age_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_fragile_age_3"><text>"emergency"</text></outputEntry>
+      </rule>
+
+      <!-- Prey species hide illness until they cannot, and then they crash. -->
+      <rule id="rule_prey_species">
+        <inputEntry id="rule_prey_species_0"><text>&gt;= 3</text></inputEntry>
+        <inputEntry id="rule_prey_species_1"><text>-</text></inputEntry>
+        <inputEntry id="rule_prey_species_2"><text>"rabbit", "ferret", "bird", "reptile"</text></inputEntry>
+        <outputEntry id="rule_prey_species_3"><text>"emergency"</text></outputEntry>
+      </rule>
+
+      <rule id="rule_moderate">
+        <inputEntry id="rule_moderate_0"><text>[2..3]</text></inputEntry>
+        <inputEntry id="rule_moderate_1"><text>-</text></inputEntry>
+        <inputEntry id="rule_moderate_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_moderate_3"><text>"urgent"</text></outputEntry>
+      </rule>
+
+      <rule id="rule_mild_fragile_age">
+        <inputEntry id="rule_mild_fragile_age_0"><text>&lt; 2</text></inputEntry>
+        <inputEntry id="rule_mild_fragile_age_1"><text>"neonate", "senior"</text></inputEntry>
+        <inputEntry id="rule_mild_fragile_age_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_mild_fragile_age_3"><text>"soon"</text></outputEntry>
+      </rule>
+
+      <rule id="rule_mild_prey_species">
+        <inputEntry id="rule_mild_prey_species_0"><text>&lt; 2</text></inputEntry>
+        <inputEntry id="rule_mild_prey_species_1"><text>-</text></inputEntry>
+        <inputEntry id="rule_mild_prey_species_2"><text>"rabbit", "ferret", "bird", "reptile"</text></inputEntry>
+        <outputEntry id="rule_mild_prey_species_3"><text>"soon"</text></outputEntry>
+      </rule>
+
+      <!-- The catch-all. Its presence is why the verifier finds no gap. -->
+      <rule id="rule_routine">
+        <inputEntry id="rule_routine_0"><text>-</text></inputEntry>
+        <inputEntry id="rule_routine_1"><text>-</text></inputEntry>
+        <inputEntry id="rule_routine_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_routine_3"><text>"routine"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

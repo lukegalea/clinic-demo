@@ -97,6 +97,13 @@ defmodule ClinicDemo.Scheduling.Patient do
       public? true
     end
 
+    calculate :age_band,
+              :string,
+              ClinicDemo.Scheduling.Calculations.AgeBand do
+      description "Life stage, as the triage decision table reads it. Nil when the age is unknown."
+      public? true
+    end
+
     calculate :display_label, :string, expr(name <> " (" <> type(species, :string) <> ")") do
       public? true
     end
