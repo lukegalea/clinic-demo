@@ -8,7 +8,7 @@ $ bin/ash-agent validate ClinicDemo.Scheduling.Appointment book \
       "path": "patient_id",
       "source": {
         "line": 157,
-        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+        "file": "/home/demo/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
       }
     },
     {

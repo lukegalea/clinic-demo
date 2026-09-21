@@ -1,36 +1,36 @@
 $ elixir docs/evidence/bin/serena-mcp-smoke.exs rename
-[1ms] spawned /home/lukegalea/capstone-demo/bin/serena-mcp (bin/serena-mcp; uvx -> serena start-mcp-server --transport stdio)
+[1ms] spawned /home/demo/capstone-demo/bin/serena-mcp (bin/serena-mcp; uvx -> serena start-mcp-server --transport stdio)
 [5ms] -> initialize (Serena runs its activation_command, then boots Expert; first contact indexes the project)
 INFO  2026-09-21 06:52:00,856 [MainThread] serena.cli:start_mcp_server:366 - Initializing Serena MCP server
-INFO  2026-09-21 06:52:00,856 [MainThread] serena.cli:start_mcp_server:367 - Storing logs in /home/lukegalea/.serena/logs/2026-09-21/mcp_20260921-065200_481822.txt
-INFO  2026-09-21 06:52:00,859 [MainThread] serena.config.serena_config:from_config_file:1075 - Loading Serena configuration from /home/lukegalea/.serena/serena_config.yml
+INFO  2026-09-21 06:52:00,856 [MainThread] serena.cli:start_mcp_server:367 - Storing logs in /home/demo/.serena/logs/2026-09-21/mcp_20260921-065200_481822.txt
+INFO  2026-09-21 06:52:00,859 [MainThread] serena.config.serena_config:from_config_file:1075 - Loading Serena configuration from /home/demo/.serena/serena_config.yml
 INFO  2026-09-21 06:52:00,886 [MainThread] serena.agent:__init__:647 - Will record tool usage statistics with token count estimator: CHAR_COUNT.
 INFO  2026-09-21 06:52:00,888 [MainThread] serena.agent:__init__:651 - Starting Serena server (version=2.0.0.dev0, process id=481822, parent process id=481790; language backend=LSP); Python version=3.12.13, platform=Linux-6.14.0-37-generic-x86_64-with-glibc2.41
-INFO  2026-09-21 06:52:00,888 [MainThread] serena.agent:__init__:655 - Configuration file: /home/lukegalea/.serena/serena_config.yml
+INFO  2026-09-21 06:52:00,888 [MainThread] serena.agent:__init__:655 - Configuration file: /home/demo/.serena/serena_config.yml
 INFO  2026-09-21 06:52:00,888 [MainThread] serena.agent:__init__:656 - Available projects: clinic_demo
 INFO  2026-09-21 06:52:00,888 [MainThread] serena.agent:__init__:657 - Loaded tools (53): create_text_file, replace_content, replace_in_files, delete_lines, replace_lines, insert_at_line, replace_symbol_body, insert_after_symbol, insert_before_symbol, read_file, list_dir, find_file, search_for_pattern, restart_language_server, get_symbols_overview, find_symbol, find_referencing_symbols, find_implementations, find_declaration, get_diagnostics_for_file, get_diagnostics_for_symbol, rename_symbol, safe_delete_symbol, write_memory, read_memory, list_memories, delete_memory, rename_memory, edit_memory, execute_shell_command, open_dashboard, activate_project, remove_project, get_current_config, onboarding, initial_instructions, serena_info, jet_brains_find_symbol, jet_brains_move, jet_brains_safe_delete, jet_brains_inline_symbol, jet_brains_find_referencing_symbols, jet_brains_get_symbols_overview, jet_brains_type_hierarchy, jet_brains_find_declaration, jet_brains_find_implementations, jet_brains_rename, jet_brains_debug, jet_brains_run_inspections, jet_brains_list_inspections, list_queryable_projects, query_project, serena_repl
 INFO  2026-09-21 06:52:00,888 [MainThread] serena.config.serena_config:determine_language_backend:1565 - Using language backend from global configuration: LSP
 INFO  2026-09-21 06:52:00,888 [MainThread] serena.config.serena_config:determine_agent_interface:1554 - Using agent interface 'tools' (global configuration)
-INFO  2026-09-21 06:52:00,907 [MainThread] serena.config.serena_config:start:329 - Loading project instance for RegisteredProject[project_root=/home/lukegalea/capstone-demo, project_config=ProjectConfig[project_name=clinic_demo]] starting ...
-INFO  2026-09-21 06:52:00,907 [MainThread] serena.project:__init__:48 - Serena project data folder: /home/lukegalea/capstone-demo/.serena
+INFO  2026-09-21 06:52:00,907 [MainThread] serena.config.serena_config:start:329 - Loading project instance for RegisteredProject[project_root=/home/demo/capstone-demo, project_config=ProjectConfig[project_name=clinic_demo]] starting ...
+INFO  2026-09-21 06:52:00,907 [MainThread] serena.project:__init__:48 - Serena project data folder: /home/demo/capstone-demo/.serena
 INFO  2026-09-21 06:52:00,907 [gather-ignorespec[clinic_demo]] serena.project:start:329 - Gathering ignore spec for project clinic_demo starting ...
-INFO  2026-09-21 06:52:00,908 [MainThread] serena.config.serena_config:stop:336 - Loading project instance for RegisteredProject[project_root=/home/lukegalea/capstone-demo, project_config=ProjectConfig[project_name=clinic_demo]] completed in 0.001 seconds
+INFO  2026-09-21 06:52:00,908 [MainThread] serena.config.serena_config:stop:336 - Loading project instance for RegisteredProject[project_root=/home/demo/capstone-demo, project_config=ProjectConfig[project_name=clinic_demo]] completed in 0.001 seconds
 INFO  2026-09-21 06:52:00,908 [gather-ignorespec[clinic_demo]] serena.project:_gather_ignorespec:91 - Using 2 ignored paths from the project configuration.
-INFO  2026-09-21 06:52:00,908 [MainThread] serena.agent:activate_project_from_path_or_name:1529 - Found registered project 'clinic_demo' at path /home/lukegalea/capstone-demo
+INFO  2026-09-21 06:52:00,908 [MainThread] serena.agent:activate_project_from_path_or_name:1529 - Found registered project 'clinic_demo' at path /home/demo/capstone-demo
 INFO  2026-09-21 06:52:00,908 [gather-ignorespec[clinic_demo]] serena.util.file_system:start:329 - Loading of .gitignore files starting ...
-INFO  2026-09-21 06:52:00,908 [MainThread] serena.agent:_activate_project:1417 - Activating clinic_demo at /home/lukegalea/capstone-demo
+INFO  2026-09-21 06:52:00,908 [MainThread] serena.agent:_activate_project:1417 - Activating clinic_demo at /home/demo/capstone-demo
 INFO  2026-09-21 06:52:00,908 [MainThread] serena.task_executor:issue_task:219 - Scheduling Task-1:init_project_services
 INFO  2026-09-21 06:52:00,909 [MainThread] serena.agent:_update_active_modes:1281 - Active modes (2): editing, interactive
-INFO  2026-09-21 06:52:00,909 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/lukegalea/capstone-demo/.gitignore
+INFO  2026-09-21 06:52:00,909 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/demo/capstone-demo/.gitignore
 INFO  2026-09-21 06:52:00,913 [MainThread] serena.agent:_create_base_toolset:841 - Applying tool inclusion/exclusion definitions for single-project context based on project 'clinic_demo'
 INFO  2026-09-21 06:52:00,914 [MainThread] serena.agent:apply:195 - SerenaAgentContext[name='claude-code'] excluded 6 tools: create_text_file, read_file, execute_shell_command, find_file, list_dir, search_for_pattern
 INFO  2026-09-21 06:52:00,914 [MainThread] serena.agent:apply:195 - ToolInclusionDefinition[SingleProjectExclusions] excluded 2 tools: activate_project, get_current_config
 INFO  2026-09-21 06:52:00,914 [MainThread] serena.agent:_create_base_toolset:858 - Number of exposed tools: 21
 INFO  2026-09-21 06:52:00,915 [MainThread] serena.agent:__init__:708 - Number of exposed tools: 21. Exposed tools: ['delete_memory', 'edit_memory', 'find_declaration', 'find_implementations', 'find_referencing_symbols', 'find_symbol', 'get_diagnostics_for_file', 'get_symbols_overview', 'initial_instructions', 'insert_after_symbol', 'insert_before_symbol', 'list_memories', 'onboarding', 'read_memory', 'rename_memory', 'rename_symbol', 'replace_content', 'replace_in_files', 'replace_symbol_body', 'safe_delete_symbol', 'write_memory']
 INFO  2026-09-21 06:52:00,915 [MainThread] serena.agent:_update_active_tools:1304 - Active tools (21): delete_memory, edit_memory, find_declaration, find_implementations, find_referencing_symbols, find_symbol, get_diagnostics_for_file, get_symbols_overview, initial_instructions, insert_after_symbol, insert_before_symbol, list_memories, onboarding, read_memory, rename_memory, rename_symbol, replace_content, replace_in_files, replace_symbol_body, safe_delete_symbol, write_memory
-INFO  2026-09-21 06:52:00,916 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/lukegalea/capstone-demo/.expert/.gitignore
-INFO  2026-09-21 06:52:00,923 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/lukegalea/capstone-demo/.serena/.gitignore
-INFO  2026-09-21 06:52:00,930 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/lukegalea/capstone-demo/docs/.expert/.gitignore
+INFO  2026-09-21 06:52:00,916 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/demo/capstone-demo/.expert/.gitignore
+INFO  2026-09-21 06:52:00,923 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/demo/capstone-demo/.serena/.gitignore
+INFO  2026-09-21 06:52:00,930 [gather-ignorespec[clinic_demo]] serena.util.file_system:_load_gitignore_files:239 - Processing .gitignore file: /home/demo/capstone-demo/docs/.expert/.gitignore
 INFO  2026-09-21 06:52:00,932 [MainThread] serena.dashboard:run_in_thread:847 - Starting dashboard (listen_address=127.0.0.1, port=24282)
 INFO  2026-09-21 06:52:00,935 [MainThread] serena.agent:__init__:744 - Serena web dashboard started at http://127.0.0.1:24282/dashboard/index.html
 INFO  2026-09-21 06:52:00,939 [gather-ignorespec[clinic_demo]] serena.util.file_system:stop:336 - Loading of .gitignore files completed in 0.031 seconds
@@ -54,20 +54,20 @@ INFO  2026-09-21 06:52:01,358 [AnyIO worker thread] serena.tools.tools_base:appl
 INFO  2026-09-21 06:52:01,359 [AnyIO worker thread] serena.task_executor:issue_task:219 - Scheduling Task-2:FindSymbolTool
 INFO  2026-09-21 06:52:01,958 [Task-1:init_project_services] serena.agent:stop:336 - Project activation command completed in 0.969 seconds
 INFO  2026-09-21 06:52:01,958 [Task-1:init_project_services] serena.lsp.lsp_backend:start:329 - Language server initialization starting ...
-INFO  2026-09-21 06:52:01,958 [Task-1:init_project_services] serena.project:create_language_server_manager:520 - Creating language server manager for /home/lukegalea/capstone-demo
+INFO  2026-09-21 06:52:01,958 [Task-1:init_project_services] serena.project:create_language_server_manager:520 - Creating language server manager for /home/demo/capstone-demo
 INFO  2026-09-21 06:52:01,959 [StartLS:elixir] sensai.util.logging:start:329 - Language server startup (ls_id=elixir) starting ...
-INFO  2026-09-21 06:52:01,959 [StartLS:elixir] serena.ls_manager:create_language_server:60 - Creating language server instance for /home/lukegalea/capstone-demo, language=elixir.
+INFO  2026-09-21 06:52:01,959 [StartLS:elixir] serena.ls_manager:create_language_server:60 - Creating language server instance for /home/demo/capstone-demo, language=elixir.
 INFO  2026-09-21 06:52:02,275 [StartLS:elixir] solidlsp.language_servers.elixir_tools.elixir_tools:_setup_runtime_dependencies:91 - Found Elixir: Erlang/OTP 28 [erts-16.2] [source] [64-bit] [smp:12:12] [ds:12:12:10] [async-threads:1] [jit:ns]
 
 Elixir 1.19.5 (compiled with Erlang/OTP 28)
-INFO  2026-09-21 06:52:02,276 [StartLS:elixir] solidlsp.language_servers.elixir_tools.elixir_tools:_setup_runtime_dependencies:98 - Found Expert in PATH: /home/lukegalea/.cache/clinic-demo/expert-shim/expert
-INFO  2026-09-21 06:52:02,276 [StartLS:elixir] solidlsp.ls:_load_raw_document_symbols_cache:3069 - Loading document symbols cache from /home/lukegalea/capstone-demo/.serena/cache/elixir/raw_document_symbols.pkl
+INFO  2026-09-21 06:52:02,276 [StartLS:elixir] solidlsp.language_servers.elixir_tools.elixir_tools:_setup_runtime_dependencies:98 - Found Expert in PATH: /home/demo/.cache/clinic-demo/expert-shim/expert
+INFO  2026-09-21 06:52:02,276 [StartLS:elixir] solidlsp.ls:_load_raw_document_symbols_cache:3069 - Loading document symbols cache from /home/demo/capstone-demo/.serena/cache/elixir/raw_document_symbols.pkl
 INFO  2026-09-21 06:52:02,278 [StartLS:elixir] solidlsp.ls:_load_raw_document_symbols_cache:3074 - Loaded 51 entries from raw document symbols cache.
-INFO  2026-09-21 06:52:02,278 [StartLS:elixir] solidlsp.ls:_load_document_symbols_cache:3104 - Loading document symbols cache from /home/lukegalea/capstone-demo/.serena/cache/elixir/document_symbols.pkl
+INFO  2026-09-21 06:52:02,278 [StartLS:elixir] solidlsp.ls:_load_document_symbols_cache:3104 - Loading document symbols cache from /home/demo/capstone-demo/.serena/cache/elixir/document_symbols.pkl
 INFO  2026-09-21 06:52:02,281 [StartLS:elixir] solidlsp.ls:_load_document_symbols_cache:3109 - Loaded 60 entries from document symbols cache.
-INFO  2026-09-21 06:52:02,282 [StartLS:elixir] solidlsp.ls:start:3200 - Starting language server elixir for /home/lukegalea/capstone-demo
-INFO  2026-09-21 06:52:02,282 [StartLS:elixir] solidlsp.ls_process:_start:521 - Starting language server process via command: /home/lukegalea/.cache/clinic-demo/expert-shim/expert --stdio
-INFO  2026-09-21 06:52:02,299 [StartLS:elixir] solidlsp.initialize_params:_apply_updates:63 - Workspace folders: ['/home/lukegalea/capstone-demo']
+INFO  2026-09-21 06:52:02,282 [StartLS:elixir] solidlsp.ls:start:3200 - Starting language server elixir for /home/demo/capstone-demo
+INFO  2026-09-21 06:52:02,282 [StartLS:elixir] solidlsp.ls_process:_start:521 - Starting language server process via command: /home/demo/.cache/clinic-demo/expert-shim/expert --stdio
+INFO  2026-09-21 06:52:02,299 [StartLS:elixir] solidlsp.initialize_params:_apply_updates:63 - Workspace folders: ['/home/demo/capstone-demo']
 INFO  2026-09-21 06:52:03,084 [LSP-stderr-reader:elixir] solidlsp.ls_process:_read_ls_process_stderr:647 - bash: cannot set terminal process group (-1): Inappropriate ioctl for device
 
 INFO  2026-09-21 06:52:03,084 [LSP-stderr-reader:elixir] solidlsp.ls_process:_read_ls_process_stderr:647 - bash: no job control in this shell
@@ -88,7 +88,7 @@ ERROR 2026-09-21 06:52:04,037 [LSP-stderr-reader:elixir] solidlsp.ls_process:_re
 
 INFO  2026-09-21 06:52:04,037 [LSP-stderr-reader:elixir] solidlsp.ls_process:_read_ls_process_stderr:647 - 
 
-WARNING 2026-09-21 06:52:04,043 [LSP-stdout-reader:elixir] solidlsp.language_servers.elixir_tools.elixir_tools:window_log_message:328 - Expert: Failed to find erl for project, falling back to packaged elixir: Couldn't find an erl executable for project at /home/lukegalea/capstone-demo. Using shell at /bin/bash with PATH=/home/lukegalea/.local/bin:/home/lukegalea/bin:/home/lukegalea/.opencode/bin:/home/lukegalea/.nvm/versions/node/v22.16.0/bin:/home/lukegalea/.bun/bin:/home/lukegalea/.fly/bin:/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/bin:/home/lukegalea/.cache/clinic-demo/expert-shim:/nix/store/iqc2jyh602php9bhy28qi01gk6w0sgb3-elixir-1.19.5/bin:/home/lukegalea/.local/share/devbox/global/default/.devbox/nix/profile/default/bin:/nix/store/iqc2jyh602php9bhy28qi01gk6w0sgb3-elixir-1.19.5/bin:/usr/local/bin:/usr/bin:/bin:/snap/bin:/usr/local/go/bin:/usr/local/go/bin:/home/lukegalea/.local/bin:/home/lukegalea/.pulumi/bin
+WARNING 2026-09-21 06:52:04,043 [LSP-stdout-reader:elixir] solidlsp.language_servers.elixir_tools.elixir_tools:window_log_message:328 - Expert: Failed to find erl for project, falling back to packaged elixir: Couldn't find an erl executable for project at /home/demo/capstone-demo. Using shell at /bin/bash with PATH=/home/demo/.local/bin:/home/demo/bin:/home/demo/.opencode/bin:/home/demo/.nvm/versions/node/v22.16.0/bin:/home/demo/.bun/bin:/home/demo/.fly/bin:/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/bin:/home/demo/.cache/clinic-demo/expert-shim:/nix/store/...-elixir-1.19.5/bin:/home/demo/.local/share/devbox/global/default/.devbox/nix/profile/default/bin:/nix/store/...-elixir-1.19.5/bin:/usr/local/bin:/usr/bin:/bin:/snap/bin:/usr/local/go/bin:/usr/local/go/bin:/home/demo/.local/bin:/home/demo/.pulumi/bin
 INFO  2026-09-21 06:52:07,224 [LSP-stderr-reader:elixir] solidlsp.ls_process:_read_ls_process_stderr:647 - bash: cannot set terminal process group (-1): Inappropriate ioctl for device
 
 INFO  2026-09-21 06:52:07,224 [LSP-stderr-reader:elixir] solidlsp.ls_process:_read_ls_process_stderr:647 - bash: no job control in this shell
@@ -121,90 +121,90 @@ INFO  2026-09-21 06:52:15,366 [Task-3:RenameSymbolTool] serena.tools.tools_base:
 INFO  2026-09-21 06:52:15,366 [Task-3:RenameSymbolTool] serena.ls_manager:sync_file_system_changes:281 - Polling file system for changes to source files ...
 INFO  2026-09-21 06:52:15,377 [Task-3:RenameSymbolTool] serena.ls_manager:sync_file_system_changes:283 - File system polling complete; 0 change events sent to language servers.
 ERROR 2026-09-21 06:52:15,402 [Task-3:RenameSymbolTool] serena.tools.tools_base:task:365 - SolidLSPException: Error processing request textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
+{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
 solidlsp.lsp_protocol_handler.server.LSPError: Method not found (-32601)
 
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/tools_base.py", line 340, in task
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/tools_base.py", line 340, in task
     result = apply_fn(**apply_kwargs)
              ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/symbol_tools.py", line 452, in apply
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/symbol_tools.py", line 452, in apply
     return self._api().rename_symbol(name_path, relative_path, new_name)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/repl/api/lsp_api.py", line 750, in rename_symbol
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/repl/api/lsp_api.py", line 750, in rename_symbol
     return self._create_ls_code_editor().rename_symbol(name_path, relative_path=relative_path, new_name=new_name)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/code_editor.py", line 403, in rename_symbol
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/code_editor.py", line 403, in rename_symbol
     rename_result = lang_server.request_rename_symbol_edit(
                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls.py", line 3173, in request_rename_symbol_edit
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls.py", line 3173, in request_rename_symbol_edit
     return self.server.send.rename(params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 372, in rename
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 372, in rename
     return self._send_request("textDocument/rename", params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 16, in _send_request
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 16, in _send_request
     return self.handler.send_request(method, params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_process.py", line 387, in send_request
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_process.py", line 387, in send_request
     raise SolidLSPException(f"Error processing request {method} with params:\n{params}", cause=result.error) from result.error
 solidlsp.ls_exceptions.SolidLSPException: Error processing request textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
+{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
 ERROR 2026-09-21 06:52:15,404 [Task-3:RenameSymbolTool] serena.task_executor:__exit__:342 - Task-3:RenameSymbolTool failed after 0.039 seconds
 ERROR 2026-09-21 06:52:15,404 [Task-3:RenameSymbolTool] serena.task_executor:run_task:70 - Error during execution of Task-3:RenameSymbolTool: SolidLSPException: Error processing request textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
+{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
 solidlsp.lsp_protocol_handler.server.LSPError: Method not found (-32601)
 
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/tools_base.py", line 340, in task
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/tools_base.py", line 340, in task
     result = apply_fn(**apply_kwargs)
              ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/symbol_tools.py", line 452, in apply
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/symbol_tools.py", line 452, in apply
     return self._api().rename_symbol(name_path, relative_path, new_name)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/repl/api/lsp_api.py", line 750, in rename_symbol
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/repl/api/lsp_api.py", line 750, in rename_symbol
     return self._create_ls_code_editor().rename_symbol(name_path, relative_path=relative_path, new_name=new_name)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/code_editor.py", line 403, in rename_symbol
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/code_editor.py", line 403, in rename_symbol
     rename_result = lang_server.request_rename_symbol_edit(
                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls.py", line 3173, in request_rename_symbol_edit
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls.py", line 3173, in request_rename_symbol_edit
     return self.server.send.rename(params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 372, in rename
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 372, in rename
     return self._send_request("textDocument/rename", params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 16, in _send_request
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_request.py", line 16, in _send_request
     return self.handler.send_request(method, params)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_process.py", line 387, in send_request
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/solidlsp/ls_process.py", line 387, in send_request
     raise SolidLSPException(f"Error processing request {method} with params:\n{params}", cause=result.error) from result.error
 solidlsp.ls_exceptions.SolidLSPException: Error processing request textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
+{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
 
 During handling of the above exception, another exception occurred:
 
 Traceback (most recent call last):
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/task_executor.py", line 65, in run_task
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/task_executor.py", line 65, in run_task
     result = self._function()
              ^^^^^^^^^^^^^^^^
-  File "/home/lukegalea/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/tools_base.py", line 366, in task
+  File "/home/demo/.cache/uv/archive-v0/ZZeEvNAbKhWx4dA1/lib/python3.12/site-packages/serena/tools/tools_base.py", line 366, in task
     raise ToolCallError(msg)
 serena.tools.tools_base.ToolCallError: SolidLSPException: Error processing request textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
+{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
-INFO  2026-09-21 06:52:15,406 [MainThread] mcp.server.mcpserver.server:_handle_call_tool:444 - Tool 'rename_symbol' failed: "Error executing tool rename_symbol: SolidLSPException: Error processing request textDocument/rename with params:\n{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}\n(caused by Method not found (-32601))"
+INFO  2026-09-21 06:52:15,406 [MainThread] mcp.server.mcpserver.server:_handle_call_tool:444 - Tool 'rename_symbol' failed: "Error executing tool rename_symbol: SolidLSPException: Error processing request textDocument/rename with params:\n{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}\n(caused by Method not found (-32601))"
 [16.1s] <- tools/call rename_symbol ERROR after 44ms
 [16.1s] Error executing tool rename_symbol: SolidLSPException: Error processing request textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
+{'textDocument': {'uri': 'file:///home/demo/capstone-demo/lib/clinic_demo/decisions/resolver.ex'}, 'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
 serena-mcp-smoke: tool call failed: rename_symbol
 INFO  2026-09-21 06:52:15,409 [MainThread] serena.mcp:server_lifespan:412 - MCP server shutting down

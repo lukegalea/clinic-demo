@@ -34,7 +34,7 @@ configuration. It is logged in `.agents/logs/tool-gaps.log` with the date, and
 ## Reproducing
 
 ```sh
-export ELIXIR_BIN_DIR=/nix/store/iqc2jyh602php9bhy28qi01gk6w0sgb3-elixir-1.19.5/bin
+export ELIXIR_BIN_DIR="$(dirname "$(command -v elixir)")"   # or set it to your own store path
 export PATH="$(ls -d /nix/store/*libxml2*-bin/bin | head -1):$PATH"   # for mix test
 
 mix compile

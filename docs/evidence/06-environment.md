@@ -8,8 +8,8 @@ Captured 2026-09-21.
 
 ```
 $ command -v uvx; command -v xmllint; command -v expert; command -v mix
-/home/lukegalea/.local/share/devbox/global/default/.devbox/nix/profile/default/bin/uvx
-/home/lukegalea/.local/bin/expert
+.../.local/share/devbox/global/default/.devbox/nix/profile/default/bin/uvx
+.../.local/bin/expert
 (exit 1 -- mix is the one that is missing; both bin/ scripts accept ELIXIR_BIN_DIR)
 ```
 
@@ -19,12 +19,12 @@ Two present, two absent, and every absence has a documented answer:
 |---|---|---|
 | `uvx` | on PATH (devbox profile) | installs/runs Serena from `git+https://github.com/oraios/serena`; nothing vendored |
 | `expert` | on PATH (`~/.local/bin/expert`) | the fork build; `bin/serena-mcp` re-wins PATH through its shim dir |
-| `mix` | **not on PATH** (Nix setup) | `ELIXIR_BIN_DIR=/nix/store/iqc2jyh602php9bhy28qi01gk6w0sgb3-elixir-1.19.5/bin`, which both `bin/ash-agent` and `bin/serena-mcp` prepend themselves |
+| `mix` | **not on PATH** (Nix setup) | `ELIXIR_BIN_DIR="$(dirname "$(command -v elixir)")"`, which both `bin/ash-agent` and `bin/serena-mcp` prepend themselves |
 | `xmllint` | **not on PATH** | `export PATH="$(ls -d /nix/store/*libxml2*-bin/bin | head -1):$PATH"` before `mix test` |
 
 ```
 $ command -v xmllint   # with the libxml2 bin dir on PATH
-/nix/store/6bqmn78acg59nf3nf73jmk9p8sjn6k8y-libxml2-2.11.5-bin/bin/xmllint
+/nix/store/...-libxml2-2.11.5-bin/bin/xmllint
 xmllint: using libxml version 21105
 ```
 
@@ -57,7 +57,7 @@ exactly as `docs/agents.md` warns. The session added:
 
 ```yaml
 trusted_project_path_patterns:
-  - /home/lukegalea/capstone-demo
+  - .../capstone-demo
 ```
 
 and the next run logged `Running activation_command for project

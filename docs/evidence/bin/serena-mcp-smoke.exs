@@ -230,7 +230,13 @@ defmodule SerenaSmoke do
   # whitelist, deliberately: Port env replaces the whole environment, and a
   # child of this script has no business holding this shell's API keys.
   defp env do
-    elixir_bin = "/nix/store/iqc2jyh602php9bhy28qi01gk6w0sgb3-elixir-1.19.5/bin"
+    # Wherever Elixir lives on the reader's machine (a Nix store hash is
+    # per-machine); ELIXIR_BIN_DIR is the same escape hatch bin/ash-agent
+    # and bin/serena-mcp accept.
+    elixir_bin =
+      System.get_env("ELIXIR_BIN_DIR") ||
+        Path.dirname(System.find_executable("elixir") || "/usr/bin/elixir")
+
     source = System.get_env()
 
     keep = [

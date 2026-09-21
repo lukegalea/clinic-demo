@@ -133,7 +133,7 @@ must not do is conclude from a 10-second silence that the tool has hung.
 [16.1s] <- tools/call rename_symbol ERROR after 44ms
 Error executing tool rename_symbol: SolidLSPException: Error processing request
 textDocument/rename with params:
-{'textDocument': {'uri': 'file:///home/lukegalea/capstone-demo/lib/clinic_demo/decisions/resolver.ex'},
+{'textDocument': {'uri': 'file://.../capstone-demo/lib/clinic_demo/decisions/resolver.ex'},
  'position': {'line': 32, 'character': 6}, 'newName': 'evaluate'}
 (caused by Method not found (-32601))
 ```

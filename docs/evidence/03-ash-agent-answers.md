@@ -45,7 +45,7 @@ $ bin/ash-agent describe ClinicDemo.Scheduling.Appointment book --pretty
       "description": "An existing patient. Booking does not create one.",
       "source": {
         "line": 157,
-        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+        "file": ".../capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
       },
       "required?": true,
       "public?": true,

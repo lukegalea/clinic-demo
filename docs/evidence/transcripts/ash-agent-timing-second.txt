@@ -19,7 +19,7 @@ $ bin/ash-agent describe ClinicDemo.Scheduling.Appointment complete --pretty   #
       "description": "What was found and what was done.",
       "source": {
         "line": 215,
-        "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+        "file": "/home/demo/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
       },
       "required?": true,
       "public?": true,
@@ -29,7 +29,7 @@ $ bin/ash-agent describe ClinicDemo.Scheduling.Appointment complete --pretty   #
   "resource": "Elixir.ClinicDemo.Scheduling.Appointment",
   "source": {
     "line": 208,
-    "file": "/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
+    "file": "/home/demo/capstone-demo/lib/clinic_demo/scheduling/appointment.ex"
   },
   "returns": {
     "type": "Elixir.ClinicDemo.Scheduling.Appointment",

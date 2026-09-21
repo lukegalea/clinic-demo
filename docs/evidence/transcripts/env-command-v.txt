@@ -1,10 +1,10 @@
 ## command -v, in a plain shell (no environment help):
 
 $ command -v uvx; command -v xmllint; command -v expert; command -v mix
-/home/lukegalea/.local/share/devbox/global/default/.devbox/nix/profile/default/bin/uvx
-/home/lukegalea/.local/bin/expert
+/home/demo/.local/share/devbox/global/default/.devbox/nix/profile/default/bin/uvx
+/home/demo/.local/bin/expert
 (exit 1 -- mix is the one that is missing; both bin/ scripts accept ELIXIR_BIN_DIR)
 
 $ command -v xmllint  # with the libxml2 bin dir the tests need on PATH
-/nix/store/6bqmn78acg59nf3nf73jmk9p8sjn6k8y-libxml2-2.11.5-bin/bin/xmllint
+/nix/store/...-libxml2-2.11.5-bin/bin/xmllint
 xmllint: using libxml version 21105

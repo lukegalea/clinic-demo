@@ -4,7 +4,7 @@
     "content": [
       {
         "type": "text",
-        "text": "[{\"name\":\"appointments\",\"type\":\"has_many\",\"resource\":\"Elixir.ClinicDemo.Scheduling.Clinician\",\"source\":{\"line\":53,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/clinician.ex\"},\"kind\":\"relationship\"},{\"name\":\"appointments\",\"type\":\"has_many\",\"resource\":\"Elixir.ClinicDemo.Scheduling.Patient\",\"source\":{\"line\":73,\"file\":\"/home/lukegalea/capstone-demo/lib/clinic_demo/scheduling/patient.ex\"},\"kind\":\"relationship\"}]"
+        "text": "[{\"name\":\"appointments\",\"type\":\"has_many\",\"resource\":\"Elixir.ClinicDemo.Scheduling.Clinician\",\"source\":{\"line\":53,\"file\":\"/home/demo/capstone-demo/lib/clinic_demo/scheduling/clinician.ex\"},\"kind\":\"relationship\"},{\"name\":\"appointments\",\"type\":\"has_many\",\"resource\":\"Elixir.ClinicDemo.Scheduling.Patient\",\"source\":{\"line\":73,\"file\":\"/home/demo/capstone-demo/lib/clinic_demo/scheduling/patient.ex\"},\"kind\":\"relationship\"}]"
       }
     ],
     "isError": false

@@ -14,8 +14,8 @@ installed build does instead. Full transcripts:
 
 ```
 $ elixir bin/expert-smoke.exs ~/.local/bin/expert
-binary   /home/lukegalea/.local/bin/expert
-root     /home/lukegalea/capstone-demo
+binary   .../.local/bin/expert
+root     .../capstone-demo
 file     lib/clinic_demo/scheduling/appointment.ex
 initialize sent, waiting (Expert compiles the project on first contact)
 initialize ok
