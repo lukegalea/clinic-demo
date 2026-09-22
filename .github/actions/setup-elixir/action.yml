@@ -15,6 +15,12 @@ inputs:
 runs:
   using: composite
   steps:
+    # Rule publishing (ClinicDemo.Rules.install!) validates the DMN/BPMN XML
+    # through xmllint; the runners do not ship it.
+    - name: Install xmllint
+      shell: bash
+      run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils
+
     - uses: erlef/setup-beam@v1.24.1
       with:
         # Pinned to the minor rather than the patch so a missing prebuilt
