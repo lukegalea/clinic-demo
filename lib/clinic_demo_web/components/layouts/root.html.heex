@@ -38,6 +38,24 @@
     </script>
   </head>
   <body>
-    {@inner_content}
+    <div class="navbar bg-base-200 sticky top-0 z-40 min-h-fit flex-wrap gap-x-2 gap-y-1 px-4 py-2 shadow-sm">
+      <a class="btn btn-ghost px-2 text-lg normal-case" href="/">ClinicDemo</a>
+      <nav class="flex flex-wrap gap-1" aria-label="Main">
+        <a class="btn btn-ghost btn-sm" href="/schedule">Schedule</a>
+        <a class="btn btn-ghost btn-sm" href="/worklist">Worklist</a>
+        <a class="btn btn-ghost btn-sm" href="/visits">Visits</a>
+        <a class="btn btn-ghost btn-sm" href="/patients">Patients</a>
+        <a class="btn btn-ghost btn-sm" href="/clinicians">Clinicians</a>
+        <a class="btn btn-ghost btn-sm" href="/processes">Processes</a>
+        <a class="btn btn-ghost btn-sm" href="/decisions">Decisions</a>
+        <a class="btn btn-ghost btn-sm" href="/evaluations">Evidence</a>
+      </nav>
+      <div class="ms-auto">
+        <a class="btn btn-outline btn-sm" href="/acting-as">Acting as…</a>
+      </div>
+    </div>
+    <main class="container mx-auto max-w-7xl px-4 py-6">
+      {@inner_content}
+    </main>
   </body>
 </html>

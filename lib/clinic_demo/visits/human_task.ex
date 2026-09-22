@@ -20,9 +20,50 @@ defmodule ClinicDemo.Visits.HumanTask do
     end
   end
 
+  actions do
+    # The worklist surface completes tasks through the engine facade so the
+    # token advances with the outcome; a plain update would leave the visit
+    # standing at the same node. ActionHandler invokes this as a generic row
+    # action, injecting the row's id as :record_id; the engine enforces
+    # candidacy itself, so the policy only asks that someone is acting.
+    action :a2ui_complete, :struct do
+      description "Complete the task through the engine, routing the token onwards."
+
+      argument :record_id, :uuid do
+        allow_nil? false
+        description "The task being completed (injected by the surface)."
+      end
+
+      argument :outcome, :atom do
+        allow_nil? false
+        constraints one_of: [:arrived, :no_show, :written_up, :labs_pending, :results_in]
+        description "The task's outcome; routes the token onwards."
+      end
+
+      argument :comment, :string do
+        description "Optional note recorded with the completion."
+      end
+
+      run fn input, %{actor: actor} ->
+        input.arguments.record_id
+        |> Ash.get!(ClinicDemo.Visits.HumanTask, authorize?: false)
+        |> AshBpmn.complete_task(
+          outcome: input.arguments.outcome,
+          comment: input.arguments.comment,
+          actor: actor
+        )
+      end
+    end
+  end
+
   policies do
     policy action_type(:read) do
       authorize_if always()
+    end
+
+    policy action(:a2ui_complete) do
+      description "Anyone acting may try; the engine refuses non-candidates."
+      authorize_if actor_present()
     end
   end
 end

@@ -58,6 +58,7 @@ defmodule ClinicDemo.Scheduling.Clinician do
   aggregates do
     count :upcoming_appointment_count, :appointments do
       filter expr(status in [:scheduled, :checked_in])
+      public? true
     end
   end
 

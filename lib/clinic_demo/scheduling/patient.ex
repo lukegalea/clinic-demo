@@ -78,14 +78,20 @@ defmodule ClinicDemo.Scheduling.Patient do
   end
 
   aggregates do
-    count :appointment_count, :appointments
+    # Public so the a2ui grids can show them — visit counts are grid
+    # questions, asked per row.
+    count :appointment_count, :appointments do
+      public? true
+    end
 
     count :completed_visit_count, :appointments do
       filter expr(status == :completed)
+      public? true
     end
 
     max :last_seen_at, :appointments, :scheduled_at do
       filter expr(status == :completed)
+      public? true
     end
   end
 

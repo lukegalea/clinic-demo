@@ -34,6 +34,17 @@ config :ash_a2ui,
   experience_version: 2,
   catalog: :admin_v1
 
+# Who is acting: the surfaces run every write under a Clinician — appointment
+# transitions need an actor present, task completion goes through the engine's
+# candidacy checks under that actor, and attribution gets a name. This is the
+# demo's whole auth story, by design.
+config :ash_a2ui,
+  actor: [
+    resource: ClinicDemo.Scheduling.Clinician,
+    label: :full_name,
+    filter: [active: true]
+  ]
+
 # The process engine's three host seams. `ash_bpmn` never guesses any of them:
 # a diagram with a business rule task will not even compile without a decision
 # resolver configured, and the error names this key.
