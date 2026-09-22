@@ -34,6 +34,7 @@ defmodule ClinicDemo.AI.Interpreter do
   sets — so switching provider is a deployment concern and never a code change.
   """
 
+  alias AshA2ui.Dynamic.Error
   alias ClinicDemo.AI.Answer
   alias ClinicDemo.AI.RequestClassifier
   alias ClinicDemoWeb.A2ui.Surfaces
@@ -139,7 +140,7 @@ defmodule ClinicDemo.AI.Interpreter do
   # which Dialyzer proves rather than this asserting.
   defp refusal_message(errors) do
     "I composed a table but the server refused it:\n" <>
-      Enum.map_join(AshA2ui.Dynamic.Error.messages(errors), "\n", &"  - #{&1}")
+      Enum.map_join(Error.messages(errors), "\n", &"  - #{&1}")
   end
 
   defp compose(request) do

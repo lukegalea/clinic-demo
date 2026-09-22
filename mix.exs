@@ -20,7 +20,11 @@ defmodule ClinicDemo.MixProject do
       # Agent instructions for the a2ui surfaces, linked rather than inlined
       # (same trade as ash_enterprise: a pointer instead of ~130k chars of
       # always-loaded content). Regenerate with `mix usage_rules.sync`.
-      usage_rules: [file: "AGENTS.md", usage_rules: [{:ash_a2ui, link: :markdown}]]
+      usage_rules: [file: "AGENTS.md", usage_rules: [{:ash_a2ui, link: :markdown}]],
+
+      # The one known finding — injected by `use AshBpmn.Web.DesignerLive` —
+      # is documented in the ignore file rather than suppressed inline.
+      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"]
     ]
   end
 

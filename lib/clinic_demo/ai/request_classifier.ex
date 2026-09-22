@@ -16,6 +16,8 @@ defmodule ClinicDemo.AI.RequestClassifier do
   # not auto-imported by the extension.
   import AshAi.Actions, only: [prompt: 2]
 
+  alias ClinicDemoWeb.A2ui.Surfaces
+
   code_interface do
     define :interpret_request, args: [:request]
     define :compose_surface, args: [:request]
@@ -201,7 +203,7 @@ defmodule ClinicDemo.AI.RequestClassifier do
   key, and the symptom would be a model producing specs the server refuses.
   """
   def spec_schema_json do
-    ClinicDemoWeb.A2ui.Surfaces.dynamic_allowlist()
+    Surfaces.dynamic_allowlist()
     |> AshA2ui.Dynamic.spec_schema()
     |> JSON.encode!()
   end
@@ -219,7 +221,7 @@ defmodule ClinicDemo.AI.RequestClassifier do
   is given, which raises on a list of maps rather than rendering one.
   """
   def resource_descriptions do
-    ClinicDemoWeb.A2ui.Surfaces.dynamic_allowlist()
+    Surfaces.dynamic_allowlist()
     |> AshA2ui.Dynamic.describe_resources()
     |> JSON.encode!()
   end
