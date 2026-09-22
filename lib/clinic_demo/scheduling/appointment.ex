@@ -125,6 +125,15 @@ defmodule ClinicDemo.Scheduling.Appointment do
       description "Still occupies a slot on the schedule."
       public? true
     end
+
+    # Grid labels for the schedule surfaces: names instead of bare UUIDs.
+    calculate :patient_label, :string, expr(patient.name) do
+      public? true
+    end
+
+    calculate :clinician_label, :string, expr(clinician.full_name) do
+      public? true
+    end
   end
 
   actions do

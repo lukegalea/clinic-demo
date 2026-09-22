@@ -31,15 +31,16 @@ import topbar from "../vendor/topbar"
 // searchable selects) and the semantic admin_v1 catalog (entityPage /
 // dataGrid / recordPanel) that experience v2 selects server-side.
 import "@a2ui/lit/v0_9"
-import {basicCatalog, A2uiLitElement, A2uiController} from "@a2ui/lit/v0_9"
+import {basicCatalog, A2uiLitElement, A2uiController, Context} from "@a2ui/lit/v0_9"
 import {MessageProcessor, Catalog} from "@a2ui/web_core/v0_9"
 import {ChoicePickerApi, ColumnApi} from "@a2ui/web_core/v0_9/basic_catalog"
+import {ContextProvider} from "@lit/context"
+import {renderMarkdown} from "@a2ui/markdown-it"
 import {html, css, nothing} from "lit"
 import {z} from "zod"
 import {createAshA2uiCatalog} from "../../deps/ash_a2ui/priv/js/ash_a2ui_catalog.js"
 import {createAshAdminCatalog} from "../../deps/ash_a2ui/priv/js/ash_admin_catalog.js"
 import {AshA2ui, configureAshA2ui} from "../../deps/ash_a2ui/priv/js/ash_a2ui_hook.js"
-import "../../deps/ash_a2ui/priv/js/ash_a2ui_theme.css"
 
 const a2uiCatalog = createAshA2uiCatalog({
   Catalog,
@@ -62,7 +63,15 @@ const adminCatalog = createAshAdminCatalog({
   lit: {html, css, nothing},
 })
 
-configureAshA2ui({MessageProcessor, catalogs: [a2uiCatalog, adminCatalog]})
+// Without a markdown renderer every Text on every surface collapses to one
+// unstyled span, and v1.0's heading-as-markdown has no variant to fall back
+// on. Hard requirement, not a nicety. renderMarkdown runs its output through
+// DOMPurify — these values come from the database, not a trusted author.
+configureAshA2ui({
+  MessageProcessor,
+  catalogs: [a2uiCatalog, adminCatalog],
+  markdown: {ContextProvider, context: Context.markdown, render: renderMarkdown},
+})
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {

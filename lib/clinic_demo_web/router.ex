@@ -7,7 +7,12 @@ defmodule ClinicDemoWeb.Router do
     plug :fetch_live_flash
     plug :put_root_layout, html: {ClinicDemoWeb.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
+    # A2UI components inline their styles into shadow DOM; without
+    # 'unsafe-inline' on style-src every surface renders unstyled.
+    plug :put_secure_browser_headers, %{
+      "content-security-policy" =>
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:"
+    }
   end
 
   pipeline :api do
