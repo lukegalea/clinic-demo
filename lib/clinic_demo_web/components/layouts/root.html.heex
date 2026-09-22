@@ -6,6 +6,9 @@
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title default="ClinicDemo" suffix=" · Phoenix Framework" phx-no-format>{assigns[:page_title]}</.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <!-- The bpmn-js / dmn-js / canvas CSS, emitted by esbuild alongside app.js
+         because the diagram hooks import their own stylesheets. -->
+    <link phx-track-static rel="stylesheet" href={~p"/assets/js/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
     <script>
@@ -50,6 +53,7 @@
         <a class="btn btn-ghost btn-sm" href="/processes">Processes</a>
         <a class="btn btn-ghost btn-sm" href="/decisions">Decisions</a>
         <a class="btn btn-ghost btn-sm" href="/evaluations">Evidence</a>
+        <a class="btn btn-ghost btn-sm" href="/operator">Operator</a>
       </nav>
       <div class="ms-auto">
         <a class="btn btn-outline btn-sm" href="/acting-as">Acting as…</a>

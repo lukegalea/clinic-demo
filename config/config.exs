@@ -72,14 +72,29 @@ config :phoenix_live_view,
   # the attribute set on all root tags. Used for Phoenix.LiveView.ColocatedCSS.
   root_tag_attribute: "phx-r"
 
-# Configure esbuild (the version is required)
+# Configure esbuild (the version is required). NODE_PATH includes
+# assets/node_modules because the bpmn-js/dmn-js imports live inside
+# deps/*/priv/js — Node resolution walks up from the importing file and
+# would never reach the app's assets without it.
 config :esbuild,
   version: "0.25.4",
   clinic_demo: [
+    # The bpmn-js / dmn-js stylesheets reference their icon fonts by URL
+    # with cache-buster query strings; without an explicit loader esbuild
+    # refuses the build outright. Inlined as data URLs, which
+    # `font-src 'self' data:` in the CSP permits.
     args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.) ++
+        ~w(--loader:.woff=dataurl --loader:.woff2=dataurl --loader:.ttf=dataurl
+           --loader:.eot=dataurl --loader:.svg=dataurl),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+    env: %{
+      "NODE_PATH" => [
+        Path.expand("../assets/node_modules", __DIR__),
+        Path.expand("../deps", __DIR__),
+        Mix.Project.build_path()
+      ]
+    }
   ]
 
 # Configure tailwind (the version is required)
@@ -91,7 +106,13 @@ config :tailwind,
       --output=priv/static/assets/css/app.css
     ),
     cd: Path.expand("..", __DIR__),
-    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+    env: %{
+      "NODE_PATH" => [
+        Path.expand("../assets/node_modules", __DIR__),
+        Path.expand("../deps", __DIR__),
+        Mix.Project.build_path()
+      ]
+    }
   ]
 
 # Configure Elixir's Logger

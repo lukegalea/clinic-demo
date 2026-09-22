@@ -41,3 +41,4 @@ npm-debug.log
 /.serena/cache/
 /.serena/project.local.yml
 /.serena/memories/
+/probe-screenshots/

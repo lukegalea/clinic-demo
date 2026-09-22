@@ -15,7 +15,7 @@ defmodule ClinicDemo.MixProject do
       docs: docs(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       consolidate_protocols: Mix.env() != :dev,
-      listeners: [Phoenix.CodeReloader],
+      listeners: [Phoenix.CodeReloader] ++ clarity_listener(),
 
       # Agent instructions for the a2ui surfaces, linked rather than inlined
       # (same trade as ash_enterprise: a pointer instead of ~130k chars of
@@ -105,6 +105,20 @@ defmodule ClinicDemo.MixProject do
       # hook. Runtime dependency — it powers the app's interface.
       {:ash_a2ui, github: "lukegalea/ash_a2ui"},
 
+      # The operator section's helper agent: ash_ai's prompt actions carry
+      # the interpreter, ReqLLM speaks to the model. The console degrades
+      # honestly (surface buttons only) when no provider key is set.
+      {:ash_ai, "~> 1.0"},
+      {:req_llm, "~> 1.7"},
+
+      # The operator section's introspection UI. Mounted unconditionally (an
+      # operator tool, not a dev extra) so every env compiles the same
+      # router; the CSP it needs stays scoped to its own pipeline.
+      {:clarity, "~> 0.6"},
+      # Clarity's diagram engine (ER/policy views) — optional to Clarity and
+      # genuinely dev-only.
+      {:ash_diagram, "~> 0.2", only: :dev},
+
       # Ash's policy authorizer needs a SAT solver to compile policies.
       {:picosat_elixir, "~> 0.2"},
 
@@ -148,5 +162,11 @@ defmodule ClinicDemo.MixProject do
   # API documentation, built by CI's `mix docs` job.
   defp docs do
     [main: "readme", extras: ["README.md"]]
+  end
+
+  # Clarity's code-reload listener exists only in dev (the dep is only: :dev);
+  # the list is compiled per env, so ask the code server what is loaded.
+  defp clarity_listener do
+    if Code.ensure_loaded?(Clarity.CodeReloader), do: [Clarity.CodeReloader], else: []
   end
 end

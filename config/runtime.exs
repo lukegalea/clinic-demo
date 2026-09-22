@@ -24,6 +24,15 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :dev do
+  # The helper agent's interpreter model, e.g.
+  # AI_INTERPRETER_MODEL=openrouter:anthropic/claude-haiku-4.5 — format is
+  # "provider:model-id"; provider keys (ANTHROPIC_API_KEY, OPENAI_API_KEY,
+  # ...) are read straight from the environment by ReqLLM. Without a key the
+  # console still shows surfaces — it just refuses to guess.
+  if model = System.get_env("AI_INTERPRETER_MODEL") do
+    config :clinic_demo, :ai, interpreter_model: model
+  end
+
   # Reload browser tabs when matching files change.
   config :clinic_demo, ClinicDemoWeb.Endpoint,
     live_reload: [

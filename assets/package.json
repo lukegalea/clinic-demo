@@ -7,6 +7,9 @@
     "@a2ui/markdown-it": "^0.1.1",
     "@a2ui/web_core": "^0.11.0",
     "@lit/context": "^1.1.6",
+    "bpmn-js": "^18.0.0",
+    "cytoscape": "^3.34.3",
+    "dmn-js": "^17.10.1",
     "lit": "^3.3.3",
     "zod": "^4.6.5"
   }

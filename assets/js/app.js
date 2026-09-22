@@ -41,6 +41,10 @@ import {z} from "zod"
 import {createAshA2uiCatalog} from "../../deps/ash_a2ui/priv/js/ash_a2ui_catalog.js"
 import {createAshAdminCatalog} from "../../deps/ash_a2ui/priv/js/ash_admin_catalog.js"
 import {AshA2ui, configureAshA2ui} from "../../deps/ash_a2ui/priv/js/ash_a2ui_hook.js"
+import {AshCanvas} from "./canvas/ash_canvas_hook.js"
+import "./canvas/ash_canvas_graph.js"
+import {AshBpmnDesigner, AshBpmnViewer} from "../../deps/ash_bpmn/priv/js/ash_bpmn_designer.js"
+import {AshDecisionsEditor} from "../../deps/ash_decisions/priv/js/ash_decisions_editor.js"
 
 const a2uiCatalog = createAshA2uiCatalog({
   Catalog,
@@ -77,7 +81,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AshA2ui},
+  hooks: {...colocatedHooks, AshA2ui, AshCanvas, AshBpmnDesigner, AshBpmnViewer, AshDecisionsEditor},
 })
 
 // Show progress bar on live navigation and form submits
