@@ -29,6 +29,7 @@ defmodule ClinicDemoWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/operator", PageController, :operator
 
     # The a2ui surfaces: one route per surface, all sharing the actor
     # session; every write runs under the acting Clinician.

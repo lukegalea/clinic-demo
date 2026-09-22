@@ -59,7 +59,7 @@ for (const route of routes) {
   page.on("pageerror", (e) => errors.push(String(e).slice(0, 160)));
 
   try {
-    await page.goto(`${BASE}${route.path}`, {
+    const response = await page.goto(`${BASE}${route.path}`, {
       waitUntil: "load",
       timeout: route.timeout ?? 30000,
     });
@@ -110,6 +110,11 @@ for (const route of routes) {
     });
 
     const problems = [];
+    // goto follows redirects and does NOT throw on HTTP errors — a 404 error
+    // page would otherwise pass every text check (this exact false positive
+    // hid a missing route once).
+    const status = response?.status() ?? 0;
+    if (status !== 200) problems.push(`HTTP ${status}`);
     if (report.objectHits > 0) problems.push(`${report.objectHits} "[object Object]"`);
     if (route.kind !== "plain" && !report.surfaceHost) problems.push("no surface host rendered");
     if (route.kind === "surface" && report.interactive.length === 0) {
