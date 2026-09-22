@@ -28,7 +28,7 @@ defmodule ClinicDemoWeb.A2ui.EvaluationUI do
         :definition_version,
         :matched_rule_ids,
         :duration_us,
-        :correlation_id,
+        :visit_label,
         :hit_policy
       ]
 
@@ -36,9 +36,9 @@ defmodule ClinicDemoWeb.A2ui.EvaluationUI do
       query :default
 
       row_layout do
-        title :definition_key
+        title :visit_label
         badge :definition_version
-        meta [:matched_rule_ids, :duration_us, :correlation_id, :hit_policy]
+        meta [:matched_rule_ids, :duration_us, :definition_key, :hit_policy]
         columns 2
       end
     end
@@ -55,8 +55,8 @@ defmodule ClinicDemoWeb.A2ui.EvaluationUI do
       label "Matched rules"
     end
 
-    field :correlation_id do
-      label "Visit instance"
+    field :visit_label do
+      label "Visit"
     end
   end
 end
