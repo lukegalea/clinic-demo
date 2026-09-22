@@ -21,6 +21,8 @@ defmodule ClinicDemo.Scheduling.Changes.StartVisitProcess do
 
   use Ash.Resource.Change
 
+  alias Ash.Error.Changes.InvalidChanges
+
   @impl true
   def change(changeset, _opts, context) do
     Ash.Changeset.after_action(changeset, fn _changeset, appointment ->
@@ -34,7 +36,7 @@ defmodule ClinicDemo.Scheduling.Changes.StartVisitProcess do
 
         {:error, reason} ->
           {:error,
-           Ash.Error.Changes.InvalidChanges.exception(
+           InvalidChanges.exception(
              message: "could not start the visit process: #{inspect(reason)}"
            )}
       end

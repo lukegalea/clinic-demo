@@ -24,8 +24,6 @@ defmodule ClinicDemo.Decisions.Resolver do
 
   @behaviour AshBpmn.DecisionResolver
 
-  require Logger
-
   alias ClinicDemo.Decisions.Definition
   alias ClinicDemo.Decisions.Evaluation
 

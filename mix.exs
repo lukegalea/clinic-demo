@@ -5,11 +5,14 @@ defmodule ClinicDemo.MixProject do
     [
       app: :clinic_demo,
       version: "0.1.0",
-      elixir: "~> 1.17",
+      # runtime.exs uses 1.20 regex modifiers (~r"..."E) and the boxic_*
+      # packages already require ~> 1.20.
+      elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      docs: docs(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       consolidate_protocols: Mix.env() != :dev,
       listeners: [Phoenix.CodeReloader]
@@ -97,7 +100,14 @@ defmodule ClinicDemo.MixProject do
       # `Spark.Formatter` (wired up in .formatter.exs) needs sourceror to
       # keep Ash DSL sections in a stable order.
       {:sourceror, "~> 1.7", only: [:dev, :test]},
-      {:usage_rules, "~> 0.1", only: [:dev], runtime: false}
+      {:usage_rules, "~> 0.1", only: [:dev], runtime: false},
+
+      # Dev/test hygiene for CI: linting, type checking, docs and dependency
+      # advisories.
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -122,5 +132,10 @@ defmodule ClinicDemo.MixProject do
       ],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
     ]
+  end
+
+  # API documentation, built by CI's `mix docs` job.
+  defp docs do
+    [main: "readme", extras: ["README.md"]]
   end
 end
