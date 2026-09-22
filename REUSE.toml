@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Luke Galea
+#
+# SPDX-License-Identifier: MIT
+
+version = 1
+
+# This repository predates REUSE and carries no inline SPDX headers, so a
+# single blanket annotation declares every file (source, config, assets,
+# dotfiles) at once.
+[[annotations]]
+path = "**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Luke Galea"
+SPDX-License-Identifier = "MIT"
