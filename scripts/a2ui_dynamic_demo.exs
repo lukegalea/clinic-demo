@@ -82,7 +82,7 @@ case show.(AshA2ui.Dynamic.resolve(spec_v3, allowlist: allowlist)) do
     case AshA2ui.Dynamic.to_dsl_source(surface,
            module: ClinicDemoWeb.A2ui.EmergencyBoardUI,
            allowlist: allowlist,
-           spec_version: "1.0"
+           spec_version: "0.9.1"
          ) do
       {:ok, source} ->
         IO.puts("  promotion source ready (#{length(String.split(source, "\n"))} lines)")

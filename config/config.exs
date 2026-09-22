@@ -25,19 +25,14 @@ config :ash,
   default_page_type: :keyset,
   policies: [no_filter_static_forbidden_reads?: false]
 
-# The full ash_a2ui v2 experience: semantic View/Edit rows, task-panel forms
-# with explicit create/view/edit modes, and the admin_v1 semantic catalog
-# (entityPage / dataGrid / recordPanel), rendered by the admin catalog wired
-# up in assets/js/app.js. The catalog selection requires experience v2 — the
-# two travel together.
-config :ash_a2ui,
-  experience_version: 2,
-  catalog: :admin_v1
-
-# Who is acting: the surfaces run every write under a Clinician — appointment
-# transitions need an actor present, task completion goes through the engine's
-# candidacy checks under that actor, and attribution gets a name. This is the
-# demo's whole auth story, by design.
+# ash_a2ui: running the default experience (v1 basic emission + the merged
+# catalog). The experience-v2/admin_v1 cell emits a semantic component tree
+# (entityPage/dataGrid/recordPanel) whose reserved-path text bindings
+# (/ui/panel/title, /ui/status, grid records) are NOT hydrated by the shipped
+# renderer stack today (0.10.x and 0.11.x both) — everything schema-valid,
+# everything renders, values show as [object Object] and the grid stays
+# empty. Re-enable only when the client side lands; evidence trail in
+# scripts/a2ui_render_probe.mjs.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,

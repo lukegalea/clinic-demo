@@ -11,7 +11,7 @@ defmodule ClinicDemoWeb.A2ui.ClinicianUI do
     surface_id "clinic_clinicians"
     title "Clinicians"
     record_label("clinician")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       search_fields [:full_name, :license_number]

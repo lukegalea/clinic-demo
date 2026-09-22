@@ -14,7 +14,7 @@ defmodule ClinicDemoWeb.A2ui.VisitInstanceUI do
     surface_id "clinic_visits"
     title "Visit processes"
     record_label("visit")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       sortable [:status, :outcome]

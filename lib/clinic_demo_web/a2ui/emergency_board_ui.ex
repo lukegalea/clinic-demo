@@ -24,7 +24,7 @@ defmodule ClinicDemoWeb.A2ui.EmergencyBoardUI do
     surface_id "clinic_emergency_board"
     title "Emergency board"
     record_label("emergency")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       sortable [:scheduled_at, :severity]

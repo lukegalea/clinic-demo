@@ -14,7 +14,7 @@ defmodule ClinicDemoWeb.A2ui.WorklistUI do
     surface_id "clinic_worklist"
     title "Worklist"
     record_label("task")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       sortable [:node_id, :status, :due_at]

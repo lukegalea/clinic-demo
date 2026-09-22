@@ -15,7 +15,7 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
     surface_id "clinic_schedule"
     title "Schedule"
     record_label("appointment")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       search_fields [:reason, [:patient, :name], [:clinician, :full_name]]
@@ -108,6 +108,13 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
     field :severity do
       label "Severity (1–5)"
+    end
+
+    field :clinician_id do
+      # The select's options label by :full_name — Clinician's identifying
+      # attribute is not in the default label ladder, so without this the
+      # picker shows bare UUIDs.
+      option_label :full_name
     end
 
     field :triage_urgency do

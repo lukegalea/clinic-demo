@@ -13,7 +13,7 @@ defmodule ClinicDemoWeb.A2ui.EvaluationUI do
     surface_id "clinic_evaluations"
     title "Decision evidence"
     record_label("evaluation")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       search_fields [:definition_key, :correlation_id]

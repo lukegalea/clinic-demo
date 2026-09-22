@@ -11,7 +11,7 @@ defmodule ClinicDemoWeb.A2ui.PatientUI do
     surface_id "clinic_patients"
     title "Patients"
     record_label("patient")
-    spec_version "1.0"
+    spec_version "0.9.1"
 
     query :default do
       search_fields [:name, :breed, :owner_email]
