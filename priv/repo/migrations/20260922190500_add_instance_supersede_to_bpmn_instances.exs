@@ -21,9 +21,9 @@ defmodule ClinicDemo.Repo.Migrations.AddInstanceSupersedeToBpmnInstances do
 
   def down do
     drop index(:bpmn_instances, [:superseded_by_instance_id],
-             where: "superseded_by_instance_id IS NOT NULL",
-             name: "bpmn_instances_superseded_by_index"
-           )
+           where: "superseded_by_instance_id IS NOT NULL",
+           name: "bpmn_instances_superseded_by_index"
+         )
 
     alter table(:bpmn_instances) do
       remove :superseded_at
