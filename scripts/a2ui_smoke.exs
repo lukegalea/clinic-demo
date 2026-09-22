@@ -12,7 +12,8 @@ surfaces = [
   ClinicDemoWeb.A2ui.ClinicianUI,
   ClinicDemoWeb.A2ui.ProcessDefinitionUI,
   ClinicDemoWeb.A2ui.DecisionDefinitionUI,
-  ClinicDemoWeb.A2ui.EvaluationUI
+  ClinicDemoWeb.A2ui.EvaluationUI,
+  ClinicDemoWeb.A2ui.EmergencyBoardUI
 ]
 
 failures =

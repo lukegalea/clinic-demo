@@ -31,6 +31,7 @@ defmodule ClinicDemoWeb.Router do
     # The a2ui surfaces: one route per surface, all sharing the actor
     # session; every write runs under the acting Clinician.
     live_session :a2ui, on_mount: AshA2ui.Actor do
+      live "/emergencies", A2ui.EmergencyBoardLive
       live "/schedule", A2ui.ScheduleLive
       live "/worklist", A2ui.WorklistLive
       live "/visits", A2ui.VisitsLive

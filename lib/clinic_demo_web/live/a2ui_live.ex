@@ -42,6 +42,12 @@ defmodule ClinicDemoWeb.A2ui.DecisionDefinitionsLive do
     actor_fn: & &1.assigns.a2ui_actor
 end
 
+defmodule ClinicDemoWeb.A2ui.EmergencyBoardLive do
+  use AshA2ui.LiveRenderer,
+    ui: ClinicDemoWeb.A2ui.EmergencyBoardUI,
+    actor_fn: & &1.assigns.a2ui_actor
+end
+
 defmodule ClinicDemoWeb.A2ui.EvaluationsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.EvaluationUI,
