@@ -25,6 +25,15 @@ config :ash,
   default_page_type: :keyset,
   policies: [no_filter_static_forbidden_reads?: false]
 
+# The full ash_a2ui v2 experience: semantic View/Edit rows, task-panel forms
+# with explicit create/view/edit modes, and the admin_v1 semantic catalog
+# (entityPage / dataGrid / recordPanel), rendered by the admin catalog wired
+# up in assets/js/app.js. The catalog selection requires experience v2 — the
+# two travel together.
+config :ash_a2ui,
+  experience_version: 2,
+  catalog: :admin_v1
+
 # The process engine's three host seams. `ash_bpmn` never guesses any of them:
 # a diagram with a business rule task will not even compile without a decision
 # resolver configured, and the error names this key.

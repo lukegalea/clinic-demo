@@ -94,6 +94,12 @@ defmodule ClinicDemo.MixProject do
       # application.
       {:ash_agent_tools, github: "lukegalea/ash_agent_tools", only: :dev, runtime: false},
 
+      # The UI layer under demonstration: `a2ui` DSL blocks on the domain's
+      # resources emit A2UI message streams, rendered in the browser by the
+      # @a2ui/lit components through the LiveRenderer and the shipped JS
+      # hook. Runtime dependency — it powers the app's interface.
+      {:ash_a2ui, github: "lukegalea/ash_a2ui"},
+
       # Ash's policy authorizer needs a SAT solver to compile policies.
       {:picosat_elixir, "~> 0.2"},
 

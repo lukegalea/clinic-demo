@@ -25,11 +25,50 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/clinic_demo"
 import topbar from "../vendor/topbar"
 
+// A2UI rendering: @a2ui/lit web components driven by the @a2ui/web_core
+// message processor. ash_a2ui ships the LiveView hook plus two catalogs: the
+// merged catalog (native <select> choice pickers, typeahead comboboxes for
+// searchable selects) and the semantic admin_v1 catalog (entityPage /
+// dataGrid / recordPanel) that experience v2 selects server-side.
+import "@a2ui/lit/v0_9"
+import {basicCatalog, A2uiLitElement, A2uiController} from "@a2ui/lit/v0_9"
+import {MessageProcessor, Catalog} from "@a2ui/web_core/v0_9"
+import {ChoicePickerApi, ColumnApi} from "@a2ui/web_core/v0_9/basic_catalog"
+import {html, css, nothing} from "lit"
+import {z} from "zod"
+import {createAshA2uiCatalog} from "../../deps/ash_a2ui/priv/js/ash_a2ui_catalog.js"
+import {createAshAdminCatalog} from "../../deps/ash_a2ui/priv/js/ash_admin_catalog.js"
+import {AshA2ui, configureAshA2ui} from "../../deps/ash_a2ui/priv/js/ash_a2ui_hook.js"
+import "../../deps/ash_a2ui/priv/js/ash_a2ui_theme.css"
+
+const a2uiCatalog = createAshA2uiCatalog({
+  Catalog,
+  basicCatalog,
+  ChoicePickerApi,
+  ColumnApi,
+  A2uiLitElement,
+  A2uiController,
+  lit: {html, css, nothing},
+})
+
+const adminCatalog = createAshAdminCatalog({
+  Catalog,
+  // The admin catalog extends whatever basic catalog it is handed — give it
+  // the merged one so its pickers keep the select/combobox upgrades.
+  basicCatalog: a2uiCatalog,
+  A2uiLitElement,
+  A2uiController,
+  z,
+  lit: {html, css, nothing},
+})
+
+configureAshA2ui({MessageProcessor, catalogs: [a2uiCatalog, adminCatalog]})
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, AshA2ui},
 })
 
 // Show progress bar on live navigation and form submits
