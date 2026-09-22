@@ -45,8 +45,28 @@ defmodule ClinicDemo.MixProject do
   end
 
   # Specifies which paths to compile per environment.
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  #
+  # lib/clinic_demo_web/storybook.ex `use`s phoenix_storybook, a dev-only
+  # dep — compiling it in test/prod (where the dep is not fetched) fails.
+  # The router's storybook scope is gated on :dev_routes, so nothing
+  # references the module outside dev; `without_storybook/1` keeps it out
+  # of the compile set in those envs.
+  defp elixirc_paths(:dev), do: ["lib"]
+  defp elixirc_paths(:test), do: without_storybook(["lib", "test/support"])
+  defp elixirc_paths(_), do: without_storybook(["lib"])
+
+  # Expand the "lib" directory into explicit .ex files minus the storybook
+  # backend. Both glob shapes are listed because `**` matching zero path
+  # segments (i.e. files directly under lib/) varies by implementation;
+  # Enum.uniq/1 collapses the overlap.
+  defp without_storybook(paths) do
+    (paths
+     |> Enum.flat_map(fn
+       "lib" -> Path.wildcard("lib/**/*.ex") ++ Path.wildcard("lib/*.ex")
+       path -> [path]
+     end)
+     |> Enum.uniq()) -- ["lib/clinic_demo_web/storybook.ex"]
+  end
 
   # Specifies your project dependencies.
   #
@@ -60,6 +80,11 @@ defmodule ClinicDemo.MixProject do
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.2.0"},
+      # Component storybook, mounted at /storybook behind Mix.env() == :dev.
+      # Unconditional (like Clarity) — the router's import needs the module
+      # in the code path at compile time regardless of the route guard, and
+      # `if Mix.env()` in a module body still expands macros in dead branches.
+      {:phoenix_storybook, "~> 1.5"},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
@@ -67,13 +92,6 @@ defmodule ClinicDemo.MixProject do
        github: "tailwindlabs/heroicons",
        tag: "v2.2.0",
        sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
-      {:daisyui,
-       github: "saadeghi/daisyui",
-       tag: "v5.5.20",
-       sparse: "packages/bundle",
        app: false,
        compile: false,
        depth: 1},

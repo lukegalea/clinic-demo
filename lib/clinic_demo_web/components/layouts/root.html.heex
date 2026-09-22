@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title default="ClinicDemo" suffix=" · Phoenix Framework" phx-no-format>{assigns[:page_title]}</.live_title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- DM Sans: the neobrutalist typeface (body 500, headings 700 — see
+         assets/css/neobrutalism.css). -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <!-- The bpmn-js / dmn-js / canvas CSS, emitted by esbuild alongside app.js
          because the diagram hooks import their own stylesheets. -->
@@ -40,27 +48,35 @@
       })();
     </script>
   </head>
-  <body>
-    <div class="navbar bg-base-200 sticky top-0 z-40 min-h-fit flex-wrap gap-x-2 gap-y-1 px-4 py-2 shadow-sm">
-      <a class="btn btn-ghost px-2 text-lg normal-case" href="/">ClinicDemo</a>
+  <body class="bg-background text-foreground font-base">
+    <%!-- Neobrutalist nav: a bar of white "neutral" buttons on the blue page,
+         the accent-blue "Acting as" as the one colored control. Links share
+         one class list so the recipe stays a recipe. --%>
+    <% nav_link =
+      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+
+    acting_as_link =
+      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none" %>
+    <div class="sticky top-0 z-40 flex min-h-fit flex-wrap items-center gap-x-2 gap-y-1 border-b-2 border-border bg-background px-4 py-2">
+      <a class="px-2 text-lg font-heading" href="/">ClinicDemo</a>
       <nav class="flex flex-wrap gap-1" aria-label="Main">
-        <a class="btn btn-ghost btn-sm" href="/">Board</a>
-        <a class="btn btn-ghost btn-sm" href="/intake">Intake</a>
-        <a class="btn btn-ghost btn-sm" href="/schedule">Schedule</a>
-        <a class="btn btn-ghost btn-sm" href="/worklist">Worklist</a>
-        <a class="btn btn-ghost btn-sm" href="/visits">Visits</a>
-        <a class="btn btn-ghost btn-sm" href="/patients">Patients</a>
-        <a class="btn btn-ghost btn-sm" href="/clinicians">Clinicians</a>
-        <a class="btn btn-ghost btn-sm" href="/processes">Processes</a>
-        <a class="btn btn-ghost btn-sm" href="/decisions">Decisions</a>
-        <a class="btn btn-ghost btn-sm" href="/evaluations">Evidence</a>
-        <a class="btn btn-ghost btn-sm" href="/operator">Operator</a>
+        <a class={nav_link} href="/">Board</a>
+        <a class={nav_link} href="/intake">Intake</a>
+        <a class={nav_link} href="/schedule">Schedule</a>
+        <a class={nav_link} href="/worklist">Worklist</a>
+        <a class={nav_link} href="/visits">Visits</a>
+        <a class={nav_link} href="/patients">Patients</a>
+        <a class={nav_link} href="/clinicians">Clinicians</a>
+        <a class={nav_link} href="/processes">Processes</a>
+        <a class={nav_link} href="/decisions">Decisions</a>
+        <a class={nav_link} href="/evaluations">Evidence</a>
+        <a class={nav_link} href="/operator">Operator</a>
       </nav>
       <div class="ms-auto">
-        <a class="btn btn-outline btn-sm" href="/acting-as">Acting as…</a>
+        <a class={acting_as_link} href="/acting-as">Acting as…</a>
       </div>
     </div>
-    <main class="container mx-auto max-w-7xl px-4 py-6">
+    <main class="mx-auto max-w-[1300px] px-4 py-6">
       {@inner_content}
     </main>
   </body>

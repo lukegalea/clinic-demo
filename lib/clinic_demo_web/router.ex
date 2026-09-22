@@ -10,10 +10,12 @@ defmodule ClinicDemoWeb.Router do
     # A2UI components inline their styles into shadow DOM; without
     # 'unsafe-inline' on style-src every surface renders unstyled. The
     # theme-switcher bootstrap is the one inline script — pinned by hash
-    # rather than opening script-src up entirely.
+    # rather than opening script-src up entirely. The Google Fonts origins
+    # serve DM Sans, the design system's typeface (linked in the root
+    # layout).
     plug :put_secure_browser_headers, %{
       "content-security-policy" =>
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-BK52NP1e8rQFFVZCoDYB4YoCL0cZc/KAVl4dkMM7/QM='; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:"
+        "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'sha256-BK52NP1e8rQFFVZCoDYB4YoCL0cZc/KAVl4dkMM7/QM='; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:"
     }
 
     # GET /a2ui/actor?id=<uuid> switches the acting Clinician (validated
@@ -71,7 +73,7 @@ defmodule ClinicDemoWeb.Router do
   pipeline :clarity_browser do
     plug :put_secure_browser_headers, %{
       "content-security-policy" =>
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:"
+        "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:"
     }
   end
 
@@ -84,6 +86,28 @@ defmodule ClinicDemoWeb.Router do
     pipe_through [:browser, :clarity_browser]
 
     clarity("/")
+  end
+
+  # Component storybook (dev-only). `Mix.env()` rather than the dev_routes
+  # flag: phoenix_storybook is `only: :dev`, so in test/prod the module
+  # doesn't exist in the code path at all — Application.compile_env cannot
+  # eliminate the branch before the import is resolved, but Mix.env() is a
+  # compile-time constant the dead-code eliminator acts on.
+  if Mix.env() == :dev do
+    import PhoenixStorybook.Router
+
+    scope "/" do
+      storybook_assets()
+    end
+
+    scope "/", ClinicDemoWeb do
+      pipe_through [:browser, :clarity_browser]
+
+      live_storybook("/storybook",
+        backend_module: ClinicDemoWeb.Storybook,
+        title: "ClinicDemo Storybook"
+      )
+    end
   end
 
   # Other scopes may use custom stacks.

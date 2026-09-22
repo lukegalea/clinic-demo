@@ -26,7 +26,11 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
   secret_key_base: "U6T4et8tV1Ox0PD8bnbgei7h+XcoBM+c26URoIyfMRcwzqV7OnqyIf/hvdlUzdIM",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:clinic_demo, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:clinic_demo, ~w(--watch)]}
+    tailwind: {Tailwind, :install_and_run, [:clinic_demo, ~w(--watch)]},
+    # The storybook's own asset builds (profiles defined in config.exs).
+    # Distinct keys: Phoenix keys watcher entries by name.
+    storybook_esbuild: {Esbuild, :install_and_run, [:storybook, ~w(--sourcemap=inline --watch)]},
+    storybook_tailwind: {Tailwind, :install_and_run, [:storybook, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -52,7 +56,9 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
 # configured to run both http and https servers on
 # different ports.
 
-# Enable dev routes for dashboard and mailbox
+# Enable dev-only routes. Gates the storybook mount (and any other dev
+# tooling) in the router — in test/prod the flag is unset and the routes
+# compile out entirely.
 config :clinic_demo, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs

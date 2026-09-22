@@ -1,0 +1,182 @@
+/* ---------------------------------------------------------------------------
+ * Neobrutalism design tokens — the "blue" scheme from neobrutalism.dev.
+ *
+ * This sheet is the single source of truth for the design system and is
+ * imported by BOTH app.css and storybook.css, so the storybook renders
+ * components exactly as the app does.
+ *
+ * It is structured as two halves:
+ *
+ *   1. Raw `:root` variables — real, inheritable CSS custom properties.
+ *      These exist at runtime (not just at build time) because the A2UI
+ *      shadow-DOM bridge below can only consume real custom properties.
+ *
+ *   2. A Tailwind v4 `@theme inline` block — maps the raw tokens onto
+ *      Tailwind's utility namespaces (bg-main, border-border, rounded-base,
+ *      shadow-shadow, translate-x-boxShadowX, font-base, ...). `inline`
+ *      means utilities embed the value directly, which keeps them pointing
+ *      at the runtime variables above.
+ *
+ * Signature move of the style: every surface is white-or-blue with a 2px
+ * black border and a hard 4px offset black shadow. The hover idiom is
+ * "press" — translate away from the shadow until it collapses.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* ---- Color ------------------------------------------------------- */
+  /* Page background: the pale blue the whole app floats on. */
+  --background: hsl(214, 95%, 93%);
+  /* Cards, inputs and other raised surfaces: pure white. */
+  --secondary-background: oklch(100% 0 0);
+  /* Ink. Text, borders, shadows and focus rings are all the same black —
+   * that uniformity is most of the look. */
+  --foreground: oklch(0% 0 0);
+  --main: hsl(217, 100%, 66%);
+  /* Black on the blue accent, not white: neobrutalism keeps its ink. */
+  --main-foreground: oklch(0% 0 0);
+  --border: oklch(0% 0 0);
+  --ring: oklch(0% 0 0);
+  /* Dialog/backdrop scrim. */
+  --overlay: oklch(0% 0 0 / 0.8);
+
+  /* Not part of the published neobrutalism scheme: the app's form-error
+   * states need a red. A hard, warm red that holds a 2px black border. */
+  --error: hsl(0, 100%, 45%);
+
+  /* ---- Shape ------------------------------------------------------- */
+  /* Slight rounding, never square: 5px everywhere. */
+  --radius-base: 5px;
+
+  /* ---- Depth ------------------------------------------------------- */
+  /* THE shadow: a hard black offset, same color as the border. */
+  --shadow: 4px 4px 0px 0px var(--border);
+
+  /* ---- Type -------------------------------------------------------- */
+  /* DM Sans is linked from the root layout <head>. Body copy sits at 500
+   * (medium) rather than 400 — neobrutalism wants chunky text. */
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-weight-base: 500;
+  --font-weight-heading: 700;
+}
+
+@theme inline {
+  /* ---- Color → utilities (bg-*, text-*, border-*, ring-*) ----------- */
+  --color-background: var(--background);
+  --color-secondary-background: var(--secondary-background);
+  --color-foreground: var(--foreground);
+  --color-main: var(--main);
+  --color-main-foreground: var(--main-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+  --color-error: var(--error);
+
+  /* ---- Typography ---------------------------------------------------- */
+  /* No --font-sans mapping is needed here: the raw :root --font-sans
+   * above overrides Tailwind's default (layered) --font-sans, so both the
+   * font-sans utility and preflight's default family resolve to DM Sans. */
+  /* font-base / font-heading utilities (weight namespace). */
+  --font-weight-base: 500;
+  --font-weight-heading: 700;
+
+  /* ---- Radius -------------------------------------------------------- */
+  /* rounded-base */
+  --radius-base: 5px;
+
+  /* ---- Shadow -------------------------------------------------------- */
+  /* shadow-shadow (+ shadow-none to collapse it on hover). */
+  --shadow-shadow: var(--shadow);
+
+  /* ---- The "press" idiom --------------------------------------------- */
+  /* Named spacing keys feed translate-x/y-* so hovering a shadowed control
+   * can slide exactly one shadow-width: hover:translate-x-boxShadowX
+   * hover:translate-y-boxShadowY hover:shadow-none. The reverse pair powers
+   * the inverse variant (element rests flush, shadow appears on hover). */
+  --spacing-boxShadowX: 4px;
+  --spacing-boxShadowY: 4px;
+  --spacing-reverseBoxShadowX: -4px;
+  --spacing-reverseBoxShadowY: -4px;
+
+  /* Page container width. */
+  --spacing-container: 1300px;
+}
+
+/* ---------------------------------------------------------------------------
+ * A2UI theme bridge.
+ *
+ * The A2UI components render inside shadow DOM, so page CSS cannot reach
+ * them; the one seam that crosses is CSS custom properties, which inherit
+ * through shadow boundaries. Theming A2UI is exactly this: map the
+ * --a2ui-* contract onto the neobrutalist tokens above and the surfaces
+ * follow the app's design system automatically.
+ *
+ * This block must be imported AFTER A2UI's neutral theme (see app.css):
+ * both land at :root specificity and the last declaration wins.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* ---- Color --------------------------------------------------------- */
+  --a2ui-color-background: var(--background);
+  --a2ui-color-on-background: var(--foreground);
+  /* Cards, modals and raised surfaces go white, like app cards. */
+  --a2ui-color-surface: var(--secondary-background);
+  --a2ui-color-on-surface: var(--foreground);
+  --a2ui-color-primary: var(--main);
+  --a2ui-color-on-primary: var(--main-foreground);
+  /* Secondary chrome (default buttons, active tab headers) reads as the
+   * neutral button: white with a black border. */
+  --a2ui-color-secondary: var(--secondary-background);
+  --a2ui-color-on-secondary: var(--foreground);
+  --a2ui-color-input: var(--secondary-background);
+  --a2ui-color-on-input: var(--foreground);
+  --a2ui-color-border: var(--border);
+
+  /* ---- Shape --------------------------------------------------------- */
+  /* --a2ui-border-width feeds the border shorthand fallbacks inside the
+   * Lit components (card, button, textfield, ...), which is how the 2px
+   * black border reaches into the shadow DOM. */
+  --a2ui-border-width: 2px;
+  --a2ui-border-radius: var(--radius-base);
+  --a2ui-button-border-radius: var(--radius-base);
+  --a2ui-textfield-border-radius: var(--radius-base);
+  --a2ui-card-border-radius: var(--radius-base);
+  --a2ui-choicepicker-select-border-radius: var(--radius-base);
+  /* Chips default to a pill; square them off to the system radius. */
+  --a2ui-chip-border-radius: var(--radius-base);
+
+  /* ---- Depth --------------------------------------------------------- */
+  /* A2UI surfaces get the signature hard shadow. No hover-collapse is
+   * possible through variables (no :hover seam crosses shadow DOM), so
+   * inside A2UI the shadow is a constant, not an interaction. */
+  --a2ui-card-box-shadow: var(--shadow);
+  --a2ui-button-box-shadow: var(--shadow);
+  --a2ui-combobox-box-shadow: var(--shadow);
+  --a2ui-modal-box-shadow: var(--shadow);
+  --a2ui-modal-backdrop-bg: var(--overlay);
+
+  /* ---- Spacing & layout ------------------------------------------------
+   * Admin density: the stock rhythm gives a one-line row a ~76px card, so
+   * five rows fill the viewport. The neobrutalist card padding tightens it
+   * further (0.625rem vs the previous 0.75rem) without crowding. */
+  --a2ui-button-margin: 0;
+  --a2ui-card-margin: 0;
+  --a2ui-card-padding: 0.625rem;
+  --a2ui-button-padding: 0.5rem 1rem;
+  --a2ui-list-gap: 0.5rem;
+  --a2ui-row-gap: 1rem;
+  --a2ui-column-gap: 0.75rem;
+
+  /* ---- Type --------------------------------------------------------- */
+  --a2ui-button-font-weight: 500;
+  /* Labels carry the heading weight; neobrutalism's hierarchy is blunt. */
+  --a2ui-label-font-weight: 700;
+  --a2ui-font-family-title: var(--font-sans);
+
+  /* ---- Search pickers (merged-catalog combobox & chips) -------------- */
+  --a2ui-combobox-max-height: 18rem;
+  --a2ui-combobox-z-index: 30;
+
+  /* Field-level error ink inside A2UI surfaces, mapped to the same red
+   * the app's form components use (see --error above). */
+  --a2ui-textfield-color-error: var(--error);
+  --a2ui-checkbox-color-error: var(--error);
+}

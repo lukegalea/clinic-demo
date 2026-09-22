@@ -198,26 +198,31 @@ defmodule ClinicDemoWeb.AgentLive do
     <Layouts.app flash={@flash}>
       <div class="space-y-6">
         <header>
-          <h1 class="text-2xl font-semibold">Helper</h1>
-          <p class="text-base-content/70 text-sm">
+          <h1 class="text-2xl font-heading">Helper</h1>
+          <p class="text-foreground/70 text-sm">
             Ask in plain language — it shows a surface, composes a table, or answers a
             question about this clinic. It changes nothing.
           </p>
         </header>
 
-        <form phx-submit="propose" class="join w-full" id="agent-request">
+        <form phx-submit="propose" class="flex w-full gap-2" id="agent-request">
           <input
             type="text"
             name="request"
             value={@request}
             placeholder="Show me the patients"
-            class="input input-bordered join-item w-full"
+            class="h-10 w-full rounded-base border-2 border-border bg-secondary-background px-3 py-2 text-sm font-base placeholder:text-foreground/50 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             autocomplete="off"
           />
-          <button type="submit" class="btn btn-primary join-item">Ask</button>
+          <button
+            type="submit"
+            class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-4 py-2 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+          >
+            Ask
+          </button>
         </form>
 
-        <p class="text-base-content/50 text-xs">
+        <p class="text-foreground/50 text-xs">
           Try: <span class="font-mono">show me the patients</span>
           ·
           <span class="font-mono">appointments, just patient and triage urgency, sorted by time</span>
@@ -225,23 +230,31 @@ defmodule ClinicDemoWeb.AgentLive do
         </p>
 
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-base-content/50 text-xs">or open one directly:</span>
+          <span class="text-foreground/50 text-xs">or open one directly:</span>
           <button
             :for={surface <- Surfaces.all()}
             phx-click="show-surface"
             phx-value-name={surface.name}
             id={"open-#{surface.name}"}
-            class="btn btn-xs btn-outline"
+            class="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
           >
             {surface.label}
           </button>
         </div>
 
-        <div :if={@error} class="alert alert-error" role="alert">
+        <div
+          :if={@error}
+          class="relative grid w-full gap-2 rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow"
+          role="alert"
+        >
           <span class="whitespace-pre-line">{@error}</span>
         </div>
 
-        <div :if={@result} class="alert alert-success" role="status">
+        <div
+          :if={@result}
+          class="relative grid w-full gap-2 rounded-base border-2 border-border bg-background px-4 py-3 text-sm text-foreground shadow-shadow"
+          role="status"
+        >
           <span class="whitespace-pre-line">{@result}</span>
         </div>
 
@@ -255,28 +268,33 @@ defmodule ClinicDemoWeb.AgentLive do
         <div :if={@presentation} class="space-y-3" data-role="surface">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h2 class="flex items-center gap-2 text-lg font-semibold">
+              <h2 class="flex items-center gap-2 text-lg font-heading">
                 {@presentation.title}
                 <span
                   :if={@presentation.kind == :dynamic}
-                  class="badge badge-outline badge-sm"
+                  class="rounded-base border-2 border-border bg-secondary-background px-2.5 py-0.5 text-xs font-base"
                   title="Composed for this request, then validated against the schema"
                 >
                   composed
                 </span>
                 <span
                   :if={@presentation.topics != []}
-                  class="badge badge-success badge-sm badge-outline"
+                  class="rounded-base border-2 border-border bg-main px-2.5 py-0.5 text-xs font-base text-main-foreground"
                   title="This surface updates itself when the underlying rows change"
                 >
                   live
                 </span>
               </h2>
-              <p :if={@presentation.subtitle} class="text-base-content/60 text-sm">
+              <p :if={@presentation.subtitle} class="text-foreground/60 text-sm">
                 {@presentation.subtitle}
               </p>
             </div>
-            <button phx-click="dismiss-surface" class="btn btn-ghost btn-sm">Dismiss</button>
+            <button
+              phx-click="dismiss-surface"
+              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+            >
+              Dismiss
+            </button>
           </div>
 
           <%!--
@@ -286,7 +304,7 @@ defmodule ClinicDemoWeb.AgentLive do
         --%>
           <div :if={@cue} id={"agent-cue-#{@cue}"}>
             <div
-              class="flex items-center gap-2 rounded-lg border border-amber-400/60 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-100"
+              class="flex items-center gap-2 rounded-base border-2 border-amber-500 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/60 dark:text-amber-100"
               phx-mounted={
                 JS.transition(
                   {"transition-all duration-500 ease-out", "opacity-0 -translate-y-1",

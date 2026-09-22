@@ -1,0 +1,31 @@
+/* Storybook CSS entry (dev-only).
+ *
+ * Mirrors assets/css/app.css: the same token sheet (neobrutalism.css,
+ * which includes the --a2ui-* bridge), the same source scanning, the same
+ * heroicons plugin. Keeping the two entry points in lockstep is the whole
+ * point — a story must render with exactly the classes the app build
+ * emits, or the storybook lies about the design system.
+ */
+
+@import "tailwindcss" source(none);
+/* A2UI's neutral theme first, then our token sheet (whose --a2ui-* bridge
+   must win the :root cascade). A2UI components don't render in stories
+   today, but parity with app.css costs nothing and keeps the two entries
+   diffable line-for-line. */
+@import "../../deps/ash_a2ui/priv/js/ash_a2ui_theme.css";
+@import "./neobrutalism.css";
+@source "../css";
+@source "../js";
+@source "../../lib/clinic_demo_web";
+/* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
+@source "../../_build/dev/phoenix-colocated/clinic_demo/*/";
+/* The same dep-scanned sources as the app: stories must be able to render
+   anything the app renders. */
+@source "../../deps/ash_bpmn/lib";
+@source "../../deps/ash_decisions/lib";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available. */
+@plugin "../vendor/heroicons";
+
+/* Make LiveView wrapper divs transparent for layout (same as app.css). */
+[data-phx-session], [data-phx-teleported-src] { display: contents }

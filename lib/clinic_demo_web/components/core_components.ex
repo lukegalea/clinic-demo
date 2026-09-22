@@ -9,11 +9,14 @@ defmodule ClinicDemoWeb.CoreComponents do
   them in any way you want, based on your application growth and needs.
 
   The foundation for styling is Tailwind CSS, a utility-first CSS framework,
-  augmented with daisyUI, a Tailwind CSS plugin that provides UI components
-  and themes. Here are useful references:
+  carrying a Neobrutalism design system (tokens in
+  `assets/css/neobrutalism.css`): 2px black borders, hard 4px offset black
+  shadows, 5px radii, DM Sans, and the "press" hover idiom — a shadowed
+  control slides one shadow-width on hover and the shadow collapses.
+  Here are useful references:
 
-    * [daisyUI](https://daisyui.com/docs/intro/) - a good place to get
-      started and see the available components.
+    * [neobrutalism.dev](https://www.neobrutalism.dev) - the design system
+      the token sheet implements.
 
     * [Tailwind CSS](https://tailwindcss.com) - the foundational framework
       we build on. You will use it for layout, sizing, flexbox, grid, and
@@ -63,18 +66,22 @@ defmodule ClinicDemoWeb.CoreComponents do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class="toast toast-top toast-end z-50"
+      class="fixed top-4 right-4 z-50"
       {@rest}
     >
-      <div class={[
-        "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
-        @kind == :info && "alert-info",
-        @kind == :error && "alert-error"
-      ]}>
+      <div class={
+        [
+          # The neobrutalist alert: hard shadow, 2px border; info rides the
+          # page background, errors invert to the destructive black card.
+          "relative grid w-80 max-w-80 gap-2 rounded-base border-2 border-border px-4 py-3 text-sm text-wrap shadow-shadow sm:w-96 sm:max-w-96",
+          @kind == :info && "bg-background text-foreground",
+          @kind == :error && "bg-black text-white"
+        ]
+      }>
         <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
         <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
         <div>
-          <p :if={@title} class="font-semibold">{@title}</p>
+          <p :if={@title} class="font-heading">{@title}</p>
           <p>{msg}</p>
         </div>
         <div class="flex-1" />
@@ -89,6 +96,9 @@ defmodule ClinicDemoWeb.CoreComponents do
   @doc """
   Renders a button with navigation support.
 
+  Both variants carry the neobrutalist "press": on hover the button slides
+  one shadow-width down-right and the hard shadow collapses under it.
+
   ## Examples
 
       <.button>Send!</.button>
@@ -101,11 +111,19 @@ defmodule ClinicDemoWeb.CoreComponents do
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
+    # Shared recipe: sizing, focus ring and the press transition; variants
+    # only choose the fill.
+    base =
+      "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border px-4 py-2 text-sm font-base shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+
+    variants = %{
+      "primary" => "bg-main text-main-foreground",
+      nil => "bg-secondary-background text-foreground"
+    }
 
     assigns =
       assign_new(assigns, :class, fn ->
-        ["btn", Map.fetch!(variants, assigns[:variant])]
+        [base, Map.fetch!(variants, assigns[:variant])]
       end)
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
@@ -212,8 +230,8 @@ defmodule ClinicDemoWeb.CoreComponents do
       end)
 
     ~H"""
-    <div class="fieldset mb-2">
-      <label for={@id}>
+    <div class="mb-4">
+      <label for={@id} class="flex items-center gap-2">
         <input
           type="hidden"
           name={@name}
@@ -221,17 +239,15 @@ defmodule ClinicDemoWeb.CoreComponents do
           disabled={@rest[:disabled]}
           form={@rest[:form]}
         />
-        <span class="label">
-          <input
-            type="checkbox"
-            id={@id}
-            name={@name}
-            value="true"
-            checked={@checked}
-            class={@class || "checkbox checkbox-sm"}
-            {@rest}
-          />{@label}
-        </span>
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          class={@class || "size-5 accent-main"}
+          {@rest}
+        /><span class="text-sm">{@label}</span>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
@@ -240,13 +256,17 @@ defmodule ClinicDemoWeb.CoreComponents do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div class="fieldset mb-2">
+    <div class="mb-4">
       <label for={@id}>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="mb-1 block text-sm font-heading">{@label}</span>
         <select
           id={@id}
           name={@name}
-          class={[@class || "w-full select", @errors != [] && (@error_class || "select-error")]}
+          class={[
+            @class ||
+              "h-10 w-full rounded-base border-2 border-border bg-secondary-background px-3 py-2 text-sm font-base focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2",
+            @errors != [] && (@error_class || "ring-2 ring-error")
+          ]}
           multiple={@multiple}
           {@rest}
         >
@@ -261,15 +281,16 @@ defmodule ClinicDemoWeb.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div class="fieldset mb-2">
+    <div class="mb-4">
       <label for={@id}>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="mb-1 block text-sm font-heading">{@label}</span>
         <textarea
           id={@id}
           name={@name}
           class={[
-            @class || "w-full textarea",
-            @errors != [] && (@error_class || "textarea-error")
+            @class ||
+              "min-h-20 w-full rounded-base border-2 border-border bg-secondary-background px-3 py-2 text-sm font-base placeholder:text-foreground/50 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2",
+            @errors != [] && (@error_class || "ring-2 ring-error")
           ]}
           {@rest}
         >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -282,17 +303,18 @@ defmodule ClinicDemoWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class="fieldset mb-2">
+    <div class="mb-4">
       <label for={@id}>
-        <span :if={@label} class="label mb-1">{@label}</span>
+        <span :if={@label} class="mb-1 block text-sm font-heading">{@label}</span>
         <input
           type={@type}
           name={@name}
           id={@id}
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           class={[
-            @class || "w-full input",
-            @errors != [] && (@error_class || "input-error")
+            @class ||
+              "h-10 w-full rounded-base border-2 border-border bg-secondary-background px-3 py-2 text-sm font-base placeholder:text-foreground/50 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2",
+            @errors != [] && (@error_class || "ring-2 ring-error")
           ]}
           {@rest}
         />
@@ -323,10 +345,10 @@ defmodule ClinicDemoWeb.CoreComponents do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-4"]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8">
+        <h1 class="text-lg font-heading leading-8">
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="text-sm text-base-content/70">
+        <p :if={@subtitle != []} class="text-sm text-foreground/70">
           {render_slot(@subtitle)}
         </p>
       </div>
@@ -367,34 +389,43 @@ defmodule ClinicDemoWeb.CoreComponents do
       end
 
     ~H"""
-    <table class="table table-zebra">
-      <thead>
-        <tr>
-          <th :for={col <- @col}>{col[:label]}</th>
-          <th :if={@action != []}>
-            <span class="sr-only">Actions</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody id={@id} phx-update={is_struct(@rows, Phoenix.LiveView.LiveStream) && "stream"}>
-        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-          <td
-            :for={col <- @col}
-            phx-click={@row_click && @row_click.(row)}
-            class={@row_click && "hover:cursor-pointer"}
+    <%!-- Neobrutalist table: 2px black frame, heavy heading row, ruled
+         rows; an overflow wrapper keeps wide streams scrollable instead of
+         breaking the page grid. --%>
+    <div class="overflow-auto rounded-base">
+      <table class="w-full border-2 border-border bg-secondary-background text-sm">
+        <thead>
+          <tr class="border-b-2 border-border">
+            <th :for={col <- @col} class="h-12 px-4 text-left font-heading">{col[:label]}</th>
+            <th :if={@action != []} class="h-12 px-4 text-left font-heading">
+              <span class="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id={@id} phx-update={is_struct(@rows, Phoenix.LiveView.LiveStream) && "stream"}>
+          <tr
+            :for={row <- @rows}
+            id={@row_id && @row_id.(row)}
+            class="border-b-2 border-border last:border-b-0"
           >
-            {render_slot(col, @row_item.(row))}
-          </td>
-          <td :if={@action != []} class="w-0 font-semibold">
-            <div class="flex gap-4">
-              <%= for action <- @action do %>
-                {render_slot(action, @row_item.(row))}
-              <% end %>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            <td
+              :for={col <- @col}
+              phx-click={@row_click && @row_click.(row)}
+              class={["px-4 py-2", @row_click && "hover:cursor-pointer"]}
+            >
+              {render_slot(col, @row_item.(row))}
+            </td>
+            <td :if={@action != []} class="w-0 px-4 py-2 font-heading">
+              <div class="flex gap-4">
+                <%= for action <- @action do %>
+                  {render_slot(action, @row_item.(row))}
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 
@@ -414,10 +445,10 @@ defmodule ClinicDemoWeb.CoreComponents do
 
   def list(assigns) do
     ~H"""
-    <ul class="list">
-      <li :for={item <- @item} class="list-row">
-        <div class="list-col-grow">
-          <div class="font-bold">{item.title}</div>
+    <ul class="rounded-base border-2 border-border bg-secondary-background font-base">
+      <li :for={item <- @item} class="border-b-2 border-border px-4 py-3 last:border-b-0">
+        <div class="flex flex-col gap-1">
+          <div class="font-heading">{item.title}</div>
           <div>{render_slot(item)}</div>
         </div>
       </li>

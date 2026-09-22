@@ -118,7 +118,10 @@ defmodule ClinicDemoWeb.CanvasLive do
 
       <div id="canvas-inspector" class="space-y-3">
         <%= if @selection_error == :unknown_object do %>
-          <div class="alert alert-warning" role="status">
+          <div
+            class="relative grid w-full gap-2 rounded-base border-2 border-border bg-background px-4 py-3 text-sm text-foreground shadow-shadow"
+            role="status"
+          >
             <.icon name="hero-exclamation-triangle" class="size-5" />
             <span>Unknown object — the reference does not name anything this canvas exposes.</span>
           </div>
@@ -147,16 +150,16 @@ defmodule ClinicDemoWeb.CanvasLive do
 
   def inspector(assigns) do
     ~H"""
-    <section class="card bg-base-100 border border-base-300">
-      <div class="card-body gap-4">
+    <section class="flex flex-col gap-4 rounded-base border-2 border-border bg-secondary-background px-4 py-4 font-base text-foreground shadow-shadow">
+      <div class="flex flex-col gap-4">
         <div class="flex items-center gap-3">
-          <span class="badge badge-outline font-mono text-xs">{@object.ref.kind}</span>
-          <h2 class="card-title text-lg">{@object.label}</h2>
+          <span class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 font-mono text-xs">{@object.ref.kind}</span>
+          <h2 class="text-lg font-heading">{@object.label}</h2>
           <code class="font-mono text-xs opacity-60">{@object.ref.id}</code>
         </div>
 
         <div>
-          <h3 class="text-xs font-semibold uppercase opacity-60">Provenance</h3>
+          <h3 class="text-xs font-heading uppercase opacity-60">Provenance</h3>
           <ul class="text-sm">
             <li :for={{role, module} <- provenance_rows(@object)}>
               <span class="opacity-60">{role}:</span>
@@ -166,21 +169,26 @@ defmodule ClinicDemoWeb.CanvasLive do
         </div>
 
         <div>
-          <h3 class="text-xs font-semibold uppercase opacity-60">Capabilities</h3>
-          <ul class="divide-y divide-base-300 text-sm">
+          <h3 class="text-xs font-heading uppercase opacity-60">Capabilities</h3>
+          <ul class="divide-y divide-border text-sm">
             <li
               :for={capability <- @object.capabilities}
               class="flex flex-wrap items-center gap-2 py-1"
             >
               <span class="font-medium">{capability.label}</span>
-              <span class="badge badge-ghost">{capability.consequence}</span>
-              <span :if={capability.confirmation == :required} class="badge badge-warning">
+              <span class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 text-xs font-base">
+                {capability.consequence}
+              </span>
+              <span
+                :if={capability.confirmation == :required}
+                class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 text-xs font-base"
+              >
                 confirmation required
               </span>
               <span class={[
-                "badge",
-                capability.authorized? && "badge-success",
-                !capability.authorized? && "badge-ghost opacity-60"
+                "rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base",
+                capability.authorized? && "bg-main text-main-foreground",
+                !capability.authorized? && "bg-background opacity-60"
               ]}>
                 {if capability.authorized?, do: "authorized", else: "not authorized"}
               </span>
@@ -189,11 +197,11 @@ defmodule ClinicDemoWeb.CanvasLive do
         </div>
 
         <div>
-          <h3 class="text-xs font-semibold uppercase opacity-60">Projections</h3>
+          <h3 class="text-xs font-heading uppercase opacity-60">Projections</h3>
           <div class="flex flex-wrap gap-2">
             <span
               :for={projection <- @object.projections}
-              class="badge badge-outline font-mono text-xs"
+              class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 font-mono text-xs"
             >
               {projection}
             </span>
@@ -202,7 +210,7 @@ defmodule ClinicDemoWeb.CanvasLive do
             <.link
               :for={destination <- @destinations}
               navigate={destination.path}
-              class="btn btn-sm btn-primary"
+              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
             >
               <.icon name="hero-arrow-top-right-on-square" class="size-4" />
               {destination.label}

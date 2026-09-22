@@ -95,6 +95,20 @@ config :esbuild,
         Mix.Project.build_path()
       ]
     }
+  ],
+  # Dev-only storybook entry (assets/js/storybook.js): the bundle the
+  # storybook loads to reach the app's LiveView hooks/params/uploaders.
+  # Built by the `storybook_*` watchers in config/dev.exs.
+  storybook: [
+    args: ~w(js/storybook.js --bundle --target=es2022 --outdir=../priv/static/assets/js),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{
+      "NODE_PATH" => [
+        Path.expand("../assets/node_modules", __DIR__),
+        Path.expand("../deps", __DIR__),
+        Mix.Project.build_path()
+      ]
+    }
   ]
 
 # Configure tailwind (the version is required)
@@ -104,6 +118,24 @@ config :tailwind,
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css
+    ),
+    cd: Path.expand("..", __DIR__),
+    env: %{
+      "NODE_PATH" => [
+        Path.expand("../assets/node_modules", __DIR__),
+        Path.expand("../deps", __DIR__),
+        Mix.Project.build_path()
+      ]
+    }
+  ],
+  # Dev-only storybook styles (assets/css/storybook.css). The entry mirrors
+  # app.css's imports and @source scanning so stories emit exactly the
+  # utility classes the app build emits — a storybook that styles
+  # differently from the app is worse than none.
+  storybook: [
+    args: ~w(
+      --input=assets/css/storybook.css
+      --output=priv/static/assets/css/storybook.css
     ),
     cd: Path.expand("..", __DIR__),
     env: %{
