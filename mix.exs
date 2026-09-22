@@ -111,7 +111,7 @@ defmodule ClinicDemo.MixProject do
       # `Spark.Formatter` (wired up in .formatter.exs) needs sourceror to
       # keep Ash DSL sections in a stable order.
       {:sourceror, "~> 1.7", only: [:dev, :test]},
-      {:usage_rules, "~> 0.1", only: [:dev], runtime: false},
+      {:usage_rules, "~> 1.1", only: [:dev], runtime: false},
 
       # Dev/test hygiene for CI: linting, type checking, docs and dependency
       # advisories.
