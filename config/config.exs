@@ -9,8 +9,24 @@ import Config
 
 config :clinic_demo,
   ecto_repos: [ClinicDemo.Repo],
-  ash_domains: [ClinicDemo.Scheduling, ClinicDemo.Decisions, ClinicDemo.Visits],
+  ash_domains: [
+    ClinicDemo.Scheduling,
+    ClinicDemo.Decisions,
+    ClinicDemo.Visits,
+    AshCompliance.Domain
+  ],
   generators: [timestamp_type: :utc_datetime]
+
+# ash_compliance: every resource resolves its repo and table prefix at COMPILE
+# time (`Application.compile_env`), so this block must exist before the deps
+# ever compile — a fresh checkout that compiled first would bake in the wrong
+# repo and fail at runtime with "relation does not exist".
+config :ash_compliance,
+  repo: ClinicDemo.Repo,
+  table_prefix: "ash_compliance_"
+
+# ash_compliance's host wiring, per its README.
+config :ash, ash_domains: [AshCompliance.Domain]
 
 # Ash reads `:ash_domains` above to find the domains it should know about.
 # `include_embedded_source_by_default: false` and the policy settings below

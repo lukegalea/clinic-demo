@@ -12,6 +12,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer]
 
+  alias ClinicDemo.Scheduling.Changes.ComplianceGuard
   alias ClinicDemo.Scheduling.Changes.StartVisitProcess
   alias ClinicDemo.Scheduling.Validations.CurrentStatusIn
   alias ClinicDemo.Scheduling.Validations.NotInThePast
@@ -232,6 +233,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       validate {CurrentStatusIn, from: [:scheduled]}
 
+      change {ComplianceGuard, transition_to: :checked_in}
       change set_attribute(:status, :checked_in)
     end
 
@@ -250,6 +252,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       validate {CurrentStatusIn, from: [:checked_in]}
 
+      change {ComplianceGuard, transition_to: :completed}
       change set_attribute(:notes, arg(:notes))
       change set_attribute(:status, :completed)
     end
@@ -268,6 +271,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       validate {CurrentStatusIn, from: [:scheduled, :checked_in]}
 
+      change {ComplianceGuard, transition_to: :cancelled}
       change set_attribute(:cancellation_reason, arg(:reason))
       change set_attribute(:status, :cancelled)
     end
@@ -306,6 +310,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       validate {CurrentStatusIn, from: [:scheduled]}
 
+      change {ComplianceGuard, transition_to: :no_show}
       change set_attribute(:status, :no_show)
     end
 

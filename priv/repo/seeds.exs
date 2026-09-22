@@ -234,3 +234,18 @@ Seeded:
 Triage decided:
 #{Scheduling.list_appointments!() |> Enum.map_join("\n", fn a -> "  #{a.reason} -> #{a.triage_urgency}" end)}
 """)
+
+# ── Compliance: put the appointment rule bundle in force ───────────────────
+#
+# Last, deliberately: everything above walked transitions the guard now
+# watches (Clover has no recorded weight and could not be checked in under
+# the activated bundle). The guard is inert until a bundle is active, which
+# is what keeps a fresh database bootable and reseeding safe — the lifecycle
+# itself short-circuits when an active bundle already exists.
+#
+# From here on, :check_in without a recorded patient weight is refused with
+# the rule's gap text, and :complete without triage urgency is refused too.
+
+bundle = ClinicDemo.Compliance.activate_appointment_bundle!()
+
+IO.puts("Compliance: clinic_appointment_rules in force (bundle #{bundle.content_hash}).")

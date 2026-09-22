@@ -112,6 +112,13 @@ defmodule ClinicDemo.MixProject do
       {:ash_decisions, github: "lukegalea/ash_decisions"},
       {:ash_bpmn, github: "lukegalea/ash_bpmn"},
 
+      # Operator-defined compliance: rule bundles (via ash_rules) compiled into
+      # immutable policy bundles that guard the appointment state machine's
+      # transitions. Pinned by ref so the schema the migration creates stays
+      # in lockstep with the resources that read it.
+      {:ash_compliance,
+       github: "lukegalea/ash_compliance", ref: "75d6ae861f715f4c3b9485edf1b0f25f715aea9e"},
+
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
       {:oban, "~> 2.0"},

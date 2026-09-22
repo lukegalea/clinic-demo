@@ -23,6 +23,12 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+# Ash loads relationships in spawned Tasks by default; those are separate
+# processes and do not own the sandbox connection, which turns every load
+# into an intermittent OwnershipError. The compliance guard loads the
+# patient mid-action, so async loads stay off for the whole suite.
+config :ash, disable_async?: true
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
