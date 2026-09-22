@@ -15,7 +15,12 @@ defmodule ClinicDemo.MixProject do
       docs: docs(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       consolidate_protocols: Mix.env() != :dev,
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+
+      # Agent instructions for the a2ui surfaces, linked rather than inlined
+      # (same trade as ash_enterprise: a pointer instead of ~130k chars of
+      # always-loaded content). Regenerate with `mix usage_rules.sync`.
+      usage_rules: [file: "AGENTS.md", usage_rules: [{:ash_a2ui, link: :markdown}]]
     ]
   end
 
