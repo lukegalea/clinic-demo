@@ -134,6 +134,27 @@ defmodule ClinicDemo.Scheduling.Appointment do
     calculate :clinician_label, :string, expr(clinician.full_name) do
       public? true
     end
+
+    # The board's lane key: the one dimension the kanban cards sort by. It
+    # reads the same state the process engine moves (status + triage
+    # urgency), so a lane move IS a state transition — never a parallel
+    # tracking field that can drift from the engine.
+    calculate :board_lane,
+              :string,
+              expr(
+                cond do
+                  status == :checked_in -> "in_visit"
+                  status == :completed -> "discharged"
+                  status in [:cancelled, :no_show] -> "closed"
+                  status == :scheduled and is_nil(triage_urgency) -> "intake"
+                  status == :scheduled and triage_urgency == :routine -> "low"
+                  status == :scheduled and triage_urgency == :soon -> "medium"
+                  status == :scheduled and triage_urgency in [:urgent, :emergency] -> "high"
+                  true -> "closed"
+                end
+              ) do
+      public? true
+    end
   end
 
   actions do

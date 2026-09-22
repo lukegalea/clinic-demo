@@ -24,6 +24,8 @@ const { chromium } = await import(playwrightModule);
 //                controls appear only after a surface is presented).
 // kind "plain":   any page — must load with zero "[object Object]" anywhere.
 const routes = [
+  { path: "/", kind: "surface" },
+  { path: "/intake", kind: "surface" },
   { path: "/schedule", kind: "surface" },
   { path: "/worklist", kind: "surface" },
   { path: "/visits", kind: "surface" },

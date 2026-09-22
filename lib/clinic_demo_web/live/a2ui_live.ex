@@ -1,5 +1,17 @@
 # One mount module per surface — the whole LiveView is the LiveRenderer use,
 # pointed at a standalone UI module and the actor the session hook assigns.
+defmodule ClinicDemoWeb.A2ui.BoardLive do
+  use AshA2ui.LiveRenderer,
+    ui: ClinicDemoWeb.A2ui.BoardUI,
+    actor_fn: & &1.assigns.a2ui_actor
+end
+
+defmodule ClinicDemoWeb.A2ui.IntakeLive do
+  use AshA2ui.LiveRenderer,
+    ui: ClinicDemoWeb.A2ui.IntakeUI,
+    actor_fn: & &1.assigns.a2ui_actor
+end
+
 defmodule ClinicDemoWeb.A2ui.ScheduleLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.AppointmentUI,

@@ -39,5 +39,9 @@ defmodule ClinicDemo.Scheduling do
       define :mark_appointment_no_show, action: :mark_no_show
       define :discharge_appointment, action: :discharge
     end
+
+    resource ClinicDemo.Scheduling.BoardLane do
+      define :list_board_lanes, action: :read
+    end
   end
 end

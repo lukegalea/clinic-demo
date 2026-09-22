@@ -28,12 +28,16 @@ defmodule ClinicDemoWeb.Router do
   scope "/", ClinicDemoWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/home", PageController, :home
     get "/operator", PageController, :operator
 
     # The a2ui surfaces: one route per surface, all sharing the actor
     # session; every write runs under the acting Clinician.
+    # The board is the main UI: the process as lanes, one card column per
+    # stage. Intake takes a new patient; the schedule books the visit.
     live_session :a2ui, on_mount: AshA2ui.Actor do
+      live "/", A2ui.BoardLive
+      live "/intake", A2ui.IntakeLive
       live "/emergencies", A2ui.EmergencyBoardLive
       live "/schedule", A2ui.ScheduleLive
       live "/worklist", A2ui.WorklistLive
