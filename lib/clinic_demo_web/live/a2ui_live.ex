@@ -4,6 +4,27 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.BoardUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  # Without an acting clinician, every card action is refused by the
+  # actor_present policy — the error surfaces in the a2ui status banner
+  # inside the shadow DOM, which reads as "the button didn't work". This
+  # banner says why, before the click.
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <%= if is_nil(assigns[:a2ui_actor]) do %>
+        <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
+          <strong class="font-heading">No one is acting.</strong>
+          Every move on the board needs a clinician —
+          <.link href="/acting-as" class="underline underline-offset-2">pick one</.link>
+          to enable check-ins, triage, and discharges.
+        </div>
+      <% end %>
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.IntakeLive do
@@ -16,6 +37,23 @@ defmodule ClinicDemoWeb.A2ui.ScheduleLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.AppointmentUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <%= if is_nil(assigns[:a2ui_actor]) do %>
+        <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
+          <strong class="font-heading">No one is acting.</strong>
+          Booking and transitions need a clinician —
+          <.link href="/acting-as" class="underline underline-offset-2">pick one</.link>
+          to enable them.
+        </div>
+      <% end %>
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.WorklistLive do

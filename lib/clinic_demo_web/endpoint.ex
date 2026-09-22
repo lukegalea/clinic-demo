@@ -47,5 +47,12 @@ defmodule ClinicDemoWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+
+  # Before the router: the actor switcher intercepts /a2ui/actor?id=<uuid>
+  # and redirects — it is not a route, so a pipeline plug would never see it
+  # (pipelines run only after a route matches, and no route matches a path
+  # the plug is meant to swallow).
+  plug AshA2ui.ActorPlug
+
   plug ClinicDemoWeb.Router
 end
