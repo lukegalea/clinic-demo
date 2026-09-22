@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   The appointment lifecycle: booked -> triaged -> checked in -> seen -> (labs)
   -> discharged.
@@ -20,74 +21,61 @@
   above 127 as an illegal character even in a document that declares UTF-8. See
   .agents/logs/tool-gaps.log.
 -->
-<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
-                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                   xmlns:ash="https://github.com/lukegalea/ash_bpmn/ns"
-                   id="Definitions_appointment_visit"
-                   targetNamespace="https://github.com/lukegalea/ash_bpmn/ns">
-  <bpmn2:process id="Process_appointment_visit" name="Appointment visit" isExecutable="true">
 
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:ash="https://github.com/lukegalea/ash_bpmn/ns" id="Definitions_appointment_visit" targetNamespace="https://github.com/lukegalea/ash_bpmn/ns">
+  <bpmn2:process id="Process_appointment_visit" name="Appointment visit" isExecutable="true">
     <bpmn2:startEvent id="Start_booked" name="Appointment booked">
       <bpmn2:outgoing>Flow_to_triage</bpmn2:outgoing>
     </bpmn2:startEvent>
-
-    <!-- Ask how urgent this is. `ash:load` is what makes the patient reachable:
-         the subject is read live on every advance, and an undeclared path is
-         honestly null rather than quietly fetched. -->
     <bpmn2:businessRuleTask id="Triage" name="Triage">
       <bpmn2:extensionElements>
-        <ash:decision ref="appointment.triage" binding="latest"/>
+        <ash:decision ref="appointment.triage" binding="latest" />
         <ash:load>
-          <ash:path name="patient.age_band"/>
+          <ash:path name="patient.age_band" />
         </ash:load>
         <ash:inputs>
-          <ash:input name="severity" from="subject.severity"/>
-          <ash:input name="ageBand" from="subject.patient.age_band"/>
-          <ash:input name="species" from="subject.patient.species"/>
+          <ash:input name="severity" from="subject.severity" />
+          <ash:input name="ageBand" from="subject.patient.age_band" />
+          <ash:input name="species" from="subject.patient.species" />
         </ash:inputs>
         <ash:promote>
-          <ash:signal name="urgency" required="true"/>
+          <ash:signal name="urgency" required="true" />
         </ash:promote>
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_to_triage</bpmn2:incoming>
       <bpmn2:outgoing>Flow_triaged</bpmn2:outgoing>
     </bpmn2:businessRuleTask>
-
     <bpmn2:serviceTask id="RecordUrgency" name="Record urgency">
       <bpmn2:extensionElements>
-        <ash:taskConfig action="record_triage"/>
+        <ash:taskConfig action="record_triage" />
         <ash:inputs>
-          <ash:input name="urgency" from="routing.urgency"/>
+          <ash:input name="urgency" from="routing.urgency" />
         </ash:inputs>
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_triaged</bpmn2:incoming>
       <bpmn2:outgoing>Flow_recorded</bpmn2:outgoing>
     </bpmn2:serviceTask>
-
     <bpmn2:exclusiveGateway id="HowUrgent" name="Emergency?" default="Flow_ordinary">
       <bpmn2:incoming>Flow_recorded</bpmn2:incoming>
       <bpmn2:outgoing>Flow_emergency</bpmn2:outgoing>
       <bpmn2:outgoing>Flow_ordinary</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-
     <bpmn2:serviceTask id="AlertEmergencyTeam" name="Alert the emergency team">
       <bpmn2:extensionElements>
-        <ash:taskConfig action="alert_emergency_team"/>
+        <ash:taskConfig action="alert_emergency_team" />
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_emergency</bpmn2:incoming>
       <bpmn2:outgoing>Flow_alerted</bpmn2:outgoing>
     </bpmn2:serviceTask>
-
-    <!-- Wait one: the animal has to turn up. -->
     <bpmn2:userTask id="CheckIn" name="Check the animal in">
       <bpmn2:extensionElements>
         <ash:taskConfig>
           <ash:candidates>
-            <ash:candidate kind="role" of="nurse"/>
+            <ash:candidate kind="role" of="nurse" />
           </ash:candidates>
           <ash:outcomes>
-            <ash:outcome name="arrived"/>
-            <ash:outcome name="no_show"/>
+            <ash:outcome name="arrived" />
+            <ash:outcome name="no_show" />
           </ash:outcomes>
         </ash:taskConfig>
       </bpmn2:extensionElements>
@@ -95,121 +83,221 @@
       <bpmn2:incoming>Flow_alerted</bpmn2:incoming>
       <bpmn2:outgoing>Flow_front_desk</bpmn2:outgoing>
     </bpmn2:userTask>
-
     <bpmn2:exclusiveGateway id="Arrived" name="Arrived?" default="Flow_absent">
       <bpmn2:incoming>Flow_front_desk</bpmn2:incoming>
       <bpmn2:outgoing>Flow_present</bpmn2:outgoing>
       <bpmn2:outgoing>Flow_absent</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-
     <bpmn2:serviceTask id="MarkNoShow" name="Mark as a no-show">
       <bpmn2:extensionElements>
-        <ash:taskConfig action="mark_no_show"/>
+        <ash:taskConfig action="mark_no_show" />
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_absent</bpmn2:incoming>
       <bpmn2:outgoing>Flow_to_end_no_show</bpmn2:outgoing>
     </bpmn2:serviceTask>
-
     <bpmn2:serviceTask id="MarkCheckedIn" name="Check in">
       <bpmn2:extensionElements>
-        <ash:taskConfig action="check_in"/>
+        <ash:taskConfig action="check_in" />
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_present</bpmn2:incoming>
       <bpmn2:outgoing>Flow_to_consult</bpmn2:outgoing>
     </bpmn2:serviceTask>
-
-    <!-- Wait two: the visit itself. The vet writes the appointment up through
-         the ordinary `:complete` action; completing this task says they have. -->
     <bpmn2:userTask id="Consult" name="See the patient">
       <bpmn2:extensionElements>
         <ash:taskConfig>
           <ash:candidates>
-            <ash:candidate kind="booked_clinician" of="subject.clinician_id"/>
+            <ash:candidate kind="booked_clinician" of="subject.clinician_id" />
           </ash:candidates>
           <ash:outcomes>
-            <ash:outcome name="written_up"/>
-            <ash:outcome name="labs_pending"/>
+            <ash:outcome name="written_up" />
+            <ash:outcome name="labs_pending" />
           </ash:outcomes>
         </ash:taskConfig>
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_to_consult</bpmn2:incoming>
       <bpmn2:outgoing>Flow_seen</bpmn2:outgoing>
     </bpmn2:userTask>
-
     <bpmn2:exclusiveGateway id="LabsPending" name="Bloods sent?" default="Flow_no_labs">
       <bpmn2:incoming>Flow_seen</bpmn2:incoming>
       <bpmn2:outgoing>Flow_labs</bpmn2:outgoing>
       <bpmn2:outgoing>Flow_no_labs</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-
-    <!-- Wait three, and the interesting one: the instance stops here until the
-         lab reports. The escalate timer is what a clinic actually wants from a
-         wait state: a nudge at four hours, not a stuck row nobody notices. -->
     <bpmn2:userTask id="AwaitLabResults" name="Await lab results">
       <bpmn2:extensionElements>
         <ash:taskConfig>
           <ash:candidates>
-            <ash:candidate kind="role" of="technician"/>
+            <ash:candidate kind="role" of="technician" />
           </ash:candidates>
           <ash:outcomes>
-            <ash:outcome name="results_in"/>
+            <ash:outcome name="results_in" />
           </ash:outcomes>
           <ash:timers>
-            <ash:timer kind="escalate" hours="4"/>
+            <ash:timer kind="escalate" hours="4" />
           </ash:timers>
         </ash:taskConfig>
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_labs</bpmn2:incoming>
       <bpmn2:outgoing>Flow_results_in</bpmn2:outgoing>
     </bpmn2:userTask>
-
     <bpmn2:serviceTask id="Discharge" name="Discharge">
       <bpmn2:extensionElements>
-        <ash:taskConfig action="discharge"/>
+        <ash:taskConfig action="discharge" />
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_no_labs</bpmn2:incoming>
       <bpmn2:incoming>Flow_results_in</bpmn2:incoming>
       <bpmn2:outgoing>Flow_discharged</bpmn2:outgoing>
     </bpmn2:serviceTask>
-
     <bpmn2:endEvent id="End_discharged" name="Discharged">
       <bpmn2:extensionElements>
-        <ash:taskConfig outcome="discharged"/>
+        <ash:taskConfig outcome="discharged" />
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_discharged</bpmn2:incoming>
     </bpmn2:endEvent>
-
     <bpmn2:endEvent id="End_no_show" name="Never arrived">
       <bpmn2:extensionElements>
-        <ash:taskConfig outcome="no_show"/>
+        <ash:taskConfig outcome="no_show" />
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_to_end_no_show</bpmn2:incoming>
     </bpmn2:endEvent>
-
-    <bpmn2:sequenceFlow id="Flow_to_triage" sourceRef="Start_booked" targetRef="Triage"/>
-    <bpmn2:sequenceFlow id="Flow_triaged" sourceRef="Triage" targetRef="RecordUrgency"/>
-    <bpmn2:sequenceFlow id="Flow_recorded" sourceRef="RecordUrgency" targetRef="HowUrgent"/>
+    <bpmn2:sequenceFlow id="Flow_to_triage" sourceRef="Start_booked" targetRef="Triage" />
+    <bpmn2:sequenceFlow id="Flow_triaged" sourceRef="Triage" targetRef="RecordUrgency" />
+    <bpmn2:sequenceFlow id="Flow_recorded" sourceRef="RecordUrgency" targetRef="HowUrgent" />
     <bpmn2:sequenceFlow id="Flow_emergency" name="emergency" sourceRef="HowUrgent" targetRef="AlertEmergencyTeam">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
-                                 language="feel">routing.urgency = "emergency"</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="feel">routing.urgency = "emergency"</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
-    <bpmn2:sequenceFlow id="Flow_ordinary" name="ordinary" sourceRef="HowUrgent" targetRef="CheckIn"/>
-    <bpmn2:sequenceFlow id="Flow_alerted" sourceRef="AlertEmergencyTeam" targetRef="CheckIn"/>
-    <bpmn2:sequenceFlow id="Flow_front_desk" sourceRef="CheckIn" targetRef="Arrived"/>
+    <bpmn2:sequenceFlow id="Flow_ordinary" name="ordinary" sourceRef="HowUrgent" targetRef="CheckIn" />
+    <bpmn2:sequenceFlow id="Flow_alerted" sourceRef="AlertEmergencyTeam" targetRef="CheckIn" />
+    <bpmn2:sequenceFlow id="Flow_front_desk" sourceRef="CheckIn" targetRef="Arrived" />
     <bpmn2:sequenceFlow id="Flow_present" name="arrived" sourceRef="Arrived" targetRef="MarkCheckedIn">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
-                                 language="feel">task.outcome = "arrived"</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="feel">task.outcome = "arrived"</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
-    <bpmn2:sequenceFlow id="Flow_absent" name="no show" sourceRef="Arrived" targetRef="MarkNoShow"/>
-    <bpmn2:sequenceFlow id="Flow_to_end_no_show" sourceRef="MarkNoShow" targetRef="End_no_show"/>
-    <bpmn2:sequenceFlow id="Flow_to_consult" sourceRef="MarkCheckedIn" targetRef="Consult"/>
-    <bpmn2:sequenceFlow id="Flow_seen" sourceRef="Consult" targetRef="LabsPending"/>
+    <bpmn2:sequenceFlow id="Flow_absent" name="no show" sourceRef="Arrived" targetRef="MarkNoShow" />
+    <bpmn2:sequenceFlow id="Flow_to_end_no_show" sourceRef="MarkNoShow" targetRef="End_no_show" />
+    <bpmn2:sequenceFlow id="Flow_to_consult" sourceRef="MarkCheckedIn" targetRef="Consult" />
+    <bpmn2:sequenceFlow id="Flow_seen" sourceRef="Consult" targetRef="LabsPending" />
     <bpmn2:sequenceFlow id="Flow_labs" name="bloods sent" sourceRef="LabsPending" targetRef="AwaitLabResults">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression"
-                                 language="feel">task.outcome = "labs_pending"</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="feel">task.outcome = "labs_pending"</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
-    <bpmn2:sequenceFlow id="Flow_no_labs" name="written up" sourceRef="LabsPending" targetRef="Discharge"/>
-    <bpmn2:sequenceFlow id="Flow_results_in" sourceRef="AwaitLabResults" targetRef="Discharge"/>
-    <bpmn2:sequenceFlow id="Flow_discharged" sourceRef="Discharge" targetRef="End_discharged"/>
+    <bpmn2:sequenceFlow id="Flow_no_labs" name="written up" sourceRef="LabsPending" targetRef="Discharge" />
+    <bpmn2:sequenceFlow id="Flow_results_in" sourceRef="AwaitLabResults" targetRef="Discharge" />
+    <bpmn2:sequenceFlow id="Flow_discharged" sourceRef="Discharge" targetRef="End_discharged" />
   </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_appointment_visit">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_appointment_visit" bpmnElement="Process_appointment_visit">
+      <bpmndi:BPMNShape id="Start_booked_di" bpmnElement="Start_booked">
+        <dc:Bounds x="57" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Triage_di" bpmnElement="Triage">
+        <dc:Bounds x="175" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RecordUrgency_di" bpmnElement="RecordUrgency">
+        <dc:Bounds x="325" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="HowUrgent_di" bpmnElement="HowUrgent" isMarkerVisible="true">
+        <dc:Bounds x="500" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AlertEmergencyTeam_di" bpmnElement="AlertEmergencyTeam">
+        <dc:Bounds x="625" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CheckIn_di" bpmnElement="CheckIn">
+        <dc:Bounds x="775" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Arrived_di" bpmnElement="Arrived" isMarkerVisible="true">
+        <dc:Bounds x="950" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MarkCheckedIn_di" bpmnElement="MarkCheckedIn">
+        <dc:Bounds x="1075" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Consult_di" bpmnElement="Consult">
+        <dc:Bounds x="1225" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LabsPending_di" bpmnElement="LabsPending" isMarkerVisible="true">
+        <dc:Bounds x="1400" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AwaitLabResults_di" bpmnElement="AwaitLabResults">
+        <dc:Bounds x="1525" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Discharge_di" bpmnElement="Discharge">
+        <dc:Bounds x="1675" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_discharged_di" bpmnElement="End_discharged">
+        <dc:Bounds x="1857" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MarkNoShow_di" bpmnElement="MarkNoShow">
+        <dc:Bounds x="1075" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_no_show_di" bpmnElement="End_no_show">
+        <dc:Bounds x="1257" y="192" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_triage_di" bpmnElement="Flow_to_triage">
+        <di:waypoint x="93" y="70" />
+        <di:waypoint x="175" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_triaged_di" bpmnElement="Flow_triaged">
+        <di:waypoint x="275" y="70" />
+        <di:waypoint x="325" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_recorded_di" bpmnElement="Flow_recorded">
+        <di:waypoint x="425" y="70" />
+        <di:waypoint x="500" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_emergency_di" bpmnElement="Flow_emergency">
+        <di:waypoint x="550" y="70" />
+        <di:waypoint x="625" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ordinary_di" bpmnElement="Flow_ordinary">
+        <di:waypoint x="525" y="95" />
+        <di:waypoint x="525" y="140" />
+        <di:waypoint x="825" y="140" />
+        <di:waypoint x="825" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_alerted_di" bpmnElement="Flow_alerted">
+        <di:waypoint x="725" y="70" />
+        <di:waypoint x="775" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_front_desk_di" bpmnElement="Flow_front_desk">
+        <di:waypoint x="875" y="70" />
+        <di:waypoint x="950" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_present_di" bpmnElement="Flow_present">
+        <di:waypoint x="1000" y="70" />
+        <di:waypoint x="1075" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_absent_di" bpmnElement="Flow_absent">
+        <di:waypoint x="975" y="95" />
+        <di:waypoint x="975" y="210" />
+        <di:waypoint x="1075" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_consult_di" bpmnElement="Flow_to_consult">
+        <di:waypoint x="1175" y="70" />
+        <di:waypoint x="1225" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_seen_di" bpmnElement="Flow_seen">
+        <di:waypoint x="1325" y="70" />
+        <di:waypoint x="1400" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_labs_di" bpmnElement="Flow_labs">
+        <di:waypoint x="1450" y="70" />
+        <di:waypoint x="1525" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_no_labs_di" bpmnElement="Flow_no_labs">
+        <di:waypoint x="1425" y="95" />
+        <di:waypoint x="1425" y="140" />
+        <di:waypoint x="1725" y="140" />
+        <di:waypoint x="1725" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_results_in_di" bpmnElement="Flow_results_in">
+        <di:waypoint x="1625" y="70" />
+        <di:waypoint x="1675" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_discharged_di" bpmnElement="Flow_discharged">
+        <di:waypoint x="1775" y="70" />
+        <di:waypoint x="1857" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_end_no_show_di" bpmnElement="Flow_to_end_no_show">
+        <di:waypoint x="1175" y="210" />
+        <di:waypoint x="1257" y="210" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
 </bpmn2:definitions>
