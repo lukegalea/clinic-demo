@@ -16,33 +16,31 @@ defmodule ClinicDemo.Decisions.Calculations.VisitLabel do
 
   @impl true
   def calculate(records, _opts, _context) do
-    instances =
-      records
-      |> Enum.map(& &1.correlation_id)
-      |> Enum.reject(&is_nil/1)
-      |> then(fn ids ->
-        if ids == [] do
-          %{}
-        else
-          ClinicDemo.Visits.Instance
-          |> Ash.Query.filter(id in ^ids)
-          |> Ash.read!(authorize?: false)
-          |> Map.new(fn instance -> {instance.id, instance} end)
-        end
-      end)
+    instances = load_instances(records)
+    {:ok, Enum.map(records, &label_for(&1, instances))}
+  end
 
-    labels =
-      Enum.map(records, fn record ->
-        case Map.get(instances, record.correlation_id) do
-          nil ->
-            "standalone decision"
+  defp load_instances(records) do
+    records
+    |> Enum.map(& &1.correlation_id)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] ->
+        %{}
 
-          instance ->
-            visit_subject_label(instance)
-        end
-      end)
+      ids ->
+        ClinicDemo.Visits.Instance
+        |> Ash.Query.filter(id in ^ids)
+        |> Ash.read!(authorize?: false)
+        |> Map.new(fn instance -> {instance.id, instance} end)
+    end
+  end
 
-    {:ok, labels}
+  defp label_for(record, instances) do
+    case Map.get(instances, record.correlation_id) do
+      nil -> "standalone decision"
+      instance -> visit_subject_label(instance)
+    end
   end
 
   # The Instance's subject is the Appointment; resolve to the patient name
