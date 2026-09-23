@@ -19,8 +19,11 @@ defmodule ClinicDemoWeb.Router do
     }
 
     # GET /a2ui/actor?id=<uuid> switches the acting Clinician (validated
-    # against the configured actor list) and redirects back.
-    plug AshA2ui.ActorPlug
+    # against the configured actor list) and redirects back. Host wrapper
+    # around AshA2ui.ActorPlug: a stale roster id (retired mid-session)
+    # lands on /acting-as with a flash instead of a raw 422, and the nav's
+    # acting-as pill gets the current actor's label off the conn.
+    plug ClinicDemoWeb.ActorPlug
   end
 
   pipeline :api do
