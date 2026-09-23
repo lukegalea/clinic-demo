@@ -10,7 +10,8 @@ defmodule ClinicDemo.Scheduling.Patient do
   use Ash.Resource,
     domain: ClinicDemo.Scheduling,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshEvents.Events]
 
   postgres do
     table "patients"
@@ -64,6 +65,12 @@ defmodule ClinicDemo.Scheduling.Patient do
     end
 
     timestamps()
+  end
+
+  # Registrations and weigh-ins are clinic history: both append to the audit
+  # log like every other story resource's write.
+  events do
+    event_log(ClinicDemo.Events.Event)
   end
 
   identities do

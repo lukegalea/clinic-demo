@@ -24,9 +24,10 @@
 //      audit: the intake picker composite upgrades, searches and selects
 //      once the create panel opens; View opens READ-ONLY; formless surfaces
 //      have no View control; row-action success is visible; anonymous
-//      writes are refused visibly; /events shows its empty state; a stale
-//      roster pick redirects with a flash (no raw 422); and the process
-//      designer's catalogue datalist is present.
+//      writes are refused visibly; /events renders the seeded event stream
+//      (bookings through discharge, DMN evaluations); a stale roster pick
+//      redirects with a flash (no raw 422); and the process designer's
+//      catalogue datalist is present.
 //
 // Conventions:
 //   * Screenshot baselines: test/visual/__screenshots__/<page>.png, committed.
@@ -423,13 +424,32 @@ async function pinAnonWriteRefused(browser, reporter, baseUrl) {
   }
 }
 
-async function pinEventsEmptyState(browser, reporter, baseUrl) {
-  const pageId = "behavior:events-empty-state";
+async function pinEventsStreamRenders(browser, reporter, baseUrl) {
+  const pageId = "behavior:events-stream-renders";
   const { context, page } = await newPageWithHelpers(browser);
   try {
     await goToPage(page, baseUrl, "/events");
-    await page.locator('text="No Event records yet."').first().waitFor({ state: "visible", timeout: 10_000 });
-    reporter.pass(pageId, 'empty state "No Event records yet." renders');
+
+    // The seeded story, asserted row by row: the lifecycle's bookings,
+    // check-ins, completions and the discharge, plus a DMN triage
+    // evaluation. ash_events appends `action on Resource` — the `what`
+    // calculation on the audit resource — so each step has a distinct,
+    // stable signature in the feed. Playwright's text engine pierces the
+    // surface's open shadow root.
+    const story = [
+      /book\s+on\s+\S*ClinicDemo\.Scheduling\.Appointment/,
+      /check_in\s+on\s+\S*ClinicDemo\.Scheduling\.Appointment/,
+      /complete\s+on\s+\S*ClinicDemo\.Scheduling\.Appointment/,
+      /discharge\s+on\s+\S*ClinicDemo\.Scheduling\.Appointment/,
+      /create\s+on\s+\S*ClinicDemo\.Decisions\.Evaluation/,
+    ];
+
+    for (const pattern of story) {
+      const row = page.locator(`text=${pattern}`).first();
+      await row.waitFor({ state: "visible", timeout: 15_000 });
+    }
+
+    reporter.pass(pageId, "seeded event stream renders: bookings, check-ins, completions, the discharge and DMN evaluations");
   } catch (error) {
     reporter.fail(pageId, describeError(error));
   } finally {
@@ -609,8 +629,8 @@ async function main() {
     if (reporter.shouldRun("behavior:anon-write-refused")) {
       await pinAnonWriteRefused(browser, reporter, options.baseUrl);
     }
-    if (reporter.shouldRun("behavior:events-empty-state")) {
-      await pinEventsEmptyState(browser, reporter, options.baseUrl);
+    if (reporter.shouldRun("behavior:events-stream-renders")) {
+      await pinEventsStreamRenders(browser, reporter, options.baseUrl);
     }
     if (reporter.shouldRun("behavior:stale-actor-redirect")) {
       await pinStaleActorRedirect(browser, reporter, options.baseUrl);

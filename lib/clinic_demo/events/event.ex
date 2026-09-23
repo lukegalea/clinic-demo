@@ -1,102 +1,61 @@
 defmodule ClinicDemo.Events.Event do
   @moduledoc """
-  One row of the `ash_events` event log, read-only.
+  One row of the `ash_events` event log.
 
-  The table is created by the compliance install's migration and is written
-  by ash_events' own machinery (not this application's code paths — the
-  guard path here is synchronous and appends nothing today). This resource
-  exists so the log is *visible*: an operator can read what happened,
-  filtered and sorted like any other surface. There are deliberately no
-  create/update/destroy actions — an audit log you can write to from the
-  application is not an audit log.
+  This is the log itself, through `AshEvents.EventLog`: every wrapped action
+  on a story resource (appointments, patients, clinicians, DMN evaluations)
+  appends a row here in the same transaction as its write, via ash_events'
+  own machinery. The append path is the framework's — it runs with
+  `authorize?: false` inside the writer's transaction — so the policy below
+  governs the *application-facing* surface: there is no sanctioned create,
+  update or destroy reachable through a normal authorized call. An audit log
+  you can write to from the application is not an audit log.
+
+  Read-side, the log is *visible*: an operator can read what happened,
+  filtered and sorted like any other surface. The columns mirror the
+  compliance install's `ash_events` migration exactly (it shipped the table
+  before the log was wired), including `practice_id`, which ash_events does
+  not populate in this app and which therefore stays a plain column.
   """
 
   use Ash.Resource,
     domain: ClinicDemo.Events,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshEvents.EventLog]
 
   postgres do
     table "ash_events"
     repo ClinicDemo.Repo
   end
 
+  event_log do
+    # The app's records are uuid-keyed, so `record_id` is a uuid (the default,
+    # spelled out because it is a contract with the migration).
+    record_id_type(:uuid)
+
+    # Every field is operator-visible: this resource exists so the log can be
+    # read. Without this the extension keeps everything private and the
+    # /events surface would have nothing to render.
+    public_fields(:all)
+
+    # Attribution when the actor is a real struct. This demo's surfaces act
+    # as bare `AshA2ui.Actor` structs and the seeds pass bare maps, so rows
+    # written today carry a nil `user_id` by design — the column lights up
+    # the day a Clinician struct stands behind an action.
+    persist_actor_primary_key(:user_id, ClinicDemo.Scheduling.Clinician)
+  end
+
   actions do
     default_accept []
+
+    # The EventLog extension supplies the machinery's `:create` and the
+    # `:replay` action; the operator surface gets only the plain read.
     defaults [:read]
   end
 
-  attributes do
-    attribute :id, :integer do
-      allow_nil? false
-      primary_key? true
-      public? true
-    end
-
-    attribute :record_id, :uuid do
-      description "The primary key of the record the event is about."
-      allow_nil? false
-      public? true
-    end
-
-    attribute :version, :integer do
-      description "Event schema version, for replay compatibility."
-      allow_nil? false
-      public? true
-    end
-
-    attribute :resource, :string do
-      description "The resource the event was recorded against."
-      allow_nil? false
-      public? true
-    end
-
-    attribute :action, :string do
-      allow_nil? false
-      public? true
-    end
-
-    attribute :action_type, :string do
-      allow_nil? false
-      public? true
-    end
-
-    attribute :data, :map do
-      description "The action's input data."
-      allow_nil? false
-      public? true
-    end
-
-    attribute :metadata, :map do
-      allow_nil? false
-      public? true
-    end
-
-    attribute :changed_attributes, :map do
-      description "Attributes changed but not present in the original action input."
-      allow_nil? false
-      public? true
-    end
-
-    attribute :occurred_at, :naive_datetime do
-      description "When the event was recorded (UTC, naive — the table's column type)."
-      allow_nil? false
-      public? true
-    end
-
-    attribute :user_id, :uuid do
-      description "The acting user's primary key, when persisted by the writer."
-      public? true
-    end
-
-    attribute :practice_id, :uuid do
-      description "The acting practice/system actor's key, when persisted by the writer."
-      public? true
-    end
-  end
-
   calculations do
-    calculate :what, :string, expr(action <> " on " <> resource) do
+    calculate :what, :string, expr(type(action, :string) <> " on " <> type(resource, :string)) do
       description "One-line subject for the audit feed."
       public? true
     end

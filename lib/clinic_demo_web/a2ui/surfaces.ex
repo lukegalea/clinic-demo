@@ -125,7 +125,8 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       blurb: "The ash_events audit log, newest first. Read-only.",
       description:
         "The audit event log: recorded write events, newest first. Read-only — the log " <>
-          "is written by the event projector, never by hand from a grid."
+          "is appended to by ash_events inside each story action's transaction, never " <>
+          "by hand from a grid."
     },
     %{
       name: "emergencies",

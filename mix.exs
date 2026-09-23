@@ -124,6 +124,12 @@ defmodule ClinicDemo.MixProject do
       # lets an operator author them.
       {:ash_compliance, github: "lukegalea/ash_compliance"},
 
+      # The event log behind /events. Declared directly (not just ridden in
+      # via ash_compliance) because host resources extend it: the audit
+      # resource is an AshEvents.EventLog, and the story resources carry
+      # AshEvents.Events so their actions append to the log.
+      {:ash_events, "~> 0.7"},
+
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
       {:oban, "~> 2.0"},

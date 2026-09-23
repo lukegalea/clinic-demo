@@ -34,7 +34,10 @@ export const PAGES = [
     route: "/events",
     name: "events",
     marker: { kind: "a2ui" },
-    extraMarker: { kind: "text", text: "No Event records yet." },
+    // The feed's time-column label — the surface never renders its own
+    // title into the shadow DOM, so this (plus the screenshot baseline and
+    // the stream-renders behavioral pin) is the hydration proof.
+    extraMarker: { kind: "text", text: "When" },
   },
   { route: "/operator", name: "operator-hub", marker: { kind: "h1", text: "Operator" }, navCurrent: "/operator" },
   {

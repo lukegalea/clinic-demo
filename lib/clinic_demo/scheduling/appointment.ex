@@ -16,7 +16,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     domain: ClinicDemo.Scheduling,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshStateMachine]
+    extensions: [AshStateMachine, AshEvents.Events]
 
   alias ClinicDemo.Scheduling.Changes.ComplianceGuard
   alias ClinicDemo.Scheduling.Changes.StartVisitProcess
@@ -170,6 +170,15 @@ defmodule ClinicDemo.Scheduling.Appointment do
   # machine with `transition_state/1`; a move the declaration does not allow
   # fails with `NoMatchingTransition`, the same refusal the old per-action
   # CurrentStatusIn validations produced but now derived from this one map.
+  # Every lifecycle action — book through discharge — appends a row to the
+  # audit log in the same transaction as its write. ash_events wraps each
+  # create/update/destroy with its manual-action machinery; reads pass
+  # through untouched. The full lifecycle is the story the /events surface
+  # tells, so nothing is excluded here.
+  events do
+    event_log(ClinicDemo.Events.Event)
+  end
+
   state_machine do
     # The lifecycle lives in the resource's own `:status` attribute (declared
     # in the attributes block, with its one_of constraint and default) —

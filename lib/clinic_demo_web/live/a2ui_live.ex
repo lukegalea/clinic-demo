@@ -319,11 +319,10 @@ defmodule ClinicDemoWeb.A2ui.EventsLive do
   # The audit feed's companion: the decision evidence surface. Same link,
   # read from the other side.
   #
-  # The promised empty state used to live only inside the shadow DOM, where
-  # the framework never rendered it — with zero rows the surface was a
-  # header and a search box over nothing, no matter what it promised. The
-  # count is cheap (one aggregate read) and honest: when the projector
-  # starts appending, the message leaves on its own.
+  # The count is cheap (one aggregate read) and honest: a fresh, unseeded
+  # database has no events, and this says so rather than rendering a bare
+  # header over nothing. On any database that has seen the seed — or any
+  # action at all — the message stays gone.
   @impl true
   def mount(params, session, socket) do
     {:ok, socket} = super(params, session, socket)

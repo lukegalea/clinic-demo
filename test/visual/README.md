@@ -82,7 +82,12 @@ Behavioral pins (from the view/edit/save interaction audit):
 - A row-action success renders visible feedback (the old invisible
   `/ui/status` write).
 - An anonymous write on `/patients` is refused with a visible message.
-- `/events` shows its empty state.
+- `/events` renders the seeded event stream — the lifecycle's bookings,
+  check-ins, completions and the discharge, plus DMN triage evaluations,
+  each as its `action on Resource` row in the ash_events feed. (The old
+  empty-state pin died with the empty state: the log is written by
+  ash_events now, and the suite runs against a seeded database, so a
+  zero-row log is not honestly drivable here.)
 - A stale `/acting-as` roster pick redirects to the picker with an error
   flash — no raw `422 "unknown actor"` page.
 - The intake patient picker composite upgrades, searches and surfaces real
