@@ -41,6 +41,7 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         :reason,
         :severity,
         :status,
+        :discharged_at,
         :triage_urgency
       ]
 
@@ -51,7 +52,7 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         title :patient_label
         badge :triage_urgency
         badge_text emergency: "Emergency", urgent: "Urgent", soon: "Soon", routine: "Routine"
-        meta [:clinician_label, :scheduled_at, :ends_at, :reason, :severity, :status]
+        meta [:clinician_label, :scheduled_at, :ends_at, :reason, :severity, :status, :discharged_at]
         columns 3
       end
 
@@ -80,7 +81,12 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
     end
 
     action :discharge do
-      visible_when status: :completed
+      # :discharge leaves :status at :completed (a discharged visit stays
+      # completed), so without the discharged_at guard the button never left
+      # the row and the success looked like a no-op — the audit's
+      # "trains users to read dead". With it, the discharged row shows WHEN
+      # the animal went home and offers nothing further.
+      visible_when status: :completed, discharged_at: nil
     end
 
     action :cancel do
@@ -111,6 +117,10 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
     field :triage_urgency do
       label "Triage"
+    end
+
+    field :discharged_at do
+      label "Discharged"
     end
   end
 end

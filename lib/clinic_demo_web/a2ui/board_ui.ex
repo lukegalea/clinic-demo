@@ -31,7 +31,8 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
         :clinician_label,
         :scheduled_at,
         :severity,
-        :status
+        :status,
+        :discharged_at
       ]
 
       read_action :read
@@ -40,7 +41,7 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
         title :patient_label
         badge :triage_urgency
         badge_text emergency: "Emergency", urgent: "Urgent", soon: "Soon", routine: "Routine"
-        meta [:clinician_label, :scheduled_at, :severity, :status]
+        meta [:clinician_label, :scheduled_at, :severity, :status, :discharged_at]
         columns 2
       end
 
@@ -78,7 +79,10 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
     end
 
     action :discharge do
-      visible_when status: :completed
+      # Same guard as the schedule: :status stays :completed, so the
+      # discharged_at nil-check is what makes the button leave the row and
+      # the card show the outcome.
+      visible_when status: :completed, discharged_at: nil
     end
 
     action :cancel do
@@ -105,6 +109,10 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
 
     field :triage_urgency do
       label "Triage"
+    end
+
+    field :discharged_at do
+      label "Discharged"
     end
   end
 end
