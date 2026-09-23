@@ -8,7 +8,10 @@ defmodule ClinicDemoWeb.PageController do
   end
 
   def operator(conn, _params) do
-    render(conn, :operator, recent_instances: recent_instances())
+    render(conn, :operator,
+      recent_instances: recent_instances(),
+      visit_machine_chart: ClinicDemo.Scheduling.VisitMachine.chart()
+    )
   end
 
   # The latest visit instances for the hub's "Recent visit processes" list.

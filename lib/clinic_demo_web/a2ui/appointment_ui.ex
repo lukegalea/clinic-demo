@@ -55,8 +55,9 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         columns 3
       end
 
-      # Every transition is its own Ash action with a CurrentStatusIn guard;
-      # visible_when mirrors the guard so the button never offers a refusal.
+      # Every transition is its own Ash action, guarded by the resource's
+      # state machine; visible_when mirrors the machine so the button
+      # never offers a refusal.
       row_actions [:check_in, :complete, :mark_no_show, :discharge, :cancel]
     end
 

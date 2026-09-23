@@ -2,15 +2,21 @@ defmodule ClinicDemo.Scheduling.Appointment do
   @moduledoc """
   A booked slot: one patient, one clinician, one point in time.
 
-  The lifecycle is deliberately explicit. There is no generic `:update`
-  action — each transition is its own named action with its own arguments and
-  its own guard, which is what makes the action contract worth reading.
+  The lifecycle is a formal state machine (`AshStateMachine`): the states a
+  visit may occupy and the moves between them are declared once, below, and
+  every lifecycle action both drives and is checked by that declaration.
+  There is no generic `:update` action — each transition is its own named
+  action with its own arguments and its own guards, which is what makes the
+  action contract worth reading. The BPMN visit process orchestrates *when*
+  these actions run; it is never a second authority on *whether* a status
+  change is allowed.
   """
 
   use Ash.Resource,
     domain: ClinicDemo.Scheduling,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshStateMachine]
 
   alias ClinicDemo.Scheduling.Changes.ComplianceGuard
   alias ClinicDemo.Scheduling.Changes.StartVisitProcess
@@ -159,6 +165,28 @@ defmodule ClinicDemo.Scheduling.Appointment do
     end
   end
 
+  # The one authority on the visit lifecycle: which statuses exist, which one
+  # a visit starts in, and which moves are legal. The actions below drive the
+  # machine with `transition_state/1`; a move the declaration does not allow
+  # fails with `NoMatchingTransition`, the same refusal the old per-action
+  # CurrentStatusIn validations produced but now derived from this one map.
+  state_machine do
+    # The lifecycle lives in the resource's own `:status` attribute (declared
+    # in the attributes block, with its one_of constraint and default) —
+    # pointed at explicitly rather than the extension's `:state` default.
+    state_attribute :status
+
+    initial_states [:scheduled, :checked_in, :completed, :cancelled, :no_show]
+    default_initial_state :scheduled
+
+    transitions do
+      transition :check_in, from: :scheduled, to: :checked_in
+      transition :complete, from: :checked_in, to: :completed
+      transition :cancel, from: [:scheduled, :checked_in], to: :cancelled
+      transition :mark_no_show, from: :scheduled, to: :no_show
+    end
+  end
+
   actions do
     default_accept []
     defaults [:read]
@@ -236,6 +264,9 @@ defmodule ClinicDemo.Scheduling.Appointment do
     update :reschedule do
       description "Move an existing appointment. Only open appointments can move."
 
+      # Not a state transition — the status does not change, the slot does.
+      # The precondition stays an explicit validation, outside the machine.
+
       # Reads the prior status, so it cannot run as a single atomic statement.
       require_atomic? false
 
@@ -258,10 +289,8 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       accept []
 
-      validate {CurrentStatusIn, from: [:scheduled]}
-
       change {ComplianceGuard, transition_to: :checked_in}
-      change set_attribute(:status, :checked_in)
+      change transition_state(:checked_in)
     end
 
     update :complete do
@@ -277,11 +306,9 @@ defmodule ClinicDemo.Scheduling.Appointment do
         constraints min_length: 10, max_length: 4000, trim?: true
       end
 
-      validate {CurrentStatusIn, from: [:checked_in]}
-
       change {ComplianceGuard, transition_to: :completed}
       change set_attribute(:notes, arg(:notes))
-      change set_attribute(:status, :completed)
+      change transition_state(:completed)
     end
 
     update :cancel do
@@ -296,11 +323,9 @@ defmodule ClinicDemo.Scheduling.Appointment do
         constraints min_length: 3, max_length: 200, trim?: true
       end
 
-      validate {CurrentStatusIn, from: [:scheduled, :checked_in]}
-
       change {ComplianceGuard, transition_to: :cancelled}
       change set_attribute(:cancellation_reason, arg(:reason))
-      change set_attribute(:status, :cancelled)
+      change transition_state(:cancelled)
     end
 
     update :record_triage do
@@ -323,6 +348,9 @@ defmodule ClinicDemo.Scheduling.Appointment do
         constraints one_of: [:emergency, :urgent, :soon, :routine]
       end
 
+      # Not a state transition either — recording the triage answer writes
+      # `triage_urgency`, not `status`, so it stays outside the machine and
+      # keeps its explicit precondition.
       validate {CurrentStatusIn, from: [:scheduled, :checked_in]}
 
       change set_attribute(:triage_urgency, arg(:urgency))
@@ -335,10 +363,8 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       accept []
 
-      validate {CurrentStatusIn, from: [:scheduled]}
-
       change {ComplianceGuard, transition_to: :no_show}
-      change set_attribute(:status, :no_show)
+      change transition_state(:no_show)
     end
 
     update :discharge do
@@ -355,6 +381,9 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       accept []
 
+      # Not a state transition: discharge writes `discharged_at` and leaves
+      # `:status` alone (a completed visit stays completed at home), so the
+      # machine does not speak for it — the precondition stays explicit.
       validate {CurrentStatusIn, from: [:completed]}
 
       change set_attribute(:discharged_at, &DateTime.utc_now/0)

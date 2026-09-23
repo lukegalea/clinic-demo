@@ -70,8 +70,9 @@ defmodule ClinicDemo.Visits.VisitFacade do
 
       # Fallback: the visit's token has already moved past CheckIn or the
       # instance has ended, so there is nothing left to complete through
-      # the engine. The direct action still applies its own guard — the
-      # surface never reaches around a refusal by landing here.
+      # the engine. The direct action still applies its own guards — the
+      # state machine's transition check, then the compliance bundle — so
+      # the surface never reaches around a refusal by landing here.
       nil ->
         direct(appointment, outcome, actor)
     end

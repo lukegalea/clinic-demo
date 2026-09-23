@@ -98,7 +98,7 @@ config :esbuild,
     # refuses the build outright. Inlined as data URLs, which
     # `font-src 'self' data:` in the CSP permits.
     args:
-      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.) ++
+      ~w(js/app.js js/operator_diagram.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.) ++
         ~w(--loader:.woff=dataurl --loader:.woff2=dataurl --loader:.ttf=dataurl
            --loader:.eot=dataurl --loader:.svg=dataurl),
     cd: Path.expand("../assets", __DIR__),

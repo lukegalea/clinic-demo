@@ -111,6 +111,60 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
              Scheduling.cancel_appointment(appointment, "Owner called", actor: @staff)
   end
 
+  describe "the formal state machine" do
+    test "completing from :scheduled is refused, naming the illegal transition" do
+      %{appointment: appointment} = fixtures()
+
+      assert {:error, %Ash.Error.Invalid{errors: errors}} =
+               Scheduling.complete_appointment(appointment, "Notes long enough to pass",
+                 actor: @staff
+               )
+
+      assert transition_error =
+               Enum.find(errors, &match?(%AshStateMachine.Errors.NoMatchingTransition{}, &1))
+
+      assert Exception.message(transition_error) =~ "from scheduled to completed"
+      assert Scheduling.get_appointment!(appointment.id).status == :scheduled
+    end
+
+    test "cancelling works from both source states" do
+      %{appointment: fresh} = fixtures()
+
+      assert {:ok, cancelled} = Scheduling.cancel_appointment(fresh, "Owner called", actor: @staff)
+      assert cancelled.status == :cancelled
+
+      # And from :checked_in, the machine's other legal source.
+      %{appointment: checked_in} = fixtures()
+      {:ok, checked_in} = Scheduling.check_in_appointment(checked_in, actor: @staff)
+
+      assert {:ok, cancelled_late} =
+               Scheduling.cancel_appointment(checked_in, "Owner called", actor: @staff)
+
+      assert cancelled_late.status == :cancelled
+    end
+
+    test "no_show is unreachable from anywhere but :scheduled" do
+      %{appointment: appointment} = fixtures()
+      {:ok, appointment} = Scheduling.check_in_appointment(appointment, actor: @staff)
+
+      assert {:error, %Ash.Error.Invalid{errors: errors}} =
+               Scheduling.mark_appointment_no_show(appointment, actor: @staff)
+
+      assert Enum.any?(errors, &match?(%AshStateMachine.Errors.NoMatchingTransition{}, &1))
+    end
+
+    test "the derived chart describes the declared machine" do
+      chart = ClinicDemo.Scheduling.VisitMachine.chart()
+
+      assert chart =~ "stateDiagram-v2"
+      assert chart =~ "scheduled --> checked_in: check_in"
+      assert chart =~ "checked_in --> completed: complete"
+      assert chart =~ "scheduled --> cancelled: cancel"
+      assert chart =~ "checked_in --> cancelled: cancel"
+      assert chart =~ "scheduled --> no_show: mark_no_show"
+    end
+  end
+
   test "in_window returns only appointments inside the window, earliest first" do
     %{vet: vet, patient: patient} = fixtures()
 

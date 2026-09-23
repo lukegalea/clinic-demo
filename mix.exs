@@ -105,6 +105,11 @@ defmodule ClinicDemo.MixProject do
       {:ash, "~> 3.0"},
       {:ash_postgres, "~> 2.0"},
 
+      # The Appointment lifecycle as a formal machine: transitions declared
+      # on the resource, checked by Ash. One authority for what states a
+      # visit may move between; the BPMN graph orchestrates when.
+      {:ash_state_machine, "~> 0.2.13"},
+
       # Decisions and process, the two halves of the rules layer. A DMN table
       # says how urgent an appointment is; a BPMN graph says what happens to it
       # between booking and discharge. Both are runtime dependencies — they are
