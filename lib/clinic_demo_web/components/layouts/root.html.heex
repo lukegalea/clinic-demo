@@ -89,11 +89,12 @@
         <a class={nav_pill} href="/operator">Operator</a>
       </nav>
       <div class="ms-auto">
-        <%!-- /acting-as is a live_session of its own (AshA2ui's actor
-             picker), and navigating across a live_session boundary is a
-             full page load anyway — a plain link says so honestly until
-             the framework seam (F2) lands. --%>
-        <a class={acting_as_pill} href="/acting-as">Acting as…</a>
+        <%!-- The picker shares the surfaces' live_session now, so this is
+             live navigation. The actor SWITCH itself is still a full
+             redirect by design — ActorPlug writes the session over HTTP
+             and 302s back to where you came from. Classes are the design
+             lane's, unchanged. --%>
+        <.link class={acting_as_pill} navigate="/acting-as">Acting as…</.link>
       </div>
     </div>
     <main class="mx-auto max-w-[1300px] px-4 py-6">

@@ -10,9 +10,9 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   # inside the shadow DOM, which reads as "the button didn't work". This
   # banner says why, before the click.
   #
-  # /acting-as is a live_session of its own (the framework's actor picker);
-  # navigating across a live_session boundary is a full page load regardless,
-  # so this stays a plain href until the framework seam (F2) lands.
+  # Reaching /acting-as is live navigation — the picker now shares this
+  # live_session. The actor SWITCH itself is still a full redirect by
+  # design: ActorPlug writes the session over HTTP and 302s back.
   @impl true
   def render(assigns) do
     ~H"""
@@ -21,7 +21,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
           Every move on the board needs a clinician —
-          <.link href="/acting-as" class="underline underline-offset-2">pick one</.link>
+          <.link navigate="/acting-as" class="underline underline-offset-2">pick one</.link>
           to enable check-ins, triage, and discharges.
         </div>
       <% end %>
@@ -49,10 +49,11 @@ defmodule ClinicDemoWeb.A2ui.ScheduleLive do
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
-          <%!-- Same as the board: /acting-as crosses the live_session
-               boundary, so it stays a full load (framework seam F2). --%>
+          <%!-- Live navigation, same live_session. The switch itself is
+               still a redirect by design (ActorPlug writes the session and
+               302s back). --%>
           Booking and transitions need a clinician —
-          <.link href="/acting-as" class="underline underline-offset-2">pick one</.link>
+          <.link navigate="/acting-as" class="underline underline-offset-2">pick one</.link>
           to enable them.
         </div>
       <% end %>

@@ -57,15 +57,18 @@ defmodule ClinicDemoWeb.Router do
       live "/operator/instances/:id", Bpmn.ViewerLive
       live "/operator/decisions/:key/editor", Decisions.EditorLive
       live "/operator/rules", Compliance.RulesetEditorLive
+
+      # The actor picker, mounted in the surfaces' live_session — the
+      # pattern ash_a2ui's ActorPickerLive documents as preferred: the
+      # Actor on_mount is already running here, and reaching the picker is
+      # live navigation (no document reload). The actor SWITCH itself
+      # remains a full redirect by design — ActorPlug writes the session
+      # over HTTP and 302s back. `alias: false` keeps the app's scope from
+      # prefixing the framework module.
+      scope "/", alias: false do
+        live "/acting-as", AshA2ui.ActorPickerLive
+      end
     end
-  end
-
-  # The framework's actor picker, in its own scope so the app's aliasing
-  # does not claim it.
-  scope "/", AshA2ui do
-    pipe_through :browser
-
-    live "/acting-as", ActorPickerLive
   end
 
   # Clarity inlines its whole JS bundle into the page, which needs inline +
