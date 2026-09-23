@@ -74,7 +74,17 @@ defmodule ClinicDemoWeb.A2ui.IntakeLive do
     ~H"""
     <div class="flex flex-col gap-4">
       <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
-      <AshA2ui.LiveRenderer.surface_container />
+      <%!-- The patient picker's host side: the a2ui combobox contract. The
+           IntakeUI declares option_search [:name] on :patient_id, so the
+           encoder emits the searchable-select composite under the frozen
+           id contract (form_select_patient_id and its descendants); the
+           shipped catalog upgrades it into a real typeahead. The data
+           attrs mirror that contract on the host chrome (see
+           AshA2ui.Combobox's moduledoc) and the hook observes it — focus
+           hand-off and host affordances hang off this seam. --%>
+      <div phx-hook="AshA2uiCombobox" {AshA2ui.Combobox.data_attrs(field: "patient_id", searchable: true)}>
+        <AshA2ui.LiveRenderer.surface_container />
+      </div>
     </div>
     """
   end

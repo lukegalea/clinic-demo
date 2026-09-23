@@ -44,6 +44,7 @@ import {AshA2ui, configureAshA2ui} from "../../deps/ash_a2ui/priv/js/ash_a2ui_ho
 import {AshCanvas} from "./canvas/ash_canvas_hook.js"
 import {CanvasSplitter} from "./hooks/canvas_splitter.js"
 import {NbScroller} from "./hooks/nb_scroller.js"
+import {AshA2uiCombobox} from "./hooks/ash_a2ui_combobox.js"
 import "./canvas/ash_canvas_graph.js"
 import {AshBpmnDesigner, AshBpmnViewer} from "../../deps/ash_bpmn/priv/js/ash_bpmn_designer.js"
 import {AshDecisionsEditor} from "../../deps/ash_decisions/priv/js/ash_decisions_editor.js"
@@ -83,7 +84,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AshA2ui, AshCanvas, AshBpmnDesigner, AshBpmnViewer, AshDecisionsEditor, CanvasSplitter, NbScroller},
+  hooks: {...colocatedHooks, AshA2ui, AshCanvas, AshBpmnDesigner, AshBpmnViewer, AshDecisionsEditor, CanvasSplitter, NbScroller, AshA2uiCombobox},
 })
 
 // Show progress bar on live navigation and form submits
