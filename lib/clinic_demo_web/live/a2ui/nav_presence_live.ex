@@ -34,8 +34,11 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
 
   # The nav's a2ui entries: {label, path, surface_id}. /operator is a
   # controller page with no presence topic and is appended in the render.
+  # The Day view is a host LiveView (NB components, not a surface) but
+  # rides the same presence wiring on its own topic, so it lists here.
   @entries [
     {"Board", "/", "clinic_board"},
+    {"Day", "/day", "clinic_day"},
     {"Intake", "/intake", "clinic_intake"},
     {"Schedule", "/schedule", "clinic_schedule"},
     {"Worklist", "/worklist", "clinic_worklist"},

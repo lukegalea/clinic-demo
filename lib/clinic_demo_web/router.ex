@@ -43,6 +43,10 @@ defmodule ClinicDemoWeb.Router do
     # stage. Intake takes a new patient; the schedule books the visit.
     live_session :a2ui, on_mount: AshA2ui.Actor do
       live "/", A2ui.BoardLive
+      # The Day view: host-rendered NB components (calendar + day list +
+      # read-only detail sheet) over the same actor session, so presence
+      # and the "No one is acting" contract behave like every surface.
+      live "/day", DayLive
       live "/intake", A2ui.IntakeLive
       live "/emergencies", A2ui.EmergencyBoardLive
       live "/schedule", A2ui.ScheduleLive
