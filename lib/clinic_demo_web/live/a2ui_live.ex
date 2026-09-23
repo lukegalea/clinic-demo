@@ -308,11 +308,42 @@ defmodule ClinicDemoWeb.A2ui.EventsLive do
 
   # The audit feed's companion: the decision evidence surface. Same link,
   # read from the other side.
+  #
+  # The promised empty state used to live only inside the shadow DOM, where
+  # the framework never rendered it — with zero rows the surface was a
+  # header and a search box over nothing, no matter what it promised. The
+  # count is cheap (one aggregate read) and honest: when the projector
+  # starts appending, the message leaves on its own.
+  @impl true
+  def mount(params, session, socket) do
+    {:ok, socket} = super(params, session, socket)
+
+    event_count =
+      ClinicDemo.Events.Event
+      |> Ash.Query.new()
+      |> Ash.count(authorize?: false)
+      |> case do
+        {:ok, count} -> count
+        _ -> 0
+      end
+
+    {:ok, Phoenix.Component.assign(socket, :event_count, event_count)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
       <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
+      <div
+        :if={@event_count == 0}
+        class="relative w-full rounded-base border-2 border-border bg-secondary-background px-4 py-6 text-sm text-foreground shadow-shadow"
+        data-testid="events-empty-state"
+      >
+        <strong class="font-heading">No Event records yet.</strong>
+        The audit log is read-only by construction, and nothing has appended
+        to it. Actions taken on the surfaces will land here, newest first.
+      </div>
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /evaluations is inside live_session :a2ui. --%>
