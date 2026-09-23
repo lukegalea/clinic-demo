@@ -1,4 +1,4 @@
-defmodule ClinicDemo.Visits.Definition do
+defmodule ClinicDemo.Visits.Process do
   @moduledoc """
   A versioned BPMN document. Publishing is one-way; an instance pins the version
   it started on for life.

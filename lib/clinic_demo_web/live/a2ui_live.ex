@@ -208,9 +208,9 @@ defmodule ClinicDemoWeb.A2ui.CliniciansLive do
   end
 end
 
-defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
+defmodule ClinicDemoWeb.A2ui.ProcessesLive do
   use AshA2ui.LiveRenderer,
-    ui: ClinicDemoWeb.A2ui.ProcessDefinitionUI,
+    ui: ClinicDemoWeb.A2ui.ProcessUI,
     actor_fn: & &1.assigns.a2ui_actor
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_process_definitions"
@@ -237,9 +237,9 @@ defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
   end
 end
 
-defmodule ClinicDemoWeb.A2ui.DecisionDefinitionsLive do
+defmodule ClinicDemoWeb.A2ui.DecisionTablesLive do
   use AshA2ui.LiveRenderer,
-    ui: ClinicDemoWeb.A2ui.DecisionDefinitionUI,
+    ui: ClinicDemoWeb.A2ui.DecisionTableUI,
     actor_fn: & &1.assigns.a2ui_actor
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_decision_definitions"

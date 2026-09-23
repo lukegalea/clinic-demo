@@ -88,22 +88,22 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
     %{
       name: "processes",
       label: "Visit processes",
-      ui: A2ui.ProcessDefinitionUI,
+      ui: A2ui.ProcessUI,
       path: "/processes",
       blurb: "The published visit processes, and which version is live. Read-only.",
       description:
-        "The published visit process definitions (BPMN): which version of which process " <>
-          "is live. Read-only — definitions change through ClinicDemo.Rules, never by " <>
-          "hand from a grid."
+        "The published visit processes (BPMN): which version of which process " <>
+          "is live. Read-only — new versions are published through ClinicDemo.Rules, " <>
+          "never by hand from a grid."
     },
     %{
       name: "decisions",
       label: "Decision tables",
-      ui: A2ui.DecisionDefinitionUI,
+      ui: A2ui.DecisionTableUI,
       path: "/decisions",
       blurb: "The published decision tables — how urgency is decided. Read-only.",
       description:
-        "The published decision table definitions (DMN) — how urgency is decided — and " <>
+        "The published decision tables (DMN) — how urgency is decided — and " <>
           "which version is live. Read-only; rules change through ClinicDemo.Rules."
     },
     %{
@@ -253,12 +253,11 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
   The allowlist the surface editor composes under.
 
   Names mirror the resources' short module names — that is what
-  `AshA2ui.Dynamic.Importer` writes into an imported spec — except where two
-  resources would collide on theirs: both `Definition`s are named by their
-  side (`visit_definition`-style, CamelCase to keep the imports aligned). An
-  import of a colliding surface resolves once the operator picks the
-  disambiguated name in the editor's resource select; the underlying
-  resource, and so every field and action reference, is unchanged.
+  `AshA2ui.Dynamic.Importer` writes into an imported spec. They can, and not
+  by luck: the two rule resources used to be a `Definition` apiece, and short
+  names colliding forced side-suffixed keys (`VisitDefinition`-style). The
+  resources are `Visits.Process` and `Decisions.DecisionTable` now, so the
+  short names are unique and the map spells them plainly.
 
   This is a map rather than `dynamic_allowlist/0`'s list because the editor's
   imports speak short names, and a map is ash_a2ui's composer contract for
@@ -273,8 +272,8 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       "Appointment" => ClinicDemo.Scheduling.Appointment,
       "HumanTask" => ClinicDemo.Visits.HumanTask,
       "Instance" => ClinicDemo.Visits.Instance,
-      "VisitDefinition" => ClinicDemo.Visits.Definition,
-      "DecisionDefinition" => ClinicDemo.Decisions.Definition,
+      "Process" => ClinicDemo.Visits.Process,
+      "DecisionTable" => ClinicDemo.Decisions.DecisionTable,
       "Evaluation" => ClinicDemo.Decisions.Evaluation,
       "Event" => ClinicDemo.Events.Event
     })
@@ -288,10 +287,12 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
   its way to a table this application never meant to publish. Kept to what the
   acting clinician may reasonably see end to end.
 
-  The names are spelled out rather than derived from module short names,
-  because two of these resources would collide on theirs — `Definition` is
-  both a decision table and a visit process, and "Definition" twice is a
-  distinction a model cannot act on.
+  The names are the resources' names, snake_cased, spelled out rather than
+  derived: host naming stays an explicit allowlist entry, so widening what a
+  model may compose over is a decision somebody types. (They used to need
+  side-suffixed names — `visit_definition` — because both rule resources
+  were `Definition` and short names collided; with `Process` and
+  `DecisionTable` there is no collision left to disambiguate.)
   """
   @spec dynamic_allowlist() :: %{String.t() => module()}
   def dynamic_allowlist do
@@ -299,9 +300,9 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       "patient" => ClinicDemo.Scheduling.Patient,
       "clinician" => ClinicDemo.Scheduling.Clinician,
       "appointment" => ClinicDemo.Scheduling.Appointment,
-      "decision_definition" => ClinicDemo.Decisions.Definition,
+      "decision_table" => ClinicDemo.Decisions.DecisionTable,
       "decision_evaluation" => ClinicDemo.Decisions.Evaluation,
-      "visit_definition" => ClinicDemo.Visits.Definition,
+      "process" => ClinicDemo.Visits.Process,
       "visit_instance" => ClinicDemo.Visits.Instance,
       "human_task" => ClinicDemo.Visits.HumanTask,
       "task_candidate" => ClinicDemo.Visits.TaskCandidate

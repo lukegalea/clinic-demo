@@ -11,8 +11,8 @@ defmodule ClinicDemo.Canvas.Registry do
   `projections/2` is where the application claims capabilities the library
   cannot derive from action shape alone. `:diagram` is claimed only where a
   renderer actually exists — the bpmn-js designer for
-  `ClinicDemo.Visits.Definition` and the dmn-js editor for
-  `ClinicDemo.Decisions.Definition` — because a projection is a promise the
+  `ClinicDemo.Visits.Process` and the dmn-js editor for
+  `ClinicDemo.Decisions.DecisionTable` — because a projection is a promise the
   object model makes on the application's behalf, and claiming it for a
   resource nothing can draw would render a badge with nothing behind it.
   Every other target returns `nil`, which keeps the library's derived
@@ -31,7 +31,7 @@ defmodule ClinicDemo.Canvas.Registry do
   def label(_other), do: nil
 
   @impl true
-  def projections(ClinicDemo.Visits.Definition, derived), do: derived ++ [:diagram]
-  def projections(ClinicDemo.Decisions.Definition, derived), do: derived ++ [:diagram]
+  def projections(ClinicDemo.Visits.Process, derived), do: derived ++ [:diagram]
+  def projections(ClinicDemo.Decisions.DecisionTable, derived), do: derived ++ [:diagram]
   def projections(_other, _derived), do: nil
 end

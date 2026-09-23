@@ -1,18 +1,18 @@
-defmodule ClinicDemoWeb.A2ui.ProcessDefinitionUI do
+defmodule ClinicDemoWeb.A2ui.ProcessUI do
   @moduledoc """
-  The published visit processes. Read-only by construction — definitions
-  change through `ClinicDemo.Rules`, never by hand from a grid. The XML stays
-  out of the surface; what a person needs is which version of which process
-  is live.
+  The published visit processes. Read-only by construction — new versions
+  are published through `ClinicDemo.Rules`, never by hand from a grid. The
+  XML stays out of the surface; what a person needs is which version of
+  which process is live.
   """
 
   use AshA2ui.Standalone
 
   a2ui do
-    for_resource ClinicDemo.Visits.Definition
+    for_resource ClinicDemo.Visits.Process
     surface_id "clinic_process_definitions"
     title "Visit processes"
-    record_label("process definition")
+    record_label("visit process")
     spec_version "0.9.1"
 
     query :default do

@@ -25,7 +25,7 @@ defmodule ClinicDemo.Visits do
   use Ash.Domain
 
   resources do
-    resource ClinicDemo.Visits.Definition do
+    resource ClinicDemo.Visits.Process do
       define :create_process, action: :create
       define :publish_process, action: :publish
       define :latest_published_process, action: :latest_published, args: [:key]

@@ -16,7 +16,7 @@ defmodule ClinicDemo.Decisions.Evaluation do
   use AshDecisions.Resources.Evaluation,
     domain: ClinicDemo.Decisions,
     repo: ClinicDemo.Repo,
-    definition: ClinicDemo.Decisions.Definition,
+    definition: ClinicDemo.Decisions.DecisionTable,
     table: "dmn_evaluations",
     base: ClinicDemo.Events.AuditedResource
 
