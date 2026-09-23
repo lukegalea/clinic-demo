@@ -10,17 +10,19 @@ defmodule ClinicDemoWeb.A2ui.Surface do
 
   defmacro __using__(surface_id: surface_id) do
     quote do
+      alias ClinicDemoWeb.A2ui.SurfaceChrome
+
       @doc false
       @impl true
       def mount(params, session, socket) do
         {:ok, socket} = AshA2ui.LiveRenderer.mount(__ash_a2ui_config__(), params, session, socket)
-        {:ok, ClinicDemoWeb.A2ui.SurfaceChrome.mount_presence(socket, unquote(surface_id))}
+        {:ok, SurfaceChrome.mount_presence(socket, unquote(surface_id))}
       end
 
       @doc false
       @impl true
       def handle_info(msg, socket) do
-        ClinicDemoWeb.A2ui.SurfaceChrome.handle_info(msg, __ash_a2ui_config__(), socket)
+        SurfaceChrome.handle_info(msg, __ash_a2ui_config__(), socket)
       end
 
       defoverridable mount: 3, handle_info: 2

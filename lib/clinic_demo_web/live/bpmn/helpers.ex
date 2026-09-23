@@ -55,6 +55,8 @@ defmodule ClinicDemoWeb.Bpmn.Helpers do
 
   def current_actor(_socket), do: nil
 
+  alias AshBpmn.Catalogue.AshActions
+
   @action_specs [
     {"record_triage", ClinicDemo.Scheduling.Appointment, :record_triage},
     {"check_in", ClinicDemo.Scheduling.Appointment, :check_in},
@@ -68,7 +70,7 @@ defmodule ClinicDemoWeb.Bpmn.Helpers do
   """
   @spec action_catalogue(term) :: [map()]
   def action_catalogue(_socket) do
-    AshBpmn.Catalogue.AshActions.entries(@action_specs)
+    AshActions.entries(@action_specs)
   end
 
   @doc """
