@@ -46,36 +46,35 @@ export const CanvasSplitter = {
     this.min = parseInt(this.el.dataset.min || "160", 10);
     this.dragging = false;
 
-    this.#restore();
+    this.restore();
 
-    this.onPointerDown = (event) => this.#startDrag(event);
-    this.onPointerMove = (event) => this.#drag(event);
-    this.onPointerUp = (event) => this.#endDrag(event);
-    this.onDoubleClick = () => this.#reset();
+    this.onPointerDown = (event) => this.startDrag(event);
+    this.onPointerMove = (event) => this.drag(event);
+    this.onPointerUp = (event) => this.endDrag(event);
+    this.onDoubleClick = () => this.reset();
 
     this.onKeydown = (event) => {
       if (this.dragging && event.key === "Escape") {
-        this.#cancelDrag();
+        this.cancelDrag();
         return;
       }
 
       const step = event.shiftKey ? 96 : 24;
-      const rows = this.#rows();
-      const height = this.#shellHeight();
+      const height = this.shellHeight();
 
       const resize = (px) => {
         event.preventDefault();
-        this.#apply(this.#clamp(px, height));
-        this.#persist(px);
-        this.#graphResize();
+        this.apply(this.clamp(px, height));
+        this.persist(px);
+        this.graphResize();
       };
 
       switch (event.key) {
         case "ArrowUp":
-          resize(this.#current() - step);
+          resize(this.current() - step);
           break;
         case "ArrowDown":
-          resize(this.#current() + step);
+          resize(this.current() + step);
           break;
         case "Home":
           resize(this.min);
@@ -86,10 +85,9 @@ export const CanvasSplitter = {
         case "Enter":
         case " ":
           event.preventDefault();
-          this.#reset();
+          this.reset();
           break;
       }
-      void rows;
     };
 
     this.el.addEventListener("pointerdown", this.onPointerDown);
@@ -109,83 +107,83 @@ export const CanvasSplitter = {
 
   // --- internals ---------------------------------------------------------------
 
-  #startDrag(event) {
+  startDrag(event) {
     if (event.button !== 0) return;
     event.preventDefault();
     this.dragging = true;
-    this.preDrag = this.#current();
+    this.preDrag = this.current();
     this.el.setPointerCapture?.(event.pointerId);
     document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
   },
 
-  #drag(event) {
+  drag(event) {
     if (!this.dragging) return;
     // One style write per frame; no reads in this path.
     if (this.raf) return;
     this.raf = requestAnimationFrame(() => {
       this.raf = null;
       if (!this.dragging) return;
-      this.#apply(this.#clamp(this.#pointerRow(event), this.#shellHeight()));
+      this.apply(this.clamp(this.pointerRow(event), this.shellHeight()));
     });
   },
 
-  #endDrag() {
+  endDrag() {
     if (!this.dragging) return;
     this.dragging = false;
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-    const px = this.#current();
-    this.#persist(px);
+    const px = this.current();
+    this.persist(px);
     // Relayout-ish work happens here and only here: one buffer resize.
-    this.#graphResize();
+    this.graphResize();
   },
 
-  #cancelDrag() {
+  cancelDrag() {
     this.dragging = false;
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-    this.#apply(this.preDrag);
-    this.#persist(this.preDrag);
+    this.apply(this.preDrag);
+    this.persist(this.preDrag);
   },
 
-  #reset() {
+  reset() {
     localStorage.removeItem(this.key);
     this.shell.style.removeProperty("grid-template-rows");
-    this.#graphResize();
+    this.graphResize();
   },
 
-  #pointerRow(event) {
+  pointerRow(event) {
     const box = this.shell.getBoundingClientRect();
     return Math.round(event.clientY - box.top);
   },
 
-  #shellHeight() {
+  shellHeight() {
     return Math.round(this.shell.getBoundingClientRect().height);
   },
 
-  #clamp(px, shellHeight) {
+  clamp(px, shellHeight) {
     const max = Math.max(this.min + 40, shellHeight - 96);
     return String(Math.min(Math.max(Math.round(px), this.min), max));
   },
 
   // The first track is the pane; the divider and the rest keep their
   // stylesheet sizes — we only ever replace the leading length.
-  #apply(px) {
+  apply(px) {
     const tracks = getComputedStyle(this.shell).gridTemplateRows.split(" ");
     tracks[0] = `${px}px`;
     this.shell.style.gridTemplateRows = tracks.join(" ");
   },
 
-  #rows() {
+  rows() {
     return getComputedStyle(this.shell).gridTemplateRows;
   },
 
-  #current() {
-    return parseInt(this.#rows().split(" ")[0], 10) || 0;
+  current() {
+    return parseInt(this.rows().split(" ")[0], 10) || 0;
   },
 
-  #persist(px) {
+  persist(px) {
     try {
       localStorage.setItem(this.key, String(px));
     } catch {
@@ -193,7 +191,7 @@ export const CanvasSplitter = {
     }
   },
 
-  #restore() {
+  restore() {
     let stored = null;
     try {
       stored = localStorage.getItem(this.key);
@@ -201,7 +199,7 @@ export const CanvasSplitter = {
       stored = null;
     }
     if (stored && parseInt(stored, 10) >= this.min) {
-      this.#apply(parseInt(stored, 10));
+      this.apply(parseInt(stored, 10));
     }
   },
 
@@ -209,7 +207,7 @@ export const CanvasSplitter = {
   // kind of console-level use; resize() redraws buffers into the new box.
   // The element's own ResizeObserver keeps it fresh during the drag; this
   // is the explicit end-of-gesture settle.
-  #graphResize() {
+  graphResize() {
     const graph = this.shell.querySelector("ash-canvas-graph");
     if (graph && graph.cy && typeof graph.cy.resize === "function") {
       graph.cy.resize();
