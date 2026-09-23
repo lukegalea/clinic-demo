@@ -1,0 +1,3 @@
+node_modules/
+__screenshots__/*.actual.png
+__screenshots__/*.diff.png

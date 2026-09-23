@@ -82,8 +82,13 @@ defmodule ClinicDemoWeb.A2ui.IntakeLive do
            shipped catalog upgrades it into a real typeahead. The data
            attrs mirror that contract on the host chrome (see
            AshA2ui.Combobox's moduledoc) and the hook observes it — focus
-           hand-off and host affordances hang off this seam. --%>
+           hand-off and host affordances hang off this seam. The id is
+           not decoration: a phx-hook element without a DOM id makes the
+           LiveView client log "no DOM ID for hook" on every mount. It
+           names the host chrome, outside the composite's frozen
+           form_select_patient_id* namespace. --%>
       <div
+        id="intake_patient_id_combobox"
         phx-hook="AshA2uiCombobox"
         {AshA2ui.Combobox.data_attrs(field: "patient_id", searchable: true)}
       >

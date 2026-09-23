@@ -66,6 +66,89 @@ jobs:
       # itself, so there is no setup task here.
       - run: mix test
 
+  # The standing visual/behavioral regression gate (test/visual/). Three
+  # incidents — wiped static assets, dead Tailwind classes, an unconsumed
+  # framework skin — all passed the Elixir-only checks above; this job boots
+  # the real app and asserts what a browser actually renders. Required: a
+  # red line here is a user-visible regression, never an allowed-to-fail.
+  #
+  # The suite owns its own readiness waits (node run.mjs polls the app first),
+  # but the curl loop keeps the failure attribution obvious when the server
+  # itself never comes up. The boot is the repo's convention: MIX_ENV=test
+  # (workflow-level) with the runtime PHX_SERVER/PORT overrides; the agent
+  # and OpenRouter paths degrade gracefully without API keys and the suite
+  # asserts what renders, not model answers.
+  visual:
+    name: visual regression suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          TZ: UTC
+          PGTZ: UTC
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Give mix access to private git deps
+        env:
+          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
+        run: |
+          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
+            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
+          fi
+      - uses: ./.github/actions/setup-elixir
+      - name: Set up the database and the seed catalog
+        run: |
+          set -euo pipefail
+          mix ash.setup --quiet
+          mix seed
+      - name: Build the static assets
+        run: |
+          set -euo pipefail
+          mix assets.setup
+          mix assets.build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the Playwright suite
+        working-directory: test/visual
+        run: |
+          set -euo pipefail
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Boot the app under test
+        run: |
+          set -euo pipefail
+          MIX_ENV=test PHX_SERVER=true PORT=4000 mix phx.server > /tmp/phx-server.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4000/ > /dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:4000/ > /dev/null
+      - name: Run the visual suite
+        working-directory: test/visual
+        run: |
+          set -euo pipefail
+          node run.mjs --base-url http://127.0.0.1:4000
+      - name: Dump the server log
+        if: failure()
+        run: tail -n 200 /tmp/phx-server.log
+      - name: Upload the failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-suite-failures
+          path: test/visual/__screenshots__/
+          if-no-files-found: ignore
+
   compile-test:
     name: MIX_ENV=test mix compile --warnings-as-errors
     runs-on: ubuntu-latest
