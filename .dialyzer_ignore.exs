@@ -7,5 +7,5 @@
   # (POST /tidewave/mcp tools/list). If a future dialyxir/dep setup includes
   # runtime-false deps in the PLT, dialyzer will flag these as unnecessary
   # skips and they can go.
-  {"lib/clinic_demo_web/endpoint.ex", :unknown_function},
+  {"lib/clinic_demo_web/endpoint.ex", :unknown_function}
 ]
