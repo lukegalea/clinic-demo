@@ -55,22 +55,26 @@ defmodule ClinicDemoWeb.AgentLive do
      |> assign(:request, "")
      |> assign(:error, nil)
      |> assign(:result, nil)
+     |> assign(:thinking, false)
      |> assign(:presentation, nil)
      |> assign(:refresh_scheduled?, false)
      |> assign(:cue, nil)
      |> assign(:cue_ref, nil)}
   end
 
+  # The LiveView is the coordinator, not the worker: interpretation is one or
+  # two synchronous model calls, and running them here would freeze this page
+  # (and its console) for the round trip. The event acks immediately with a
+  # thinking state on the wire; the plan arrives in handle_async and renders
+  # through the same carry_out paths the buttons use.
   @impl true
   def handle_event("propose", %{"request" => request}, socket) do
-    actor = socket.assigns[:a2ui_actor]
+    socket =
+      socket
+      |> assign(request: request, error: nil, result: nil, thinking: true)
+      |> start_async(:interpret, fn -> Interpreter.interpret(request) end)
 
-    socket = assign(socket, request: request, error: nil, result: nil)
-
-    case Interpreter.interpret(request) do
-      {:ok, plan} -> {:noreply, carry_out(plan, socket, actor)}
-      {:error, message} -> {:noreply, assign(socket, :error, message)}
-    end
+    {:noreply, socket}
   end
 
   # The declared surfaces, one click away. A person who already knows which table
@@ -117,6 +121,26 @@ defmodule ClinicDemoWeb.AgentLive do
       )
 
     {:noreply, assign(socket, :presentation, presentation)}
+  end
+
+  # The interpreter is back. A plan renders exactly as it did when this work
+  # was synchronous; a provider error is the same flash it always was; a
+  # crash is new, and is treated as an ordinary, non-blocking failure.
+  @impl true
+  def handle_async(:interpret, {:ok, {:ok, plan}}, socket) do
+    {:noreply, carry_out(plan, assign(socket, :thinking, false), socket.assigns[:a2ui_actor])}
+  end
+
+  def handle_async(:interpret, {:ok, {:error, message}}, socket) do
+    {:noreply, assign(socket, thinking: false, error: message)}
+  end
+
+  # A crash inside the interpreter must not freeze or blank the console: the
+  # error is non-blocking, the thinking state clears, and everything else on
+  # the page stays exactly where it was.
+  def handle_async(:interpret, {:exit, _reason}, socket) do
+    {:noreply,
+     assign(socket, thinking: false, error: "the interpreter stopped before answering — ask again.")}
   end
 
   @impl true
@@ -214,11 +238,16 @@ defmodule ClinicDemoWeb.AgentLive do
             class="h-10 w-full rounded-base border-2 border-border bg-secondary-background px-3 py-2 text-sm font-base placeholder:text-foreground/50 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
             autocomplete="off"
           />
+          <%!-- Acknowledgement is twofold: the CSS loading variant fires the
+               instant the form is submitted (before the server acks), and
+               the :thinking assign keeps the button down for as long as the
+               interpreter is actually out. --%>
           <button
             type="submit"
-            class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-4 py-2 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+            disabled={@thinking}
+            class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-4 py-2 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press phx-submit-loading:opacity-50 phx-submit-loading:pointer-events-none"
           >
-            Ask
+            {if @thinking, do: "Thinking…", else: "Ask"}
           </button>
         </form>
 
@@ -236,10 +265,20 @@ defmodule ClinicDemoWeb.AgentLive do
             phx-click="show-surface"
             phx-value-name={surface.name}
             id={"open-#{surface.name}"}
-            class="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+            class="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press phx-click-loading:opacity-50 phx-click-loading:pointer-events-none"
           >
             {surface.label}
           </button>
+        </div>
+
+        <%!-- The interpreter is out; the console says so in the same slot the
+             result lands in, so nothing jumps when it is replaced. --%>
+        <div
+          :if={@thinking}
+          class="relative grid w-full gap-2 rounded-base border-2 border-border bg-background px-4 py-3 text-sm text-foreground shadow-shadow"
+          role="status"
+        >
+          <span class="whitespace-pre-line">Thinking…</span>
         </div>
 
         <div
@@ -289,8 +328,11 @@ defmodule ClinicDemoWeb.AgentLive do
                 {@presentation.subtitle}
               </p>
             </div>
+            <%!-- Optimistic dismiss: the panel hides the instant the click
+                 lands; the server does its PubSub cleanup afterwards and the
+                 reconciling patch finds it already gone. --%>
             <button
-              phx-click="dismiss-surface"
+              phx-click={JS.push("dismiss-surface") |> JS.hide(to: "[data-role=surface]")}
               class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
             >
               Dismiss

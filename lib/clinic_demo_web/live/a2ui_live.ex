@@ -9,6 +9,10 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   # actor_present policy — the error surfaces in the a2ui status banner
   # inside the shadow DOM, which reads as "the button didn't work". This
   # banner says why, before the click.
+  #
+  # /acting-as is a live_session of its own (the framework's actor picker);
+  # navigating across a live_session boundary is a full page load regardless,
+  # so this stays a plain href until the framework seam (F2) lands.
   @impl true
   def render(assigns) do
     ~H"""
@@ -45,6 +49,8 @@ defmodule ClinicDemoWeb.A2ui.ScheduleLive do
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
+          <%!-- Same as the board: /acting-as crosses the live_session
+               boundary, so it stays a full load (framework seam F2). --%>
           Booking and transitions need a clinician —
           <.link href="/acting-as" class="underline underline-offset-2">pick one</.link>
           to enable them.
@@ -76,12 +82,14 @@ defmodule ClinicDemoWeb.A2ui.VisitsLive do
     <div class="flex flex-col gap-4">
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
-        <a
-          href="/operator/tasks"
+        <%!-- Live navigation: /operator/tasks is inside live_session :a2ui,
+             so the visit surface stays mounted while the browser moves. --%>
+        <.link
+          navigate="/operator/tasks"
           class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
           Open instances in the process viewer (via tasks)
-        </a>
+        </.link>
       </div>
     </div>
     """
@@ -114,12 +122,13 @@ defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
     <div class="flex flex-col gap-4">
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
-        <a
-          href="/operator/processes/appointment_visit/designer"
+        <%!-- Live navigation: the designer is inside live_session :a2ui. --%>
+        <.link
+          navigate="/operator/processes/appointment_visit/designer"
           class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
           Draw appointment_visit in the designer
-        </a>
+        </.link>
       </div>
     </div>
     """
@@ -137,12 +146,13 @@ defmodule ClinicDemoWeb.A2ui.DecisionDefinitionsLive do
     <div class="flex flex-col gap-4">
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
-        <a
-          href="/operator/decisions/appointment.triage/editor"
+        <%!-- Live navigation: the DMN editor is inside live_session :a2ui. --%>
+        <.link
+          navigate="/operator/decisions/appointment.triage/editor"
           class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
           Edit appointment.triage in the DMN editor
-        </a>
+        </.link>
       </div>
     </div>
     """

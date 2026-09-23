@@ -59,27 +59,40 @@
     acting_as_pill =
       "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-yellow px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press" %>
     <div class="sticky top-0 z-40 flex min-h-fit flex-wrap items-center gap-x-2 gap-y-1 border-b-2 border-border bg-background px-4 py-2">
-      <a class="flex items-center gap-2 px-2 text-lg font-display" href="/">
+      <%!-- Live navigation: every pill's target is a LiveView inside
+           live_session :a2ui (router.ex), so navigating keeps this nav
+           mounted across surfaces instead of reloading the document per
+           click. Classes are the design lane's, unchanged. --%>
+      <.link
+        class="flex items-center gap-2 px-2 text-lg font-display"
+        navigate={~p"/"}
+      >
         ClinicDemo
         <span
           class="inline-block size-3 -rotate-12 rounded-base border-2 border-border bg-yellow"
           aria-hidden="true"
         />
-      </a>
+      </.link>
       <nav class="flex flex-wrap gap-1.5" aria-label="Main">
-        <a class={nav_pill} href="/">Board</a>
-        <a class={nav_pill} href="/intake">Intake</a>
-        <a class={nav_pill} href="/schedule">Schedule</a>
-        <a class={nav_pill} href="/worklist">Worklist</a>
-        <a class={nav_pill} href="/visits">Visits</a>
-        <a class={nav_pill} href="/patients">Patients</a>
-        <a class={nav_pill} href="/clinicians">Clinicians</a>
-        <a class={nav_pill} href="/processes">Processes</a>
-        <a class={nav_pill} href="/decisions">Decisions</a>
-        <a class={nav_pill} href="/evaluations">Evidence</a>
+        <.link class={nav_pill} navigate={~p"/"}>Board</.link>
+        <.link class={nav_pill} navigate={~p"/intake"}>Intake</.link>
+        <.link class={nav_pill} navigate={~p"/schedule"}>Schedule</.link>
+        <.link class={nav_pill} navigate={~p"/worklist"}>Worklist</.link>
+        <.link class={nav_pill} navigate={~p"/visits"}>Visits</.link>
+        <.link class={nav_pill} navigate={~p"/patients"}>Patients</.link>
+        <.link class={nav_pill} navigate={~p"/clinicians"}>Clinicians</.link>
+        <.link class={nav_pill} navigate={~p"/processes"}>Processes</.link>
+        <.link class={nav_pill} navigate={~p"/decisions"}>Decisions</.link>
+        <.link class={nav_pill} navigate={~p"/evaluations"}>Evidence</.link>
+        <%!-- /operator is a plain controller page, not a LiveView, so there
+             is nothing to navigate to — this one stays a full load. --%>
         <a class={nav_pill} href="/operator">Operator</a>
       </nav>
       <div class="ms-auto">
+        <%!-- /acting-as is a live_session of its own (AshA2ui's actor
+             picker), and navigating across a live_session boundary is a
+             full page load anyway — a plain link says so honestly until
+             the framework seam (F2) lands. --%>
         <a class={acting_as_pill} href="/acting-as">Acting as…</a>
       </div>
     </div>
