@@ -23,6 +23,220 @@ and what it does:
 | [`ash_decisions`](https://github.com/lukegalea/ash_decisions) | business rules as versioned DMN, evaluated rather than compiled in |
 | [`ash_bpmn`](https://github.com/lukegalea/ash_bpmn) | a process as a BPMN document, executed as durable tokens over Postgres |
 
+## The maximal-code walkthrough
+
+The pitch of this capstone is **not** "no code." It is *maximal code*: every
+moving part of the clinic is a declaration — DSL blocks that read like
+policy — and everything a user sees, everything the engine executes, and
+every refusal the operator gets is *generated* from those declarations.
+Below, each pair shows the code on the left and the physical thing it
+becomes on the right, with the route where you can watch it happen.
+
+### A surface is a form and a table — declared, then rendered
+
+<table><tr><th width="50%">The code</th><th>What it generates</th></tr>
+<tr><td>
+
+```elixir
+# lib/clinic_demo_web/a2ui/intake_ui.ex
+use AshA2ui.Standalone
+
+a2ui do
+  for_resource ClinicDemo.Scheduling.Appointment
+  surface_id "clinic_intake"
+
+  component :form do
+    fields [:patient_id, :clinician_id, :scheduled_at,
+            :duration_minutes, :reason, :severity]
+    create_action :book
+
+    nested_form :patient do
+      label "New patient — fill in only when they have never been in"
+      fields [:name, :species, :breed, :date_of_birth,
+              :weight_kg, :microchip_number, :owner_email]
+    end
+  end
+
+  component :table, :recent do
+    fields [:patient_label, :reason, :scheduled_at,
+            :status, :triage_urgency]
+    row_layout do
+      title :patient_label
+      badge :triage_urgency
+      columns 3
+    end
+  end
+end
+```
+
+</td><td>
+
+**The Intake screen** — [`/intake`](http://localhost:4000/intake)
+
+One gated form (the *Create appointment* button opens it
+front-and-center): a searchable patient picker, or a nested new-patient
+section whose fields ride `Patient.register`'s own validations. Below it,
+the receptionist's confirmation table — rows land with triage urgency
+already decided, because booking *is* what starts the visit process.
+
+No template was written for this page. The DSL compiles to an a2ui
+surface spec; the web components, loading states, skeletons, and the
+optimistic busy feedback are the framework's, themed through tokens.
+
+</td></tr></table>
+
+### The state machine is four lines — and the diagram cannot drift
+
+<table><tr><th width="50%">The code</th><th>What it generates</th></tr>
+<tr><td>
+
+```elixir
+# lib/clinic_demo/scheduling/appointment.ex
+extensions: [AshStateMachine]
+
+state_machine do
+  state_attribute(:status)
+  initial_states([:scheduled, :checked_in, :completed,
+                  :cancelled, :no_show])
+  default_initial_state(:scheduled)
+
+  transitions do
+    transition(:check_in, from: :scheduled, to: :checked_in)
+    transition(:complete, from: :checked_in, to: :completed)
+    transition(:cancel, from: [:scheduled, :checked_in],
+              to: :cancelled)
+    transition(:mark_no_show, from: :scheduled, to: :no_show)
+  end
+end
+```
+
+</td><td>
+
+**A rendered state diagram** — [operator hub](http://localhost:4000/operator),
+*Visit state machine* card.
+
+`AshStateMachine.Charts.mermaid_state_diagram/1` derives the diagram from
+the declaration above, so the picture on the wall is the machine in the
+code — there is no second artifact to keep in step. An illegal
+`complete` from `:scheduled` is refused with a `NoMatchingTransition`
+error *naming the transition*, which is also what
+`mix ash_agent.transitions` tells an agent.
+
+</td></tr></table>
+
+### A policy is two lines — and the whole app refuses without an actor
+
+<table><tr><th width="50%">The code</th><th>What it generates</th></tr>
+<tr><td>
+
+```elixir
+# lib/clinic_demo/scheduling/appointment.ex
+policies do
+  policy action_type(:read) do
+    description "The schedule is readable by anything that can
+                 reach the application."
+    authorize_if always()
+  end
+
+  policy action_type([:create, :update, :destroy]) do
+    description "Only a signed-in member of staff may change
+                 the schedule."
+    authorize_if actor_present()
+  end
+end
+```
+
+</td><td>
+
+**Every write gated, everywhere** — try any button before picking a
+clinician at [`/acting-as`](http://localhost:4000/acting-as).
+
+The same declaration powers the board's "No one is acting" banner, the
+actor picker's roster, and `mix ash_agent.can`'s per-policy verdicts with
+`responsible` analysis — an agent can ask *why* something would be
+forbidden and get the policy's own description back.
+
+</td></tr></table>
+
+### Compliance rules are data — and the guard reads the activated bundle
+
+<table><tr><th width="50%">The code</th><th>What it generates</th></tr>
+<tr><td>
+
+```elixir
+# lib/clinic_demo/compliance/appointment_rules.ex
+use AshRules
+
+rule "check-in requires a recorded weight",
+  id: "appt.checkin_requires_weight",
+  severity: :high do
+  when_requires(has(:appointment, :transition_to, :checked_in))
+  fails_when(neg(:appointment, :patient_weight_recorded, true))
+  outcome(:noncompliant,
+          gap: "record the patient's weight before check-in")
+end
+
+# lib/clinic_demo/scheduling/appointment.ex — the guard rides
+# the transition itself:
+update :check_in do
+  change {ComplianceGuard, transition_to: :checked_in}
+  change transition_state(:checked_in)
+end
+```
+
+</td><td>
+
+**An operator-managed rulebook** — authored and activated at
+[`/operator/rules`](http://localhost:4000/operator/rules); every guarded
+decision recorded in the
+[evidence trail](http://localhost:4000/evaluations).
+
+The module compiles to a content-hashed bundle; the guard evaluates the
+*activated* bundle, never the file. Editing here changes nothing until a
+new revision is drafted, validated, approved and activated — the rules in
+force are rows, not code. A blocked check-in surfaces the gap text above,
+verbatim, with the rule's id.
+
+</td></tr></table>
+
+### The process is a document — and the tokens are real rows
+
+<table><tr><th width="50%">The code</th><th>What it generates</th></tr>
+<tr><td>
+
+```elixir
+# priv/processes/appointment_visit.bpmn — a BPMN document:
+# Triage (business rule → the DMN table) → RecordUrgency →
+# CheckIn (user task, candidates = active nurses) → Consult →
+# Discharge; every service task names the Ash action it calls.
+
+# Booking starts it inside the transaction:
+create :book do
+  change StartVisitProcess          # appointment_visit, in-txn
+  ...
+end
+```
+
+</td><td>
+
+**A live token you can watch** — book a visit, then open it from the
+operator hub's *Visit processes*; the instance viewer draws the diagram
+with the current node highlighted, status-styled (waiting = dashed,
+executing = pulsing), refreshed as the process moves.
+
+The DMN decision (`priv/decisions/appointment_triage.dmn`) answers
+*before the row lands*: severity, age band and species in; urgency out.
+The same table is dry-evaluable by agents (`mix ash_agent.evaluate`)
+and rendered in the [decision editor](http://localhost:4000/operator/decisions/appointment.triage/editor).
+
+</td></tr></table>
+
+The through-line: each declaration is small enough to read in one breath,
+and each one *is* the source of truth for a whole slice of the running
+system — the UI, the diagram, the refusal, the rulebook, the token. That
+is what maximal code buys: nothing generated that isn't declared, and
+nothing declared that doesn't generate.
+
 The domain is a veterinary clinic's appointment book. Three scheduling
 resources, one DMN table, one BPMN diagram. That is the point — everything
 interesting here is what the tooling can tell you, and what the two documents
