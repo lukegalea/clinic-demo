@@ -131,4 +131,71 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
     assert [only] = Scheduling.appointments_in_window!(from, to)
     assert only.reason == "Routine check"
   end
+
+  describe "booking with a nested new patient" do
+    defp booking_attrs(vet, overrides) do
+      Map.merge(
+        %{
+          clinician_id: vet.id,
+          scheduled_at: DateTime.add(DateTime.utc_now(), 1, :day),
+          reason: "New client, first visit"
+        },
+        overrides
+      )
+    end
+
+    test "a patient map is registered on the spot and linked" do
+      %{vet: vet} = fixtures()
+
+      {:ok, appointment} =
+        Scheduling.book_appointment(
+          booking_attrs(vet, %{
+            patient: %{name: "Waffle", species: :dog, owner_email: "waffle@example.com"}
+          }),
+          actor: @staff
+        )
+
+      assert appointment.patient_id
+      patient = Ash.load!(appointment, [:patient]).patient
+      assert patient.name == "Waffle"
+
+      # The visit process still started and ran its triage — booking is
+      # booking, whichever way the patient was named. (The engine's writes
+      # land after the booking commits, so the record is re-read.)
+      appointment = Scheduling.get_appointment!(appointment.id)
+      assert appointment.triage_urgency
+    end
+
+    test "the nested create runs Patient.register's validations" do
+      %{vet: vet} = fixtures()
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Scheduling.book_appointment(
+                 booking_attrs(vet, %{
+                   patient: %{name: "Waffle", species: :dog, owner_email: "not-an-email"}
+                 }),
+                 actor: @staff
+               )
+    end
+
+    test "supplying both patient_id and patient is refused" do
+      %{vet: vet, patient: patient} = fixtures()
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Scheduling.book_appointment(
+                 booking_attrs(vet, %{
+                   patient_id: patient.id,
+                   patient: %{name: "Waffle", species: :dog, owner_email: "waffle@example.com"}
+                 }),
+                 actor: @staff
+               )
+    end
+
+    test "supplying neither is refused" do
+      %{vet: vet} = fixtures()
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Scheduling.book_appointment(booking_attrs(vet, %{}), actor: @staff)
+    end
+  end
 end

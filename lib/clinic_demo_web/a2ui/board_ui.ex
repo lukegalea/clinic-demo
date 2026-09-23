@@ -5,9 +5,14 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
   A sectioned table — the lanes are seeded `BoardLane` rows, each expanded
   table reads appointments whose `board_lane` calculation equals the lane
   key, and a lane move IS a state transition: the same row actions as the
-  schedule (check in, record triage, complete, discharge), no refreshes
-  clause — every action refreshes every lane, so a card landing in its new
-  lane is the action's success feedback.
+  schedule (check in, complete, discharge), no refreshes clause — every
+  action refreshes every lane, so a card landing in its new lane is the
+  action's success feedback.
+
+  Check in and no-show are `via`-delegated to
+  `ClinicDemo.Visits.VisitFacade`: the click completes the visit's
+  `CheckIn` work item through the engine and the token moves the
+  appointment — the board never sets state around the process.
   """
 
   use AshA2ui.Standalone
@@ -42,7 +47,7 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
       # Every transition is its own Ash action with a CurrentStatusIn guard;
       # visible_when mirrors the guard so a card only offers the moves its
       # state allows.
-      row_actions [:check_in, :record_triage, :complete, :mark_no_show, :cancel, :discharge]
+      row_actions [:check_in, :complete, :mark_no_show, :cancel, :discharge]
 
       sections do
         source ClinicDemo.Scheduling.BoardLane
@@ -54,14 +59,11 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
       end
     end
 
+    # Via-delegated to the engine facade: the click completes the visit's
+    # CheckIn work item and the token performs the transition.
     action :check_in do
+      via {ClinicDemo.Visits.VisitFacade, :check_in_task, ["board"]}
       visible_when status: :scheduled
-    end
-
-    action :record_triage do
-      prompt_fields [:urgency]
-      prompt_title "Record triage"
-      visible_when status: [:scheduled, :checked_in]
     end
 
     action :complete do
@@ -71,6 +73,7 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
     end
 
     action :mark_no_show do
+      via {ClinicDemo.Visits.VisitFacade, :check_in_task, ["board"]}
       visible_when status: :scheduled
     end
 

@@ -79,6 +79,29 @@
   </div>
 </section>
 
+<%!-- The Visits surface can't link a row to its instance viewer (the a2ui
+     surface DSL has no external row links), so this list is the bridge:
+     latest instances, each a link into /operator/instances/:id. --%>
+<section class="mb-8">
+  <h2 class="mb-3 text-lg font-heading">Recent visit processes</h2>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <%= for instance <- @recent_instances do %>
+      <a href={"/operator/instances/#{instance.id}"} class={card}>
+        <h3 class="font-heading">{instance.subject_label}</h3>
+        <p class="text-sm text-foreground/70">
+          Standing at <span class="font-medium">{instance.current_node}</span>
+          · status {instance.status}<%= if instance.outcome, do: " · outcome #{instance.outcome}" %>
+        </p>
+      </a>
+    <% end %>
+    <%= if @recent_instances == [] do %>
+      <p class="text-sm text-foreground/70">
+        No visit processes yet — book an appointment and one starts here.
+      </p>
+    <% end %>
+  </div>
+</section>
+
 <section class="mb-8">
   <h2 class="mb-3 text-lg font-heading">Discovery &amp; insight</h2>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

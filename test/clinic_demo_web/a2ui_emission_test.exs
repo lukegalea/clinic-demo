@@ -23,6 +23,8 @@ defmodule ClinicDemoWeb.A2uiEmissionTest do
 
   surfaces = [
     ClinicDemoWeb.A2ui.AppointmentUI,
+    ClinicDemoWeb.A2ui.IntakeUI,
+    ClinicDemoWeb.A2ui.BoardUI,
     ClinicDemoWeb.A2ui.WorklistUI,
     ClinicDemoWeb.A2ui.VisitInstanceUI,
     ClinicDemoWeb.A2ui.PatientUI,

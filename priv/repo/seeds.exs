@@ -29,7 +29,7 @@ Published:
 require Ash.Query
 
 lane_rows = [
-  %{lane_key: "intake", label: "Intake", position: 1, accent: "neutral"},
+  %{lane_key: "intake", label: "Booked", position: 1, accent: "neutral"},
   %{lane_key: "low", label: "Low — routine", position: 2, accent: "green"},
   %{lane_key: "medium", label: "Medium — soon", position: 3, accent: "amber"},
   %{lane_key: "high", label: "High — urgent & emergency", position: 4, accent: "red"},
@@ -55,19 +55,69 @@ for row <- lane_rows do
   end
 end
 
+# ── Idempotency helpers ────────────────────────────────────────────────────
+#
+# Everything below the lanes is lookup-or-create keyed on a natural value
+# (a license, an owner email, patient + reason), so re-running the seeds
+# against a populated dev database updates what exists instead of crashing
+# on a unique index or piling up duplicates.
+
+clinician_by = fn opts ->
+  opts = Map.new(opts)
+  query = ClinicDemo.Scheduling.Clinician |> Ash.Query.for_read(:read)
+
+  query =
+    if opts[:license_number] do
+      Ash.Query.filter(query, license_number == ^opts.license_number)
+    else
+      Ash.Query.filter(query, full_name == ^opts.full_name)
+    end
+
+  Ash.read_one!(query, authorize?: false)
+end
+
+patient_by = fn opts ->
+  opts = Map.new(opts)
+
+  ClinicDemo.Scheduling.Patient
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(owner_email == ^opts.owner_email)
+  |> Ash.read_one!(authorize?: false)
+end
+
+appointment_by = fn patient_id, reason ->
+  ClinicDemo.Scheduling.Appointment
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(patient_id == ^patient_id and reason == ^reason)
+  |> Ash.read_one!(authorize?: false)
+end
+
 {:ok, vet} =
-  Scheduling.hire_clinician(%{
-    full_name: "Dr. Amara Osei",
-    role: :veterinarian,
-    license_number: "ON-104422"
-  })
+  case clinician_by.(license_number: "ON-104422") do
+    nil ->
+      Scheduling.hire_clinician(%{
+        full_name: "Dr. Amara Osei",
+        role: :veterinarian,
+        license_number: "ON-104422"
+      })
+
+    clinician ->
+      {:ok, clinician}
+  end
 
 {:ok, tech} =
-  Scheduling.hire_clinician(%{full_name: "Jonah Reyes", role: :technician})
+  case clinician_by.(full_name: "Jonah Reyes") do
+    nil -> Scheduling.hire_clinician(%{full_name: "Jonah Reyes", role: :technician})
+    clinician -> {:ok, clinician}
+  end
 
 # The front desk. `CheckIn` in the visit process is assigned to every active
 # nurse, resolved out of this table rather than out of the diagram.
-{:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Ruth Vance", role: :nurse})
+{:ok, nurse} =
+  case clinician_by.(full_name: "Ruth Vance") do
+    nil -> Scheduling.hire_clinician(%{full_name: "Ruth Vance", role: :nurse})
+    clinician -> {:ok, clinician}
+  end
 
 patients =
   for attrs <- [
@@ -94,8 +144,14 @@ patients =
           owner_email: "priya.nair@example.com"
         }
       ] do
-    {:ok, patient} = Scheduling.register_patient(attrs)
-    patient
+    case patient_by.(owner_email: attrs.owner_email) do
+      nil ->
+        {:ok, patient} = Scheduling.register_patient(attrs)
+        patient
+
+      patient ->
+        patient
+    end
   end
 
 [biscuit, pepper, clover] = patients
@@ -106,44 +162,51 @@ tomorrow_at = fn hour ->
   |> DateTime.new!(Time.new!(hour, 0, 0), "Etc/UTC")
 end
 
+book = fn patient, clinician, attrs ->
+  case appointment_by.(patient.id, attrs.reason) do
+    nil ->
+      Scheduling.book_appointment(
+        Map.merge(
+          %{
+            patient_id: patient.id,
+            clinician_id: clinician.id,
+            scheduled_at: tomorrow_at.(9),
+            duration_minutes: 30,
+            severity: 2
+          },
+          attrs
+        ),
+        actor: staff
+      )
+
+    existing ->
+      {:ok, existing}
+  end
+end
+
 {:ok, _} =
-  Scheduling.book_appointment(
-    %{
-      patient_id: biscuit.id,
-      clinician_id: vet.id,
-      scheduled_at: tomorrow_at.(9),
-      duration_minutes: 30,
-      reason: "Limping on the right foreleg since Saturday",
-      severity: 2
-    },
-    actor: staff
-  )
+  book.(biscuit, vet, %{
+    scheduled_at: tomorrow_at.(9),
+    duration_minutes: 30,
+    reason: "Limping on the right foreleg since Saturday",
+    severity: 2
+  })
 
 {:ok, pepper_visit} =
-  Scheduling.book_appointment(
-    %{
-      patient_id: pepper.id,
-      clinician_id: vet.id,
-      scheduled_at: tomorrow_at.(10),
-      duration_minutes: 20,
-      reason: "Annual vaccination",
-      severity: 1
-    },
-    actor: staff
-  )
+  book.(pepper, vet, %{
+    scheduled_at: tomorrow_at.(10),
+    duration_minutes: 20,
+    reason: "Annual vaccination",
+    severity: 1
+  })
 
 {:ok, clover_visit} =
-  Scheduling.book_appointment(
-    %{
-      patient_id: clover.id,
-      clinician_id: tech.id,
-      scheduled_at: tomorrow_at.(11),
-      duration_minutes: 15,
-      reason: "Off her food and quieter than usual",
-      severity: 3
-    },
-    actor: staff
-  )
+  book.(clover, tech, %{
+    scheduled_at: tomorrow_at.(11),
+    duration_minutes: 15,
+    reason: "Off her food and quieter than usual",
+    severity: 3
+  })
 
 # ── Walking two visits through the process ─────────────────────────────────
 #
@@ -167,53 +230,66 @@ open_task = fn appointment, node_id ->
   end)
 end
 
-# Pepper: in, seen, written up, out.
-{:ok, _} =
-  AshBpmn.complete_task(open_task.(pepper_visit, "CheckIn"),
-    outcome: :arrived,
-    actor: %{id: nurse.id}
-  )
+# Nothing here reaches into the engine. Each step is a person completing the
+# work item in front of them, and the process does the rest. On a re-run the
+# visits have already moved, so each step fires only when the visit is still
+# standing at the stage that makes it meaningful.
 
+# Pepper: in, seen, written up, out.
 pepper_visit = Scheduling.get_appointment!(pepper_visit.id)
 
-{:ok, _} =
-  Scheduling.complete_appointment(
-    pepper_visit,
-    "Vaccinated against FVRCP and rabies. No adverse reaction observed.",
-    actor: staff
-  )
+if pepper_visit.status == :scheduled do
+  {:ok, _} =
+    AshBpmn.complete_task(open_task.(pepper_visit, "CheckIn"),
+      outcome: :arrived,
+      actor: %{id: nurse.id}
+    )
 
-{:ok, _} =
-  AshBpmn.complete_task(open_task.(pepper_visit, "Consult"),
-    outcome: :written_up,
-    comment: "Nothing else to follow up.",
-    actor: %{id: vet.id}
-  )
+  pepper_visit = Scheduling.get_appointment!(pepper_visit.id)
+
+  {:ok, _} =
+    Scheduling.complete_appointment(
+      pepper_visit,
+      "Vaccinated against FVRCP and rabies. No adverse reaction observed.",
+      actor: staff
+    )
+
+  {:ok, _} =
+    AshBpmn.complete_task(open_task.(pepper_visit, "Consult"),
+      outcome: :written_up,
+      comment: "Nothing else to follow up.",
+      actor: %{id: vet.id}
+    )
+end
 
 # Clover: in, seen, bloods sent. This instance is parked on `AwaitLabResults`,
 # which is the wait state, and it will stay there until somebody in the lab
 # completes that task.
-{:ok, _} =
-  AshBpmn.complete_task(open_task.(clover_visit, "CheckIn"),
-    outcome: :arrived,
-    actor: %{id: nurse.id}
-  )
-
 clover_visit = Scheduling.get_appointment!(clover_visit.id)
 
-{:ok, _} =
-  Scheduling.complete_appointment(
-    clover_visit,
-    "Reduced gut sounds. Bloods sent; holding discharge until they are back.",
-    actor: staff
-  )
+if clover_visit.status == :scheduled do
+  {:ok, _} =
+    AshBpmn.complete_task(open_task.(clover_visit, "CheckIn"),
+      outcome: :arrived,
+      actor: %{id: nurse.id}
+    )
 
-{:ok, _} =
-  AshBpmn.complete_task(open_task.(clover_visit, "Consult"),
-    outcome: :labs_pending,
-    comment: "Biochem and PCV requested.",
-    actor: %{id: tech.id}
-  )
+  clover_visit = Scheduling.get_appointment!(clover_visit.id)
+
+  {:ok, _} =
+    Scheduling.complete_appointment(
+      clover_visit,
+      "Reduced gut sounds. Bloods sent; holding discharge until they are back.",
+      actor: staff
+    )
+
+  {:ok, _} =
+    AshBpmn.complete_task(open_task.(clover_visit, "Consult"),
+      outcome: :labs_pending,
+      comment: "Biochem and PCV requested.",
+      actor: %{id: tech.id}
+    )
+end
 
 {:ok, _} = Scheduling.record_weight(pepper, Decimal.new("4.35"))
 

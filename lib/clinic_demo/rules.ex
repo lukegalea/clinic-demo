@@ -90,9 +90,9 @@ defmodule ClinicDemo.Rules do
   def decision_key, do: @decision_key
 
   defp install_document(resource, key, name, xml, actor, create, publish) do
-    hash = content_hash(xml)
+    hashes = storage_hashes(xml)
 
-    case existing(resource, key, hash, actor) do
+    case existing(resource, key, hashes, actor) do
       {:published, definition} -> definition
       {:draft, draft} -> publish.(draft, actor: actor)
       :none -> publish.(compile!(key, name, xml, actor, create), actor: actor)
@@ -116,24 +116,38 @@ defmodule ClinicDemo.Rules do
   # A filtered read rather than a code interface: "the row for this key whose
   # content hash matches, in whichever lifecycle state" is a deployment
   # question, not a thing the domain should grow an action for.
-  defp existing(resource, key, hash, actor) do
+  defp existing(resource, key, hashes, actor) do
     rows =
       resource
       |> Ash.Query.for_read(:read, %{}, actor: actor)
-      |> Ash.Query.filter(key == ^key and content_hash == ^hash)
+      |> Ash.Query.filter(key == ^key)
       |> Ash.Query.sort(version: :desc)
       |> Ash.read!()
 
+    matches? = &(&1.content_hash in hashes)
+
     cond do
-      published = Enum.find(rows, &(&1.status == :published)) -> {:published, published}
-      draft = Enum.find(rows, &(&1.status == :draft and &1.errors == [])) -> {:draft, draft}
-      true -> :none
+      published = Enum.find(rows, &(&1.status == :published and matches?.(&1))) ->
+        {:published, published}
+
+      draft = Enum.find(rows, &(&1.status == :draft and &1.errors == [] and matches?.(&1))) ->
+        {:draft, draft}
+
+      true ->
+        :none
     end
   end
 
-  # Both packages hash the document the same way, and both store it on the row.
-  # Comparing it is what makes a second `install!/0` a no-op rather than a new
-  # version of a document nobody edited.
+  # The two packages hash the document differently, and both store the hash on
+  # the row: ash_decisions hashes the raw document, while ash_bpmn hashes it
+  # *after* Ash's string cast trims trailing whitespace (`trim?` is the default
+  # on `:string` attributes). A repo file that ends in a newline therefore
+  # hashes to two legitimate values depending on the package. Comparing against
+  # both is what makes a second `install!/0` a no-op against either storage,
+  # rather than a new published version of a document nobody edited.
+  defp storage_hashes(xml),
+    do: [xml, String.trim(xml)] |> Enum.uniq() |> Enum.map(&content_hash/1)
+
   defp content_hash(xml), do: Base.encode16(:crypto.hash(:sha256, xml), case: :lower)
 
   defp read!(path), do: :clinic_demo |> Application.app_dir(path) |> File.read!()

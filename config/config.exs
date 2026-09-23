@@ -41,14 +41,12 @@ config :ash,
   default_page_type: :keyset,
   policies: [no_filter_static_forbidden_reads?: false]
 
-# ash_a2ui: running the default experience (v1 basic emission + the merged
-# catalog). The experience-v2/admin_v1 cell emits a semantic component tree
-# (entityPage/dataGrid/recordPanel) whose reserved-path text bindings
-# (/ui/panel/title, /ui/status, grid records) are NOT hydrated by the shipped
-# renderer stack today (0.10.x and 0.11.x both) — everything schema-valid,
-# everything renders, values show as [object Object] and the grid stays
-# empty. Re-enable only when the client side lands; evidence trail in
-# scripts/a2ui_render_probe.mjs.
+# ash_a2ui: this app rides the framework defaults. Experience v2 is the
+# default since 5d4326b and stays — the earlier v1 pin (and the
+# [object Object] evidence trail that justified it) is gone with the
+# renderer fixes the probe verifies. The component catalog also stays at
+# its `:basic` default: `catalog :admin_v1` is not set until the
+# admin-catalog hydration fix is verified here, not just upstream.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,

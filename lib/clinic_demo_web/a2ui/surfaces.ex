@@ -36,11 +36,12 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       label: "Schedule",
       ui: A2ui.AppointmentUI,
       path: "/schedule",
-      blurb: "Every appointment in one grid, with booking and the visit lifecycle's row actions.",
+      blurb:
+        "Every appointment in one grid, with the visit lifecycle's row actions. Booking lives on the intake screen.",
       description:
         "The schedule: every appointment, with its time, reason, severity, triage " <>
-          "urgency and status, plus booking and the check-in-to-discharge transitions " <>
-          "as row actions."
+          "urgency and status, plus the check-in-to-discharge transitions " <>
+          "as row actions. New bookings are made on the intake screen."
     },
     %{
       name: "worklist",

@@ -15,6 +15,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
   alias ClinicDemo.Scheduling.Changes.ComplianceGuard
   alias ClinicDemo.Scheduling.Changes.StartVisitProcess
   alias ClinicDemo.Scheduling.Validations.CurrentStatusIn
+  alias ClinicDemo.Scheduling.Validations.ExactlyOneOf
   alias ClinicDemo.Scheduling.Validations.NotInThePast
 
   postgres do
@@ -186,8 +187,20 @@ defmodule ClinicDemo.Scheduling.Appointment do
       accept [:scheduled_at, :duration_minutes, :reason, :severity]
 
       argument :patient_id, :uuid do
-        description "An existing patient. Booking does not create one."
-        allow_nil? false
+        description "An existing patient. Exactly one of this and :patient."
+        allow_nil? true
+      end
+
+      argument :patient, :map do
+        description """
+        A new patient to register on the spot, as the intake form collects
+        them. The map is created through `Patient.register`, so that
+        action's validations (the owner-email format, no future dates of
+        birth) run on the nested input exactly as they do on the patients
+        surface.
+        """
+
+        allow_nil? true
       end
 
       argument :clinician_id, :uuid do
@@ -195,7 +208,21 @@ defmodule ClinicDemo.Scheduling.Appointment do
         allow_nil? false
       end
 
-      change manage_relationship(:patient_id, :patient, type: :append)
+      # The two ways of naming the patient. Each manage only fires when its
+      # argument was actually supplied (the `where` guards), and the
+      # validation below makes the either/or a hard contract: exactly one.
+      change manage_relationship(:patient_id, :patient, type: :append),
+        where: [present(:patient_id)]
+
+      change manage_relationship(:patient, :patient,
+               type: :create,
+               on_no_match: {:create, :register}
+             ),
+        where: [present(:patient)]
+
+      # The either/or is a hard contract, not whichever write landed last.
+      validate {ExactlyOneOf, arguments: [:patient_id, :patient]}
+
       change manage_relationship(:clinician_id, :clinician, type: :append)
 
       # Booking is what starts the visit process. Everything the appointment

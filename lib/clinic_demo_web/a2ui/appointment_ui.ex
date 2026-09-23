@@ -1,11 +1,17 @@
 defmodule ClinicDemoWeb.A2ui.AppointmentUI do
   @moduledoc """
-  The schedule board: every appointment in one grid, booking in the form,
-  and the visit lifecycle's transitions as row actions gated by status.
+  The schedule board: every appointment in one grid, and the visit
+  lifecycle's transitions as row actions gated by status.
 
-  Booking is the interesting write — it starts the visit process (triage
-  runs inline before the row lands), which is why the form sits here rather
-  than on a separate page.
+  Booking does not live here — the intake screen owns the one booking form
+  (with its patient picker and new-patient registration), keeping the
+  clinic's flow to two screens: intake to book, this schedule and the
+  board to work the visits.
+
+  Check in and no-show are `via`-delegated to
+  `ClinicDemo.Visits.VisitFacade`, so the click completes the visit's
+  `CheckIn` work item through the engine and the token performs the
+  transition — same path as the board and the worklist.
   """
 
   use AshA2ui.Standalone
@@ -51,23 +57,14 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
       # Every transition is its own Ash action with a CurrentStatusIn guard;
       # visible_when mirrors the guard so the button never offers a refusal.
-      row_actions [:check_in, :record_triage, :complete, :mark_no_show, :discharge, :cancel]
+      row_actions [:check_in, :complete, :mark_no_show, :discharge, :cancel]
     end
 
-    # The form that starts the whole visit process.
-    component :form do
-      fields [:patient_id, :clinician_id, :scheduled_at, :duration_minutes, :reason, :severity]
-      create_action :book
-    end
-
+    # Via-delegated to the engine facade: the click completes the visit's
+    # CheckIn work item and the token performs the transition.
     action :check_in do
+      via {ClinicDemo.Visits.VisitFacade, :check_in_task, ["schedule"]}
       visible_when status: :scheduled
-    end
-
-    action :record_triage do
-      prompt_fields [:urgency]
-      prompt_title "Record triage"
-      visible_when status: [:scheduled, :checked_in]
     end
 
     action :complete do
@@ -77,6 +74,7 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
     end
 
     action :mark_no_show do
+      via {ClinicDemo.Visits.VisitFacade, :check_in_task, ["schedule"]}
       visible_when status: :scheduled
     end
 
@@ -108,13 +106,6 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
     field :severity do
       label "Severity (1–5)"
-    end
-
-    field :clinician_id do
-      # The select's options label by :full_name — Clinician's identifying
-      # attribute is not in the default label ladder, so without this the
-      # picker shows bare UUIDs.
-      option_label :full_name
     end
 
     field :triage_urgency do
