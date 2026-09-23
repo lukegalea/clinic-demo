@@ -276,3 +276,85 @@
   --a2ui-textfield-color-error: var(--error);
   --a2ui-checkbox-color-error: var(--error);
 }
+
+/* ---- Canvas shell (splitter + collapse) ------------------------------ */
+/* The /canvas page's two-row grid. The hook (CanvasSplitter) writes
+ * grid-template-rows inline during drag; these rules are the resting
+ * chrome. No transitions on the tracks by design — drags must not
+ * animate, and collapse is an instant layout flip, which also keeps the
+ * reduced-motion contract trivially true (the guard below is the belt to
+ * that brace). */
+.canvas-shell {
+  min-height: 0;
+}
+
+.canvas-splitter {
+  display: grid;
+  place-items: center;
+  height: 0.75rem;
+  cursor: row-resize;
+  background: var(--secondary-background);
+  border-top: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  touch-action: none;
+}
+
+.canvas-splitter:hover,
+.canvas-splitter:focus-visible {
+  background: var(--yellow);
+  outline: none;
+}
+
+.canvas-splitter:focus-visible {
+  outline: 2px solid var(--border);
+  outline-offset: -4px;
+}
+
+.canvas-splitter-grip {
+  width: 3.5rem;
+  height: 0.375rem;
+  border: 2px solid var(--border);
+  border-radius: 9999px;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1.5px);
+  background-size: 6px 4px;
+}
+
+/* ---- NB console (agent transcript) ------------------------------------ */
+/* Message cards ride the badge palette via per-tone utility fills; the
+   card itself is the neobrutalist block: white fill, 2px border, press
+   shadow, sticker rotate on hover for a little handling life. */
+.nb-message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-base, 0.375rem);
+  box-shadow: var(--shadow-press);
+}
+
+.nb-message:hover {
+  box-shadow: var(--shadow-shadow, 4px 4px 0px 0px var(--border));
+}
+
+.nb-message[data-role="user"] {
+  background: color-mix(in srgb, var(--main) 14%, var(--background));
+}
+
+.nb-message[data-role="error"] {
+  background: color-mix(in srgb, var(--red) 12%, var(--background));
+}
+
+/* Motion guard: nothing in the shell or console animates, and if anything
+   ever gains a transition, reduced-motion strips it. */
+@media (prefers-reduced-motion: reduce) {
+  .canvas-shell,
+  .canvas-splitter,
+  .canvas-splitter-grip,
+  .nb-scroller,
+  .nb-message {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -91,30 +91,45 @@ defmodule ClinicDemoWeb.AgentLiveTest do
     end
   end
 
-  # The completion callbacks only touch assigns, so they are exercised
-  # directly through the real callbacks with a minimal socket. The
-  # `__changed__` map is part of the assigns, exactly as a mounted socket
-  # carries it.
+  # The completion callbacks only touch assigns and the message stream, so
+  # they are exercised directly through the real callbacks with a minimal
+  # socket. The stream registry is built by the real `stream/3`, exactly as
+  # mount builds it — but `stream/3` attaches a lifecycle hook, and
+  # lifecycle state normally comes from the channel (`Channel.load_lifecycle/2`),
+  # so the seed below is the channel's empty-hook starting point: the five
+  # stages `Lifecycle.update_lifecycle/3` Map.update!s over, with no hooks.
+  @lifecycle_stages [
+    :handle_params,
+    :handle_event,
+    :handle_info,
+    :handle_async,
+    :after_render
+  ]
+
   defp socket(assigns) do
     %Phoenix.LiveView.Socket{
-      assigns:
-        Map.merge(
-          %{
-            __changed__: %{},
-            request: "test request",
-            error: nil,
-            result: nil,
-            thinking: false,
-            presentation: nil,
-            refresh_scheduled?: false,
-            cue: nil,
-            cue_ref: nil,
-            a2ui_actor: nil,
-            flash: %{}
-          },
-          Map.new(assigns)
-        )
+      assigns: %{__changed__: %{}, flash: %{}},
+      private: %{live_temp: %{}, lifecycle: Map.new(@lifecycle_stages, &{&1, []})}
     }
+    |> Phoenix.LiveView.stream(:messages, [])
+    |> Map.update!(:assigns, fn stream_assigns ->
+      Map.merge(
+        %{
+          request: "test request",
+          error: nil,
+          result: nil,
+          thinking: false,
+          presentation: nil,
+          refresh_scheduled?: false,
+          cue: nil,
+          cue_ref: nil,
+          a2ui_actor: nil,
+          flash: %{}
+        },
+        Map.new(assigns)
+      )
+      |> Map.merge(stream_assigns)
+    end)
   end
 
   # Polls the view because the async patch lands on its own schedule.

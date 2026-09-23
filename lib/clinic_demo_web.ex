@@ -81,6 +81,7 @@ defmodule ClinicDemoWeb do
       import Phoenix.HTML
       # Core UI components
       import ClinicDemoWeb.CoreComponents
+      import ClinicDemoWeb.Components.NbConsole
 
       # Common modules used in templates
       alias ClinicDemoWeb.Layouts

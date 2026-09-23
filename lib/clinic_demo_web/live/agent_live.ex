@@ -59,8 +59,36 @@ defmodule ClinicDemoWeb.AgentLive do
      |> assign(:presentation, nil)
      |> assign(:refresh_scheduled?, false)
      |> assign(:cue, nil)
-     |> assign(:cue_ref, nil)}
+     |> assign(:cue_ref, nil)
+     |> stream(:messages, [])}
   end
+
+  # The transcript is the console's memory: every ask lands as a user
+  # message the moment it is submitted, and the interpreter's outcome —
+  # answer or error — lands as its reply when the async resolves. The
+  # banners below stay the single-answer view; the stream is the history.
+
+  defp push_user_message(socket, text) do
+    stream_insert(socket, :messages, %{
+      id: "user-#{System.unique_integer([:positive])}",
+      role: "user",
+      tone: nil,
+      at: clock(),
+      text: text
+    })
+  end
+
+  defp push_assistant_message(socket, text, tone \\ nil) do
+    stream_insert(socket, :messages, %{
+      id: "assistant-#{System.unique_integer([:positive])}",
+      role: if(tone == "red", do: "error", else: "assistant"),
+      tone: tone,
+      at: clock(),
+      text: text
+    })
+  end
+
+  defp clock, do: Calendar.strftime(DateTime.utc_now(), "%H:%M:%S")
 
   # The LiveView is the coordinator, not the worker: interpretation is one or
   # two synchronous model calls, and running them here would freeze this page
@@ -72,6 +100,7 @@ defmodule ClinicDemoWeb.AgentLive do
     socket =
       socket
       |> assign(request: request, error: nil, result: nil, thinking: true)
+      |> push_user_message(request)
       |> start_async(:interpret, fn -> Interpreter.interpret(request) end)
 
     {:noreply, socket}
@@ -127,12 +156,23 @@ defmodule ClinicDemoWeb.AgentLive do
   # was synchronous; a provider error is the same flash it always was; a
   # crash is new, and is treated as an ordinary, non-blocking failure.
   @impl true
+  def handle_async(:interpret, {:ok, {:ok, {:answer, text}}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:thinking, false)
+     |> push_assistant_message(text)
+     |> then(&carry_out({:answer, text}, &1, &1.assigns[:a2ui_actor]))}
+  end
+
   def handle_async(:interpret, {:ok, {:ok, plan}}, socket) do
     {:noreply, carry_out(plan, assign(socket, :thinking, false), socket.assigns[:a2ui_actor])}
   end
 
   def handle_async(:interpret, {:ok, {:error, message}}, socket) do
-    {:noreply, assign(socket, thinking: false, error: message)}
+    {:noreply,
+     socket
+     |> assign(thinking: false, error: message)
+     |> push_assistant_message(message, "red")}
   end
 
   # A crash inside the interpreter must not freeze or blank the console: the
@@ -140,9 +180,11 @@ defmodule ClinicDemoWeb.AgentLive do
   # the page stays exactly where it was.
   def handle_async(:interpret, {:exit, _reason}, socket) do
     {:noreply,
-     assign(socket,
-       thinking: false,
-       error: "the interpreter stopped before answering — ask again."
+     socket
+     |> assign(thinking: false, error: "the interpreter stopped before answering — ask again.")
+     |> push_assistant_message(
+       "the interpreter stopped before answering — ask again.",
+       "red"
      )}
   end
 
@@ -273,6 +315,16 @@ defmodule ClinicDemoWeb.AgentLive do
             {surface.label}
           </button>
         </div>
+
+        <%!-- The transcript: the console's memory. Stream-backed (keyed
+             children patch in place — no list re-render), pinned to the
+             newest message by the NbScroller hook unless the reader has
+             scrolled up. --%>
+        <.nb_message_scroller
+          id="agent-transcript"
+          stream={@streams.messages}
+          class="max-h-80 min-h-24 rounded-base border-2 border-border bg-background p-3 shadow-shadow"
+        />
 
         <%!-- The interpreter is out; the console says so in the same slot the
              result lands in, so nothing jumps when it is replaced. --%>

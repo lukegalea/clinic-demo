@@ -77,29 +77,103 @@ defmodule ClinicDemoWeb.CanvasLive do
       </header>
 
       <%!--
-        The height is load-bearing, not styling. `<ash-canvas-graph>` is
-        `height: 100%` against this element, and its two panes are a CSS grid
-        -- so with no definite height here, the grid's row is sized by its
-        tallest content, which is the outline list. At 68 resources that list
-        is around 1900px, the canvas frame becomes 1900px with it, and
-        Cytoscape dutifully fits the graph into that box and centres it: the
-        graph ends up ~950px down, below the fold, drawn small enough to read
-        as an empty canvas. Every check short of looking at the pixels passes,
-        because the data, the nodes and the fit are all correct.
+        The shell is a two-row CSS grid: graph pane, splitter, inspector
+        pane. The splitter is the CanvasSplitter hook — pointer drag
+        rewrites the first grid track (persisted to localStorage under the
+        shell's layout key, reset on double-click or Enter), and collapse
+        buttons flip panes with JS.toggle + aria-expanded/aria-hidden.
 
-        Bounding the height puts the outline back on its own scrollbar
-        (`.cv-tree-scroll` is already `overflow-y: auto; min-height: 0`,
-        built for exactly this) and gives the graph the viewport.
+        Zero-jank guards: collapsed panes stay MOUNTED — JS.toggle only
+        flips display, and the phx-update="ignore" graph container below is
+        never removed from the DOM, so the Lit element and its Cytoscape
+        instance survive collapse/expand; the hook resizes the graph's
+        buffers once per drag-end (never per pointer-move); the divider
+        carries no transitions, so drags are motion-free (and the
+        stylesheet's reduced-motion rule stands guard regardless).
       --%>
-      <div
-        id="canvas-graph"
-        phx-hook="AshCanvas"
-        phx-update="ignore"
-        aria-label="Canvas object graph"
-        class="h-[72vh] min-h-[30rem]"
-      >
-        <%!-- The Lit element owns this subtree (phx-update="ignore"). --%>
+      <div class="flex items-center justify-end gap-2">
+        <button
+          id="canvas-toggle-graph"
+          type="button"
+          aria-expanded="true"
+          aria-controls="canvas-pane-graph"
+          phx-click={
+            JS.toggle(to: "#canvas-pane-graph")
+            |> JS.toggle_attribute({"aria-expanded", "true", "false"},
+              to: "#canvas-toggle-graph"
+            )
+            |> JS.toggle_attribute({"aria-hidden", "false", "true"},
+              to: "#canvas-pane-graph"
+            )
+          }
+          class="inline-flex h-8 items-center gap-1.5 rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+        >
+          <.icon name="hero-view-columns" class="size-4" /> Graph
+        </button>
+        <button
+          id="canvas-toggle-inspector"
+          type="button"
+          aria-expanded="true"
+          aria-controls="canvas-pane-inspector"
+          phx-click={
+            JS.toggle(to: "#canvas-pane-inspector")
+            |> JS.toggle_attribute({"aria-expanded", "true", "false"},
+              to: "#canvas-toggle-inspector"
+            )
+            |> JS.toggle_attribute({"aria-hidden", "false", "true"},
+              to: "#canvas-pane-inspector"
+            )
+          }
+          class="inline-flex h-8 items-center gap-1.5 rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+        >
+          <.icon name="hero-information-circle" class="size-4" /> Inspector
+        </button>
       </div>
+
+      <div id="canvas-shell" class="canvas-shell grid" style="grid-template-rows: minmax(0, 72vh) auto auto;">
+        <section
+          id="canvas-pane-graph"
+          class="min-h-0 min-w-0"
+          aria-label="Canvas graph pane"
+          aria-hidden="false"
+        >
+          <div
+            id="canvas-graph"
+            phx-hook="AshCanvas"
+            phx-update="ignore"
+            aria-label="Canvas object graph"
+            class="h-full min-h-[18rem]"
+          >
+            <%!-- The Lit element owns this subtree (phx-update="ignore"). --%>
+          </div>
+        </section>
+
+        <div
+          id="canvas-splitter"
+          phx-hook="CanvasSplitter"
+          role="separator"
+          aria-orientation="vertical"
+          tabindex="0"
+          aria-label="Resize the graph pane (drag, arrow keys; Enter or double-click resets)"
+          aria-valuemin="10"
+          aria-valuemax="90"
+          aria-valuenow="72"
+          aria-valuetext="graph pane height"
+          data-target="#canvas-shell"
+          data-pane="#canvas-pane-graph"
+          data-layout-key="canvas-shell"
+          data-min="160"
+          class="canvas-splitter"
+        >
+          <span class="canvas-splitter-grip" aria-hidden="true"></span>
+        </div>
+
+        <section
+          id="canvas-pane-inspector"
+          class="space-y-4"
+          aria-label="Canvas inspector pane"
+          aria-hidden="false"
+        >
 
       <%!--
         The container is rendered ALWAYS and hidden with a class, never
@@ -134,6 +208,8 @@ defmodule ClinicDemoWeb.CanvasLive do
             Select a node in the graph to inspect it.
           </.empty_state>
         <% end %>
+      </div>
+        </section>
       </div>
     </div>
     """
