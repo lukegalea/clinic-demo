@@ -6,14 +6,106 @@
   </p>
 </header>
 
+<% section_chip =
+  "mr-2 inline-block size-3.5 -rotate-6 rounded-base border-2 border-border" %>
+
+<%!-- Operations index: every operational surface as a first-class link,
+      above the prose sections — the hub used to bury /operator/rules,
+      /operator/tasks and the diagram tools inside content cards, which
+      read exactly like the links were missing. One row each: where, and
+      why you'd go. --%>
+<section class="mb-8" data-testid="operations-index">
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-yellow"} aria-hidden="true" />Operations index
+  </h2>
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <.card accent="yellow" href="/operator/rules">
+      <h3 class="font-heading">Rules</h3>
+      <p class="text-sm text-foreground/70">
+        Author compliance rules and walk a bundle through draft, validate,
+        approve, activate, compile.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/operator/tasks">
+      <h3 class="font-heading">Tasks</h3>
+      <p class="text-sm text-foreground/70">
+        The engine's task inbox for the acting clinician — claim, complete,
+        delegate.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/operator/processes/appointment_visit/designer">
+      <h3 class="font-heading">Process designer</h3>
+      <p class="text-sm text-foreground/70">
+        Draw and publish the visit process: catalogue-backed action and
+        decision refs as comboboxes.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/operator/decisions/appointment.triage/editor">
+      <h3 class="font-heading">DMN editor</h3>
+      <p class="text-sm text-foreground/70">
+        Edit and publish the triage decision table; a changed rule takes
+        effect on the next booking.
+      </p>
+    </.card>
+    <.card accent="yellow" href="#recent-instances">
+      <h3 class="font-heading">Recent instances</h3>
+      <p class="text-sm text-foreground/70">
+        The latest visit instances below — each opens in the token viewer.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/events">
+      <h3 class="font-heading">Events</h3>
+      <p class="text-sm text-foreground/70">
+        The audit event log, newest first. Read-only by construction.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/evaluations">
+      <h3 class="font-heading">Evaluations</h3>
+      <p class="text-sm text-foreground/70">
+        Decision evidence: which version of which table decided, and why.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/dev/dashboard">
+      <h3 class="font-heading">LiveDashboard</h3>
+      <p class="text-sm text-foreground/70">
+        Request timings, the process tree, VM and telemetry metrics.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/agent">
+      <h3 class="font-heading">Agent console</h3>
+      <p class="text-sm text-foreground/70">
+        Ask about the clinic's data, or ask for a composed surface on the
+        fly.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/canvas">
+      <h3 class="font-heading">Canvas</h3>
+      <p class="text-sm text-foreground/70">
+        The domain as a navigable graph — domains, resources,
+        relationships.
+      </p>
+    </.card>
+    <.card accent="yellow" href="/emergencies">
+      <h3 class="font-heading">Emergency board</h3>
+      <p class="text-sm text-foreground/70">
+        The emergency triage lane — severity-5 bookings and the alert path.
+      </p>
+    </.card>
+  </div>
+  <p
+    class="mt-3 text-xs text-foreground/60"
+    title="Oban runs with an inline config and an empty queue in this demo, so there is no jobs dashboard to link."
+  >
+    Oban is configured inline with an empty queue in this demo — no jobs
+    dashboard to link.
+  </p>
+</section>
+
 <%!-- Each section owns one accent color (chip in the heading, dotted strip
       on its cards, colored lift-shadow on hover). The accents give the hub
       a scavenger-hunt readability: you find the section by its color before
       you read a word. Cards are the shared <.card> recipe; the palette is
       the accent, never the fill — bodies stay white, borders stay black. --%>
-<% section_chip =
-  "mr-2 inline-block size-3.5 -rotate-6 rounded-base border-2 border-border" %>
-
 <section class="mb-8">
   <h2 class="mb-3 text-lg font-heading">
     <span class={section_chip <> " bg-violet"} aria-hidden="true" />Rules &amp; process
@@ -127,7 +219,7 @@
 <%!-- The Visits surface can't link a row to its instance viewer (the a2ui
      surface DSL has no external row links), so this list is the bridge:
      latest instances, each a link into /operator/instances/:id. --%>
-<section class="mb-8">
+<section class="mb-8" id="recent-instances">
   <h2 class="mb-3 text-lg font-heading">
     <span class={section_chip <> " bg-main"} aria-hidden="true" />Recent visit processes
   </h2>
