@@ -113,6 +113,10 @@ jobs:
       - name: Build the static assets
         run: |
           set -euo pipefail
+          # The esbuild bundle resolves the a2ui lit elements, bpmn-js/dmn-js
+          # and mermaid from assets/node_modules (NODE_PATH in config.exs) —
+          # gitignored, so CI has to install from the committed lockfile.
+          npm ci --prefix assets
           mix assets.setup
           mix assets.build
       - uses: actions/setup-node@v4
@@ -140,7 +144,7 @@ jobs:
           node run.mjs --base-url http://127.0.0.1:4000
       - name: Dump the server log
         if: failure()
-        run: tail -n 200 /tmp/phx-server.log
+        run: tail -n 200 /tmp/phx-server.log 2>/dev/null || echo "(no server log — the boot step never ran)"
       - name: Upload the failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
