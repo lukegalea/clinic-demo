@@ -250,6 +250,37 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
   end
 
   @doc """
+  The allowlist the surface editor composes under.
+
+  Names mirror the resources' short module names — that is what
+  `AshA2ui.Dynamic.Importer` writes into an imported spec — except where two
+  resources would collide on theirs: both `Definition`s are named by their
+  side (`visit_definition`-style, CamelCase to keep the imports aligned). An
+  import of a colliding surface resolves once the operator picks the
+  disambiguated name in the editor's resource select; the underlying
+  resource, and so every field and action reference, is unchanged.
+
+  This is a map rather than `dynamic_allowlist/0`'s list because the editor's
+  imports speak short names, and a map is ash_a2ui's composer contract for
+  host naming. The gate is the same: a model (or operator) cannot compose its
+  way to a table this application never meant to publish.
+  """
+  @spec composer_allowlist() :: %{String.t() => module()}
+  def composer_allowlist do
+    AshA2ui.Dynamic.allowlist(%{
+      "Patient" => ClinicDemo.Scheduling.Patient,
+      "Clinician" => ClinicDemo.Scheduling.Clinician,
+      "Appointment" => ClinicDemo.Scheduling.Appointment,
+      "HumanTask" => ClinicDemo.Visits.HumanTask,
+      "Instance" => ClinicDemo.Visits.Instance,
+      "VisitDefinition" => ClinicDemo.Visits.Definition,
+      "DecisionDefinition" => ClinicDemo.Decisions.Definition,
+      "Evaluation" => ClinicDemo.Decisions.Evaluation,
+      "Event" => ClinicDemo.Events.Event
+    })
+  end
+
+  @doc """
   The resources the helper agent may compose an ad-hoc surface over.
 
   An allowlist, and host configuration rather than client input: it gates both

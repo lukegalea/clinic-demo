@@ -95,16 +95,24 @@ export const DOM_INIT_SCRIPT = /* js */ `
   // Screenshot sanitizer: every ASCII digit becomes an "8", same glyph, same
   // class of width, so seeded times ("tomorrow_at 9"), dates, ids and counts
   // stop moving the pixels between the day the baseline was committed and
-  // the day CI replays it. Runs only on text nodes, and only right before a
-  // capture — all structural checks run on the real content.
+  // the day CI replays it. Long hex runs (bundle content hashes, the sha
+  // fingerprints the surfaces print) get the same treatment including their
+  // letters — digits alone left a-f on the table, and a fresh seed's hash
+  // width moved the page 2px. Runs only on text nodes, and only right before
+  // a capture — all structural checks run on the real content.
   window.__sanitizeVolatileText = () => {
     let touched = 0;
     const scrub = (r) => {
       for (const node of r.querySelectorAll("*")) {
         for (const child of node.childNodes) {
-          if (child.nodeType === 3 && /[0-9]/.test(child.textContent)) {
-            child.textContent = child.textContent.replace(/[0-9]/g, "8");
-            touched++;
+          if (child.nodeType === 3) {
+            const text = child.textContent;
+            if (/[0-9]/.test(text) || /[0-9a-f]{8,}/i.test(text)) {
+              child.textContent = text
+                .replace(/[0-9a-f]{8,}/gi, (run) => run.replace(/[0-9a-f]/gi, "8"))
+                .replace(/[0-9]/g, "8");
+              touched++;
+            }
           }
         }
         if (node.shadowRoot) scrub(node.shadowRoot);

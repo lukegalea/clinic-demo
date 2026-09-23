@@ -47,6 +47,12 @@ export const PAGES = [
     extraMarker: { kind: "host", selector: "style#ruleset-editor-skin", hidden_ok: true },
   },
   {
+    route: "/operator/surfaces",
+    name: "operator-surface-editor",
+    marker: { kind: "h1", text: "Surface editor" },
+    extraMarker: { kind: "text", text: "Import" },
+  },
+  {
     route: "/canvas",
     name: "canvas",
     marker: { kind: "h1", text: "Canvas" },

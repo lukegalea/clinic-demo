@@ -65,6 +65,7 @@ defmodule ClinicDemoWeb.Router do
       live "/operator/instances/:id", Bpmn.ViewerLive
       live "/operator/decisions/:key/editor", Decisions.EditorLive
       live "/operator/rules", Compliance.RulesetEditorLive
+      live "/operator/surfaces", A2ui.SurfaceEditorLive
 
       # The actor picker, mounted in the surfaces' live_session — the
       # pattern ash_a2ui's ActorPickerLive documents as preferred: the
