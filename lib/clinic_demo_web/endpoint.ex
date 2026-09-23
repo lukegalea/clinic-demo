@@ -28,12 +28,23 @@ defmodule ClinicDemoWeb.Endpoint do
     raise_on_missing_only: code_reloading?
 
   # Tidewave: the dev server's MCP endpoint (loopback tool for agents —
-  # project_eval, logs, SQL). Dev-only, and deliberately placed BEFORE the
-  # code-reload block: its validator refuses to run once LiveReloader has
-  # mounted or the body has been parsed (Plug.Parsers comes later anyway).
-  # The toolbar is off: its injection collides with Clarity's inline-JS
-  # pages, and the MCP endpoint is the point. Not part of the application's
-  # production surface.
+  # project_eval, logs, SQL, get_source_location). Dev-only, and deliberately
+  # placed BEFORE the code-reload block: its validator refuses to run once
+  # LiveReloader has mounted or the body has been parsed (Plug.Parsers comes
+  # later anyway). The toolbar is off: its injection collides with Clarity's
+  # inline-JS pages, and the MCP endpoint is the point. Not part of the
+  # application's production surface.
+  #
+  # Click-to-source (tidewave 0.9) is a Toolbar feature — audited against the
+  # shipped 0.9.0 source, the toolbar is the plug's ONLY UI→source mechanism,
+  # and its config surface (allow_remote_access/allowed_origins/inspect_opts/
+  # team/toolbar/tmp_dir) offers no per-path scoping: with the toolbar on, the
+  # plug injects its script into EVERY html response it sees, this endpoint's
+  # router included (/clarity, /storybook, /dev/dashboard). Turning it on here
+  # would also put a tidewave.ai script and its toolbar pixels on the pages
+  # the visual gate screenshots. So it stays off; in dev, jump UI→source via
+  # the MCP `get_source_location` tool, or the debug_heex_annotations the dev
+  # templates already embed (file/line visible in the browser's DOM inspector).
   if code_reloading?, do: plug(Tidewave, toolbar: false)
 
   # Code reloading can be explicitly enabled under the

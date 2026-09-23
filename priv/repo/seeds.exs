@@ -238,6 +238,44 @@ end
     severity: 2
   })
 
+# One visit from EARLIER TODAY, so the Day view's "Earlier today" fold has a
+# real past item to collapse: every booking above sits on the dotted day
+# (tomorrow), which left the Day view's <details> branch structurally present
+# but never exercised. The lifecycle refuses past slots — NotInThePast guards
+# :book AND :reschedule — so this visit books through the attributed action
+# like every other one (its process instance and triage evaluation are real)
+# and only then has its slot moved into today's tail, with Ash.Seed: the data
+# layer's own seeding helper, which skips action validations by design. The
+# move fires once, while the visit still stands at its booked slot; on a
+# reseed it already sits in the past and is left alone (mix reset recreates
+# the day from scratch, fold included).
+earlier_today_at = fn ->
+  now = DateTime.utc_now()
+  candidate = now |> DateTime.add(-2 * 60 * 60) |> DateTime.truncate(:second)
+
+  if DateTime.to_date(candidate) == Date.utc_today() do
+    candidate
+  else
+    # A run just after midnight has no "two hours ago" inside today; the
+    # day's first instant is still earlier than now, which is what counts.
+    DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
+  end
+end
+
+{:ok, biscuit_earlier_visit} =
+  book.(biscuit, vet, %{
+    scheduled_at: tomorrow_at.(16),
+    duration_minutes: 20,
+    reason: "Ear infection recheck",
+    severity: 2
+  })
+
+biscuit_earlier_visit = Scheduling.get_appointment!(biscuit_earlier_visit.id)
+
+if DateTime.compare(biscuit_earlier_visit.scheduled_at, DateTime.utc_now()) == :gt do
+  Ash.Seed.update!(biscuit_earlier_visit, %{scheduled_at: earlier_today_at.()})
+end
+
 # ── Walking visits through the process ─────────────────────────────────────
 #
 # Every appointment above already has an instance: booking started one (and
