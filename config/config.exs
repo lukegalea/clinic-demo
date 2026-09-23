@@ -43,11 +43,19 @@ config :ash,
   policies: [no_filter_static_forbidden_reads?: false]
 
 # ash_a2ui: this app rides the framework defaults. Experience v2 is the
-# default since 5d4326b and stays — the earlier v1 pin (and the
-# [object Object] evidence trail that justified it) is gone with the
-# renderer fixes the probe verifies. The component catalog also stays at
-# its `:basic` default: `catalog :admin_v1` is not set until the
-# admin-catalog hydration fix is verified here, not just upstream.
+# default since 5d4326b and stays. The component catalog is back at its
+# `:basic` default: the admin_v1 cell was enabled and verified end to end
+# (45b088a's builder fix works — plain tables rendered hydrated
+# ash-admin-data-grids and record panels, and the full probe passed
+# everywhere except the Board), BUT enabling it exposed a residual
+# framework bug: under :admin_v1 the Board's SECTIONED table is dropped
+# from the emission entirely — the surface bootstrap carries only an empty
+# entityPage + status banner (4 components total, the sectioned table's
+# promised byte-equal basic-v2 fallback missing from the wire), so the
+# clinic's main surface renders blank. That is the
+# `admin_core_table?` fallback path failing, not a host error; evidence in
+# this file's history and the lane report. Re-enable `catalog :admin_v1`
+# when sectioned-table fallbacks land on the wire upstream.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,
