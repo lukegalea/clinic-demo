@@ -10,6 +10,7 @@ defmodule ClinicDemoWeb.Compliance.RulesetEditorLiveTest do
   import Phoenix.LiveViewTest
 
   alias ClinicDemo.Compliance
+  alias Ecto.Adapters.SQL.Sandbox
 
   setup do
     # The same lifecycle the seeds run: it drafts and activates the
@@ -21,7 +22,7 @@ defmodule ClinicDemoWeb.Compliance.RulesetEditorLiveTest do
   test "mounts over the seeded org: revision listed, active bundle hydrated", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/operator/rules")
 
-    Ecto.Adapters.SQL.Sandbox.allow(ClinicDemo.Repo, self(), view.pid)
+    Sandbox.allow(ClinicDemo.Repo, self(), view.pid)
 
     # The seeded revision is in the list, with its name.
     assert html =~ "clinic_appointment_rules"
@@ -33,7 +34,7 @@ defmodule ClinicDemoWeb.Compliance.RulesetEditorLiveTest do
   test "hydration refreshes against the seeded revision", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/operator/rules")
 
-    Ecto.Adapters.SQL.Sandbox.allow(ClinicDemo.Repo, self(), view.pid)
+    Sandbox.allow(ClinicDemo.Repo, self(), view.pid)
 
     # The editor's own select affordance (the row button) drives the hydrate
     # path — the same one the toolbar continues from.

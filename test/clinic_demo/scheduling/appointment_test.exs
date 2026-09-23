@@ -10,6 +10,7 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
   use ClinicDemo.DataCase, async: true
 
   alias ClinicDemo.Scheduling
+  alias ClinicDemo.Scheduling.VisitMachine
 
   # A UUID, because booking starts a visit process and the instance records
   # who started it in a uuid column.
@@ -156,7 +157,7 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
     end
 
     test "the derived chart describes the declared machine" do
-      chart = ClinicDemo.Scheduling.VisitMachine.chart()
+      chart = VisitMachine.chart()
 
       assert chart =~ "stateDiagram-v2"
       assert chart =~ "scheduled --> checked_in: check_in"

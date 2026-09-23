@@ -1,6 +1,7 @@
 defmodule ClinicDemoWeb.PageController do
   use ClinicDemoWeb, :controller
 
+  alias ClinicDemo.Scheduling.VisitMachine
   alias ClinicDemo.Visits.Instance
 
   def home(conn, _params) do
@@ -10,7 +11,7 @@ defmodule ClinicDemoWeb.PageController do
   def operator(conn, _params) do
     render(conn, :operator,
       recent_instances: recent_instances(),
-      visit_machine_chart: ClinicDemo.Scheduling.VisitMachine.chart(),
+      visit_machine_chart: VisitMachine.chart(),
       active_bundle: active_guard_bundle()
     )
   end

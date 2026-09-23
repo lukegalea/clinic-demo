@@ -7,6 +7,7 @@ defmodule ClinicDemo.Events.EventTest do
 
   use ClinicDemo.DataCase, async: true
 
+  alias Ash.Resource.Info
   alias ClinicDemo.Events.Event
 
   test "reads the event log table (empty until the projector runs)" do
@@ -18,7 +19,7 @@ defmodule ClinicDemo.Events.EventTest do
   end
 
   test "there is no sanctioned write path" do
-    actions = Ash.Resource.Info.actions(Event)
+    actions = Info.actions(Event)
 
     assert actions != []
     assert Enum.all?(actions, &(&1.type == :read))

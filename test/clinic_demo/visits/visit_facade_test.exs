@@ -15,8 +15,8 @@ defmodule ClinicDemo.Visits.VisitFacadeTest do
 
   require Ash.Query
 
-  alias ClinicDemo.Scheduling
   alias ClinicDemo.Compliance
+  alias ClinicDemo.Scheduling
   alias ClinicDemo.Visits.HumanTask
   alias ClinicDemo.Visits.Instance
   alias ClinicDemo.Visits.VisitFacade

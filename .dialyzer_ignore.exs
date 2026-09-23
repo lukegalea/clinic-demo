@@ -1,11 +1,11 @@
 [
-  # Injected by `use AshBpmn.Web.DesignerLive` at the `use` site: the
-  # macro's optional {m, f, a} catalogue clauses (decisions / actions /
-  # decision_editor) match against the nil this host never passes, and the
-  # expansion yields the finding twice. The wrapper is the same three-line
-  # shape the VPM spike mounts; the finding belongs to the framework's
-  # expansion, not to this app's code. Track it upstream — and note the
-  # sibling repos run dialyzer non-blocking for exactly this Spark/Ash
-  # macro-noise class.
-  {"lib/clinic_demo_web/live/bpmn/designer_live.ex", :pattern_match}
+  # Tidewave is declared `runtime: false` (dev-only MCP plug), which keeps it
+  # out of dialyxir's PLT app set while endpoint.ex still references the
+  # plug — dialyzer therefore reports its call/2 + init/1 as unknown. Both
+  # functions exist at deps/tidewave/lib/tidewave.ex (init/1 at :30, call/2
+  # at :45) and the plug is exercised end-to-end by the dev-server probes
+  # (POST /tidewave/mcp tools/list). If a future dialyxir/dep setup includes
+  # runtime-false deps in the PLT, dialyzer will flag these as unnecessary
+  # skips and they can go.
+  {"lib/clinic_demo_web/endpoint.ex", :unknown_function},
 ]

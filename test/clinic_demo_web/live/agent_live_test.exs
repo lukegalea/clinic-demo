@@ -10,6 +10,8 @@ defmodule ClinicDemoWeb.AgentLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias Ecto.Adapters.SQL.Sandbox
+
   # How long the async interpreter may take to land before the test gives
   # up. The no-key error path it exercises is a registry lookup, so this is
   # a generosity margin, not a wait. (The registry load alone is
@@ -39,7 +41,7 @@ defmodule ClinicDemoWeb.AgentLiveTest do
 
       # And the console is still usable: the declared-surface path renders a
       # plan with no model involved at all.
-      Ecto.Adapters.SQL.Sandbox.allow(ClinicDemo.Repo, self(), view.pid)
+      Sandbox.allow(ClinicDemo.Repo, self(), view.pid)
 
       view
       |> element("#open-patients")
