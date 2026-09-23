@@ -16,6 +16,13 @@ export const PAGES = [
   { route: "/", name: "board", marker: { kind: "a2ui" }, navCurrent: "/" },
   { route: "/intake", name: "intake", marker: { kind: "a2ui" }, navCurrent: "/intake" },
   { route: "/schedule", name: "schedule", marker: { kind: "a2ui" }, navCurrent: "/schedule" },
+  {
+    route: "/day",
+    name: "day",
+    marker: { kind: "h1", text: "Day" },
+    extraMarker: { kind: "host", selector: "#day-calendar" },
+    navCurrent: "/day",
+  },
   { route: "/worklist", name: "worklist", marker: { kind: "a2ui" }, navCurrent: "/worklist" },
   { route: "/visits", name: "visits", marker: { kind: "a2ui" }, navCurrent: "/visits" },
   { route: "/patients", name: "patients", marker: { kind: "a2ui" }, navCurrent: "/patients" },
