@@ -130,7 +130,11 @@ defmodule ClinicDemoWeb.CanvasLive do
         </button>
       </div>
 
-      <div id="canvas-shell" class="canvas-shell grid" style="grid-template-rows: minmax(0, 72vh) auto auto;">
+      <div
+        id="canvas-shell"
+        class="canvas-shell grid"
+        style="grid-template-rows: minmax(0, 72vh) auto auto;"
+      >
         <section
           id="canvas-pane-graph"
           class="min-h-0 min-w-0"
@@ -174,8 +178,7 @@ defmodule ClinicDemoWeb.CanvasLive do
           aria-label="Canvas inspector pane"
           aria-hidden="false"
         >
-
-      <%!--
+          <%!--
         The container is rendered ALWAYS and hidden with a class, never
         removed. `Host.present/3` delivers the surface by pushing an event to
         the `AshA2ui` hook, and a hook that does not exist yet receives
@@ -183,32 +186,32 @@ defmodule ClinicDemoWeb.CanvasLive do
         pushes into a void and the panel stays blank. Same reason AgentLive
         keeps its container mounted.
       --%>
-      <section
-        class={["space-y-2", if(!@presentation, do: "hidden")]}
-        aria-label="Surface for the selected resource"
-      >
-        {AshA2ui.LiveRenderer.surface_container(assigns)}
-      </section>
-
-      <div id="canvas-inspector" class="space-y-3">
-        <%= if @selection_error == :unknown_object do %>
-          <div
-            class="relative grid w-full gap-2 rounded-base border-2 border-border bg-background px-4 py-3 text-sm text-foreground shadow-shadow"
-            role="status"
+          <section
+            class={["space-y-2", if(!@presentation, do: "hidden")]}
+            aria-label="Surface for the selected resource"
           >
-            <.icon name="hero-exclamation-triangle" class="size-5" />
-            <span>Unknown object — the reference does not name anything this canvas exposes.</span>
-          </div>
-        <% end %>
+            {AshA2ui.LiveRenderer.surface_container(assigns)}
+          </section>
 
-        <%= if @selected do %>
-          <.inspector object={@selected} destinations={destinations_for(@selected)} />
-        <% else %>
-          <.empty_state icon="hero-cursor-arrow-rays">
-            Select a node in the graph to inspect it.
-          </.empty_state>
-        <% end %>
-      </div>
+          <div id="canvas-inspector" class="space-y-3">
+            <%= if @selection_error == :unknown_object do %>
+              <div
+                class="relative grid w-full gap-2 rounded-base border-2 border-border bg-background px-4 py-3 text-sm text-foreground shadow-shadow"
+                role="status"
+              >
+                <.icon name="hero-exclamation-triangle" class="size-5" />
+                <span>Unknown object — the reference does not name anything this canvas exposes.</span>
+              </div>
+            <% end %>
+
+            <%= if @selected do %>
+              <.inspector object={@selected} destinations={destinations_for(@selected)} />
+            <% else %>
+              <.empty_state icon="hero-cursor-arrow-rays">
+                Select a node in the graph to inspect it.
+              </.empty_state>
+            <% end %>
+          </div>
         </section>
       </div>
     </div>
