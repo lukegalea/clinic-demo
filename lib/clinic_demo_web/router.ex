@@ -27,11 +27,19 @@ defmodule ClinicDemoWeb.Router do
     plug :accepts, ["json"]
   end
 
+  import Phoenix.LiveDashboard.Router
+
   scope "/", ClinicDemoWeb do
     pipe_through :browser
 
     get "/home", PageController, :home
     get "/operator", PageController, :operator
+
+    # The operator's system window: request timings, process tree, VM
+    # metrics, channel traffic — everything the Telemetry module already
+    # emits, made visible. Linked from the operator hub's Infrastructure
+    # section; a dev-served demo, so no prod gating.
+    live_dashboard "/dev/dashboard", metrics: ClinicDemoWeb.Telemetry
 
     # The a2ui surfaces: one route per surface, all sharing the actor
     # session; every write runs under the acting Clinician.

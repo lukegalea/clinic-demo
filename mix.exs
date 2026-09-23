@@ -80,6 +80,7 @@ defmodule ClinicDemo.MixProject do
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.2.0"},
+      {:phoenix_live_dashboard, "~> 0.8"},
       # Component storybook, mounted at /storybook behind Mix.env() == :dev.
       # Unconditional (like Clarity) — the router's import needs the module
       # in the code path at compile time regardless of the route guard, and
