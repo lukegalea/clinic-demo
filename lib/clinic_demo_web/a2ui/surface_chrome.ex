@@ -1,8 +1,8 @@
 defmodule ClinicDemoWeb.A2ui.SurfaceChrome do
   @moduledoc """
-  Host chrome shared by the a2ui surface LiveViews: the presence bar row
-  and the thin wrappers that wire `AshA2ui.Presence` into the
-  LiveRenderer's injected mount/handle_info contract.
+  Host wiring shared by the a2ui surface LiveViews: the thin wrappers that
+  wire `AshA2ui.Presence` into the LiveRenderer's injected
+  mount/handle_info contract.
 
   Every surface LiveView in `A2uiLive` overrides `mount/3` and
   `handle_info/2` like this:
@@ -19,32 +19,16 @@ defmodule ClinicDemoWeb.A2ui.SurfaceChrome do
       end
 
   Presence tracks the acting clinician — key: clinician id, label: full
-  name, per `AshA2ui.Presence`'s stable-key contract. An anonymous visitor
-  is not tracked at all (there is no stable key to offer them) and sees an
-  empty bar; the surfaces' "No one is acting." banner already tells them
-  why every button refuses.
+  name, per `AshA2ui.Presence`'s stable-key contract — on the surface's own
+  topic. The surface LiveViews are the TRACKERS; the who-else-is-here
+  display lives in the nav row (`ClinicDemoWeb.A2ui.NavPresenceLive`), a
+  snapshot over all the nav topics that filters the viewer out by key. An
+  anonymous visitor is not tracked at all (there is no stable key to offer
+  them); the surfaces' "No one is acting." banner already tells them why
+  every button refuses.
   """
 
   alias ClinicDemoWeb.A2uiPresence
-
-  use Phoenix.Component
-
-  attr :presences, :list,
-    default: [],
-    doc: "rows from `AshA2ui.Presence.mount_surface/4` (%{key, label})"
-
-  @doc """
-  The surface header: the avatar stack, right-aligned above the surface
-  container. Renders nothing when nobody is tracked — an empty group box
-  would just be noise above an empty state.
-  """
-  def surface_header(assigns) do
-    ~H"""
-    <div :if={@presences != []} class="flex items-center justify-end">
-      <AshA2ui.PresenceBar.bar presences={@presences} max_visible={5} />
-    </div>
-    """
-  end
 
   @doc """
   Mounts surface presence for the acting clinician on `surface_id`; assigns

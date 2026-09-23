@@ -2,8 +2,9 @@
 # pointed at a standalone UI module and the actor the session hook assigns.
 #
 # Every surface here wires `ClinicDemoWeb.A2ui.SurfaceChrome`: presence is
-# mounted for the acting clinician (who-else-is-here, rendered by the header
-# bar), and `handle_info/2` routes presence broadcasts to the refresh
+# mounted for the acting clinician on the surface's topic (the tracker —
+# the nav row's chips in `NavPresenceLive` are the SNAPSHOT view of those
+# topics), and `handle_info/2` routes presence broadcasts to the refresh
 # contract while everything else falls through to the LiveRenderer.
 defmodule ClinicDemoWeb.A2ui.Surface do
   @moduledoc false
@@ -49,7 +50,6 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
@@ -75,7 +75,6 @@ defmodule ClinicDemoWeb.A2ui.IntakeLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <%!-- The patient picker's host side: the a2ui combobox contract. The
            IntakeUI declares option_search [:name] on :patient_id, so the
            encoder emits the searchable-select composite under the frozen
@@ -106,7 +105,6 @@ defmodule ClinicDemoWeb.A2ui.ScheduleLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
@@ -135,7 +133,6 @@ defmodule ClinicDemoWeb.A2ui.WorklistLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
     </div>
     """
@@ -156,7 +153,6 @@ defmodule ClinicDemoWeb.A2ui.VisitsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /operator/tasks is inside live_session :a2ui,
@@ -184,7 +180,6 @@ defmodule ClinicDemoWeb.A2ui.PatientsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
     </div>
     """
@@ -202,7 +197,6 @@ defmodule ClinicDemoWeb.A2ui.CliniciansLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
     </div>
     """
@@ -223,7 +217,6 @@ defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: the designer is inside live_session :a2ui. --%>
@@ -250,7 +243,6 @@ defmodule ClinicDemoWeb.A2ui.DecisionDefinitionsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: the DMN editor is inside live_session :a2ui. --%>
@@ -277,7 +269,6 @@ defmodule ClinicDemoWeb.A2ui.EmergencyBoardLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
     </div>
     """
@@ -298,7 +289,6 @@ defmodule ClinicDemoWeb.A2ui.EvaluationsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /events is inside live_session :a2ui. --%>
@@ -349,7 +339,6 @@ defmodule ClinicDemoWeb.A2ui.EventsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <div
         :if={@event_count == 0}
         class="relative w-full rounded-base border-2 border-border bg-secondary-background px-4 py-6 text-sm text-foreground shadow-shadow"

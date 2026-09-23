@@ -18,9 +18,11 @@ defmodule ClinicDemoWeb.ActorPlug do
       root layouts render from conn assigns, and the actor only existed in
       LiveView socket assigns. This plug resolves the session's actor id to
       its label once per request and puts it on the conn for the root layout.
+      The id rides along for `NavPresenceLive`, which filters the visitor's
+      own row out of the nav presence chips.
 
     * **The nav's current path.** `assigns[:current_path]` feeds
-      `AshA2ui.PresenceBar.nav_current_attrs/2` in the root layout.
+      `AshA2ui.PresenceBar.nav_current_attrs/2` in the nav row.
 
   A valid pick keeps the framework contract verbatim: id validated through
   `AshA2ui.Actor.load/1`, stored under `AshA2ui.Actor.session_key/0`, 302
@@ -67,8 +69,10 @@ defmodule ClinicDemoWeb.ActorPlug do
 
       id ->
         case AshA2ui.Actor.load(id) do
-          %AshA2ui.Actor{label: label} when is_binary(label) and label != "" ->
-            assign(conn, :a2ui_actor_label, label)
+          %AshA2ui.Actor{id: actor_id, label: label} when is_binary(label) and label != "" ->
+            conn
+            |> assign(:a2ui_actor_id, actor_id)
+            |> assign(:a2ui_actor_label, label)
 
           _ ->
             conn
@@ -77,7 +81,7 @@ defmodule ClinicDemoWeb.ActorPlug do
   end
 
   defp maybe_switch_actor(%{path_info: ["a2ui", "actor"], method: "GET"} = conn) do
-    conn = Plug.Conn.fetch_query_params(conn)
+    conn = conn |> fetch_session() |> Plug.Conn.fetch_query_params()
 
     case AshA2ui.Actor.load(conn.query_params["id"] || "") do
       %AshA2ui.Actor{} = actor ->

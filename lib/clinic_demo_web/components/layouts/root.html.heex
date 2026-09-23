@@ -53,12 +53,7 @@
          hover (shadow grows, pill rises half a shadow, rotates 1°), press
          down on click. One loud yellow pill for "Acting as" — the control
          every demo starts from. --%>
-    <% current_path = assigns[:current_path] || ""
-
-    nav_pill =
-      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-secondary-background px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
-
-    acting_as_pill =
+    <% acting_as_pill =
       "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-yellow px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press" %>
     <div class="sticky top-0 z-40 flex min-h-fit flex-wrap items-center gap-x-2 gap-y-1 border-b-2 border-border bg-background px-4 py-2">
       <%!-- Live navigation: every pill's target is a LiveView inside
@@ -75,65 +70,19 @@
           aria-hidden="true"
         />
       </.link>
-      <nav class="flex flex-wrap gap-1.5" aria-label="Main">
-        <.link
-          class={nav_pill}
-          navigate={~p"/"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/")}
-        >Board</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/intake"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/intake")}
-        >Intake</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/schedule"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/schedule")}
-        >Schedule</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/worklist"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/worklist")}
-        >Worklist</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/visits"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/visits")}
-        >Visits</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/patients"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/patients")}
-        >Patients</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/clinicians"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/clinicians")}
-        >Clinicians</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/processes"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/processes")}
-        >Processes</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/decisions"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/decisions")}
-        >Decisions</.link>
-        <.link
-          class={nav_pill}
-          navigate={~p"/evaluations"}
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/evaluations")}
-        >Evidence</.link>
-        <%!-- /operator is a plain controller page, not a LiveView, so there
-             is nothing to navigate to — this one stays a full load. --%>
-        <a
-          class={nav_pill}
-          href="/operator"
-          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/operator")}
-        >Operator</a>
-      </nav>
+      <%!-- The nav row is a live region: NavPresenceLive renders the pills
+           plus the per-route presence chips (others only, self filtered by
+           key — self is the aria-current styling). It subscribes to every
+           nav surface's presence topic and re-lists on any broadcast, so
+           the chips move when someone lands on another route. aria-current
+           accuracy is per document load, same as the rest of the chrome. --%>
+      {live_render(@conn, ClinicDemoWeb.A2ui.NavPresenceLive,
+        id: "nav-presence",
+        session: %{
+          "actor_id" => assigns[:a2ui_actor_id],
+          "current_path" => assigns[:current_path] || ""
+        }
+      )}
       <div class="ms-auto">
         <%!-- The picker shares the surfaces' live_session now, so this is
              live navigation. The actor SWITCH itself is still a full
