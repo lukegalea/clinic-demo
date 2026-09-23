@@ -24,13 +24,16 @@ defmodule ClinicDemo.Visits.HumanTaskTest do
 
   defp roster do
     {:ok, vet} =
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Task Vet",
-        role: :veterinarian,
-        license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Task Vet",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: @staff
+      )
 
-    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Task Nurse", role: :nurse})
+    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Task Nurse", role: :nurse}, actor: @staff)
 
     %{vet: vet, nurse: nurse}
   end

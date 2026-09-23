@@ -31,26 +31,32 @@ defmodule ClinicDemo.Visits.VisitFacadeTest do
 
   defp roster do
     {:ok, vet} =
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Facade Vet",
-        role: :veterinarian,
-        license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Facade Vet",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: @staff
+      )
 
-    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Facade Nurse", role: :nurse})
+    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Facade Nurse", role: :nurse}, actor: @staff)
 
     %{vet: vet, nurse: nurse}
   end
 
   defp book_with_weight(vet, weight?) do
     {:ok, patient} =
-      Scheduling.register_patient(%{
-        name: "Facade Animal",
-        species: :dog,
-        owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
-      })
+      Scheduling.register_patient(
+        %{
+          name: "Facade Animal",
+          species: :dog,
+          owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
+        },
+        actor: @staff
+      )
 
-    if weight?, do: {:ok, _} = Scheduling.record_weight(patient, Decimal.new("9.1"))
+    if weight?, do: {:ok, _} = Scheduling.record_weight(patient, Decimal.new("9.1"), actor: @staff)
 
     {:ok, appointment} =
       Scheduling.book_appointment(

@@ -20,14 +20,17 @@ defmodule ClinicDemo.Visits.AppointmentVisitTest do
 
   defp roster do
     {:ok, vet} =
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Test Vet",
-        role: :veterinarian,
-        license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Test Vet",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: @staff
+      )
 
-    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Test Nurse", role: :nurse})
-    {:ok, tech} = Scheduling.hire_clinician(%{full_name: "Test Tech", role: :technician})
+    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Test Nurse", role: :nurse}, actor: @staff)
+    {:ok, tech} = Scheduling.hire_clinician(%{full_name: "Test Tech", role: :technician}, actor: @staff)
 
     %{vet: vet, nurse: nurse, tech: tech}
   end
@@ -42,7 +45,8 @@ defmodule ClinicDemo.Visits.AppointmentVisitTest do
             owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
           },
           Keyword.get(opts, :patient, %{})
-        )
+        ),
+        actor: @staff
       )
 
     {:ok, appointment} =

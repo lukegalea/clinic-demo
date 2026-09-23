@@ -5,7 +5,8 @@ defmodule ClinicDemo.Scheduling.Clinician do
 
   use Ash.Resource,
     domain: ClinicDemo.Scheduling,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table "clinicians"
@@ -81,6 +82,22 @@ defmodule ClinicDemo.Scheduling.Clinician do
       description "Take a clinician off the roster without deleting their history."
       accept []
       change set_attribute(:active, false)
+    end
+  end
+
+  # Same two-policy shape as Appointment: reads are open, writes need someone
+  # acting. The audit flipped Active -> false on a clinician with nobody
+  # acting; the actor picker itself still lists the roster, because its reads
+  # are infrastructural and run with authorize?: false.
+  policies do
+    policy action_type(:read) do
+      description "The roster is readable by anything that can reach the application."
+      authorize_if always()
+    end
+
+    policy action_type([:create, :update, :destroy]) do
+      description "Only a signed-in member of staff may change the roster."
+      authorize_if actor_present()
     end
   end
 end

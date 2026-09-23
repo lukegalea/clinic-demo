@@ -25,18 +25,24 @@ defmodule ClinicDemo.Compliance.ComplianceGuardTest do
 
   defp fixtures do
     {:ok, vet} =
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Compliance Vet",
-        role: :veterinarian,
-        license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Compliance Vet",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: @staff
+      )
 
     {:ok, patient} =
-      Scheduling.register_patient(%{
-        name: "Unweighed Animal",
-        species: :dog,
-        owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
-      })
+      Scheduling.register_patient(
+        %{
+          name: "Unweighed Animal",
+          species: :dog,
+          owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
+        },
+        actor: @staff
+      )
 
     {:ok, appointment} =
       Scheduling.book_appointment(
@@ -66,7 +72,7 @@ defmodule ClinicDemo.Compliance.ComplianceGuardTest do
   test "check_in passes once the weight is recorded" do
     %{patient: patient, appointment: appointment} = fixtures()
 
-    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"))
+    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"), actor: @staff)
 
     assert {:ok, checked_in} = Scheduling.check_in_appointment(appointment, actor: @staff)
     assert checked_in.status == :checked_in
@@ -75,7 +81,7 @@ defmodule ClinicDemo.Compliance.ComplianceGuardTest do
   test "a passing transition records a compliance evaluation" do
     %{patient: patient, appointment: appointment} = fixtures()
 
-    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"))
+    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"), actor: @staff)
     {:ok, checked_in} = Scheduling.check_in_appointment(appointment, actor: @staff)
 
     assert [evaluation] =
@@ -95,7 +101,7 @@ defmodule ClinicDemo.Compliance.ComplianceGuardTest do
   test "completion is refused when the triage decision never answered" do
     %{patient: patient, appointment: appointment} = fixtures()
 
-    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"))
+    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"), actor: @staff)
 
     # Fresh reads, as every real caller would: the visit process writes the
     # triage answer shortly after booking, and a struct captured before that
@@ -127,7 +133,7 @@ defmodule ClinicDemo.Compliance.ComplianceGuardTest do
   test "completion passes with triage urgency and notes" do
     %{patient: patient, appointment: appointment} = fixtures()
 
-    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"))
+    {:ok, _} = Scheduling.record_weight(patient, Decimal.new("12.5"), actor: @staff)
 
     {:ok, checked_in} =
       Scheduling.check_in_appointment(Scheduling.get_appointment!(appointment.id),
@@ -171,18 +177,24 @@ defmodule ClinicDemo.Compliance.ComplianceGuardNoBundleTest do
 
   test "check_in succeeds without a recorded weight when no bundle is active" do
     {:ok, vet} =
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Pre-Seed",
-        role: :veterinarian,
-        license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Pre-Seed",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: @staff
+      )
 
     {:ok, patient} =
-      Scheduling.register_patient(%{
-        name: "Unweighed Animal",
-        species: :dog,
-        owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
-      })
+      Scheduling.register_patient(
+        %{
+          name: "Unweighed Animal",
+          species: :dog,
+          owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
+        },
+        actor: @staff
+      )
 
     {:ok, appointment} =
       Scheduling.book_appointment(

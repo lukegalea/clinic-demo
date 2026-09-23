@@ -9,7 +9,8 @@ defmodule ClinicDemo.Scheduling.Patient do
 
   use Ash.Resource,
     domain: ClinicDemo.Scheduling,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table "patients"
@@ -154,6 +155,22 @@ defmodule ClinicDemo.Scheduling.Patient do
       end
 
       change set_attribute(:weight_kg, arg(:weight_kg))
+    end
+  end
+
+  # Same two-policy shape as Appointment. Without it every write was open to
+  # the anonymous session — the interaction audit mutated Biscuit's weight
+  # 11.4 -> 77.7 with no actor, and the "No one is acting." banner advertised
+  # a gate that did not exist.
+  policies do
+    policy action_type(:read) do
+      description "The patient list is readable by anything that can reach the application."
+      authorize_if always()
+    end
+
+    policy action_type([:create, :update, :destroy]) do
+      description "Only a signed-in member of staff may change the patient books."
+      authorize_if actor_present()
     end
   end
 end

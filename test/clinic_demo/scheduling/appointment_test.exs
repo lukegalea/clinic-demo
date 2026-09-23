@@ -18,18 +18,24 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
 
   defp fixtures do
     {:ok, vet} =
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Test Vet",
-        role: :veterinarian,
-        license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Test Vet",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: @staff
+      )
 
     {:ok, patient} =
-      Scheduling.register_patient(%{
-        name: "Test Animal",
-        species: :dog,
-        owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
-      })
+      Scheduling.register_patient(
+        %{
+          name: "Test Animal",
+          species: :dog,
+          owner_email: "owner-#{System.unique_integer([:positive])}@example.com"
+        },
+        actor: @staff
+      )
 
     {:ok, appointment} =
       Scheduling.book_appointment(
