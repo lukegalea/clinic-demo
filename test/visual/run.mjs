@@ -495,9 +495,14 @@ async function pinIntakePicker(reporter, baseUrl, page) {
 
 // The designer's catalogue renders as a datalist under the action field once
 // a service task is selected — the "unconsumed framework skin" class of
-// regression hides exactly here.
-async function pinDesignerDatalist(reporter, baseUrl, page) {
+// regression hides exactly here. Mounting the designer also get-or-creates
+// the authoring DRAFT for the process, which the /processes page lists — so
+// this runs as a warm-up BEFORE the screenshot phase: every run, on a dev
+// box or a CI-fresh database, screenshots /processes with the same
+// draft-present state.
+async function pinDesignerDatalist(browser, reporter, baseUrl) {
   const pageId = "behavior:designer-datalist";
+  const { context, page } = await newPageWithHelpers(browser);
   try {
     await goToPage(page, baseUrl, "/processes");
     const designerHref = await page.locator('a[href*="/designer"]').first().getAttribute("href");
@@ -517,6 +522,8 @@ async function pinDesignerDatalist(reporter, baseUrl, page) {
     reporter.pass(pageId, `#${taskId} → #config-action[list="config-action-options"] + datalist`);
   } catch (error) {
     reporter.fail(pageId, describeError(error));
+  } finally {
+    await context.close();
   }
 }
 
@@ -555,6 +562,14 @@ async function main() {
       // Park the actor on /events: tracked, but its presence topic backs no
       // nav pill, so no chip leaks into any screenshot baseline below.
       await goToPage(helper.page, options.baseUrl, "/events");
+    }
+
+    // Phase 0.5 — the designer warm-up. Mounting the designer get-or-creates
+    // the process's authoring draft, which /processes lists; doing this
+    // before the inventory means the /processes screenshot always captures
+    // the same draft-present state, on a dev box and on a CI-fresh database.
+    if (reporter.shouldRun("behavior:designer-datalist") || reporter.shouldRun("page:processes")) {
+      await pinDesignerDatalist(browser, reporter, options.baseUrl);
     }
 
     // The main anonymous session drives the page inventory and most pins.
@@ -602,9 +617,6 @@ async function main() {
     }
     if (reporter.shouldRun("behavior:intake-picker-composite")) {
       await pinIntakePicker(reporter, options.baseUrl, main.page);
-    }
-    if (reporter.shouldRun("behavior:designer-datalist")) {
-      await pinDesignerDatalist(reporter, options.baseUrl, main.page);
     }
 
     // Cleanup of the long-lived contexts.

@@ -28,6 +28,13 @@ Flags:
 Exit code is the gate: `0` green, `1` any failure, `2` a grep that matched
 nothing. Never pipe it through `tail`/`grep` without `set -o pipefail`.
 
+Use `http://localhost:4000` rather than `http://127.0.0.1:4000` when the app
+boots under `MIX_ENV=test`: the endpoint's url host is the default
+`localhost`, and `check_origin` rejects the LiveView websocket for any other
+host — the a2ui surfaces and the `/acting-as` roster stay dead over
+`127.0.0.1`. (The dev server sets `check_origin: false`, so either works
+there.)
+
 ## Vendor fallback (no npm registry / no browser download)
 
 If the machine has a Playwright checkout and a system Chrome already, the

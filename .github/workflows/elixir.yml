@@ -133,15 +133,19 @@ jobs:
           set -euo pipefail
           MIX_ENV=test PHX_SERVER=true PORT=4000 mix phx.server > /tmp/phx-server.log 2>&1 &
           for _ in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:4000/ > /dev/null 2>&1; then break; fi
+            if curl -fsS http://localhost:4000/ > /dev/null 2>&1; then break; fi
             sleep 2
           done
-          curl -fsS http://127.0.0.1:4000/ > /dev/null
+          curl -fsS http://localhost:4000/ > /dev/null
+      # localhost, not 127.0.0.1: in test env the endpoint's url host is the
+      # default "localhost", and check_origin rejects the LiveView websocket
+      # for any other host — the a2ui surfaces (and the /acting-as roster,
+      # streamed after connect) stay dead over 127.0.0.1.
       - name: Run the visual suite
         working-directory: test/visual
         run: |
           set -euo pipefail
-          node run.mjs --base-url http://127.0.0.1:4000
+          node run.mjs --base-url http://localhost:4000
       - name: Dump the server log
         if: failure()
         run: tail -n 200 /tmp/phx-server.log 2>/dev/null || echo "(no server log — the boot step never ran)"
