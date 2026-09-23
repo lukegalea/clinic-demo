@@ -17,13 +17,6 @@ defmodule ClinicDemoWeb.Router do
       "content-security-policy" =>
         "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'sha256-BK52NP1e8rQFFVZCoDYB4YoCL0cZc/KAVl4dkMM7/QM='; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:"
     }
-
-    # GET /a2ui/actor?id=<uuid> switches the acting Clinician (validated
-    # against the configured actor list) and redirects back. Host wrapper
-    # around AshA2ui.ActorPlug: a stale roster id (retired mid-session)
-    # lands on /acting-as with a flash instead of a raw 422, and the nav's
-    # acting-as pill gets the current actor's label off the conn.
-    plug ClinicDemoWeb.ActorPlug
   end
 
   pipeline :api do

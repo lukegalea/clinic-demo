@@ -155,6 +155,23 @@
         </.link>
       </div>
     </div>
+    <%!-- Host flash area. The browser pipeline fetches flash, so conn
+         assigns carry it here on document loads; the ActorPlug's
+         stale-roster redirect lands its "no longer on the active roster"
+         message this way, because the framework's own picker view renders
+         no flash of its own. --%>
+    <% flash = assigns[:flash] || %{} %>
+    <% flash_error = flash["error"] || flash[:error] %>
+    <div
+      :if={flash_error}
+      class="mx-auto max-w-[1300px] px-4 pt-4"
+      role="alert"
+      data-testid="host-flash"
+    >
+      <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
+        <strong class="font-heading">{flash_error}</strong>
+      </div>
+    </div>
     <main class="mx-auto max-w-[1300px] px-4 py-6">
       {@inner_content}
     </main>

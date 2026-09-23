@@ -60,8 +60,12 @@ defmodule ClinicDemoWeb.Endpoint do
   # Before the router: the actor switcher intercepts /a2ui/actor?id=<uuid>
   # and redirects — it is not a route, so a pipeline plug would never see it
   # (pipelines run only after a route matches, and no route matches a path
-  # the plug is meant to swallow).
-  plug AshA2ui.ActorPlug
+  # the plug is meant to swallow). Host wrapper around AshA2ui.ActorPlug:
+  # same contract on a valid id, but a stale roster id lands on /acting-as
+  # with a flash instead of a raw 422, and the conn carries the current
+  # actor's label for the nav pill. (The pipeline plug in router.ex is this
+  # same module; the endpoint one is what actually sees the switch path.)
+  plug ClinicDemoWeb.ActorPlug
 
   plug ClinicDemoWeb.Router
 end
