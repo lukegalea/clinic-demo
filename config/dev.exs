@@ -78,3 +78,14 @@ config :phoenix_live_view,
   debug_attributes: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
+
+# Tidewave (the dev server's MCP plug). Its own supervisor would set these
+# lazily, but the plug's toolbar injection reads them on every page — so the
+# values are set up front: the project's name and root directory. The
+# `tidewave?` flag starts the MCP supervisor in application.ex (dev servers
+# only).
+config :tidewave,
+  project_name: "clinic_demo",
+  root: File.cwd!()
+
+config :clinic_demo, tidewave?: true

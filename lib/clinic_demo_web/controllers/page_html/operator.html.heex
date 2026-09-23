@@ -149,6 +149,53 @@
   </div>
 </section>
 
+<%!-- Audit: what did anyone do, and what rules were they held to. The
+     evaluations surface answers with decisions; the events surface with
+     the raw log; the bundle card says which guard is in force right now. --%>
+<section class="mb-8">
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-pink"} aria-hidden="true" />Audit
+  </h2>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <.card accent="pink" href="/operator/rules">
+      <h3 class="font-heading">Ruleset editor</h3>
+      <p class="text-sm text-foreground/70">
+        Author compliance rules as rows, then walk them through the
+        lifecycle: draft, validate, approve, activate, compile.
+      </p>
+    </.card>
+    <.card accent="pink" href="/evaluations">
+      <h3 class="font-heading">Decision evidence</h3>
+      <p class="text-sm text-foreground/70">
+        Every rule evaluation, with the matched rows — which version of
+        which table decided, and why.
+      </p>
+    </.card>
+    <.card accent="pink" href="/events">
+      <h3 class="font-heading">Audit events</h3>
+      <p class="text-sm text-foreground/70">
+        The event log, newest first. Written by the event projector; the
+        application only ever reads it.
+      </p>
+    </.card>
+    <.card accent="pink" href="/operator/rules">
+      <h3 class="font-heading">Active guard bundle</h3>
+      <%= if @active_bundle do %>
+        <p class="text-sm text-foreground/70">
+          <span class="font-mono font-medium">
+            {String.slice(@active_bundle.content_hash, 0, 12)}
+          </span>
+          · status {@active_bundle.status}
+        </p>
+      <% else %>
+        <p class="text-sm text-foreground/70">
+          Nothing is in force yet — activate a bundle in the ruleset editor.
+        </p>
+      <% end %>
+    </.card>
+  </div>
+</section>
+
 <section class="mb-8">
   <h2 class="mb-3 text-lg font-heading">
     <span class={section_chip <> " bg-cyan"} aria-hidden="true" />Discovery &amp; insight

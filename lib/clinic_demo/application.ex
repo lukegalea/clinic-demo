@@ -16,12 +16,19 @@ defmodule ClinicDemo.Application do
       # {ClinicDemo.Worker, arg},
       # Start to serve requests, typically the last entry
       ClinicDemoWeb.Endpoint
-    ]
+    ] ++ tidewave()
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: ClinicDemo.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # The MCP supervisor behind the endpoint's Tidewave plug — it owns the ETS
+  # tables and log handlers the /tidewave/mcp handler uses. Dev only: in
+  # every other env the plug never mounts and this stays unstarted.
+  defp tidewave do
+    if Application.get_env(:clinic_demo, :tidewave?, false), do: [{Tidewave.MCP, []}], else: []
   end
 
   # Tell Phoenix to update the endpoint configuration

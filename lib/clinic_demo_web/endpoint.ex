@@ -27,6 +27,15 @@ defmodule ClinicDemoWeb.Endpoint do
     only: ClinicDemoWeb.static_paths(),
     raise_on_missing_only: code_reloading?
 
+  # Tidewave: the dev server's MCP endpoint (loopback tool for agents —
+  # project_eval, logs, SQL). Dev-only, and deliberately placed BEFORE the
+  # code-reload block: its validator refuses to run once LiveReloader has
+  # mounted or the body has been parsed (Plug.Parsers comes later anyway).
+  # The toolbar is off: its injection collides with Clarity's inline-JS
+  # pages, and the MCP endpoint is the point. Not part of the application's
+  # production surface.
+  if code_reloading?, do: plug(Tidewave, toolbar: false)
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

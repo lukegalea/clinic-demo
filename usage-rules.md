@@ -58,6 +58,31 @@ answer what you need, fall back to grep and append one line to
 answer. That log is the input to the next round of tool work, and an empty log
 means nobody tried.
 
+## Editing the contract, not just reading it
+
+Reading is `describe`/`context`; editing an Ash entity is
+`mix ash_agent.edit` — a semantic edit addressed by name path
+(`MyApp.Resource/section/entity`, e.g.
+`ClinicDemo.Scheduling.Appointment/actions/check_in`), never a text edit
+against a file you have only half read:
+
+1. **Dry-run first, always.** Without `--write` the task prints the planned
+   diff plus the file's `current_digest` and touches nothing.
+2. **Digest handshake.** Apply with
+   `--write --expected-digest <digest-from-your-dry-run>`. A mismatch refuses
+   the write — that is the mechanical read-before-edit, and it is not
+   optional.
+3. **The gate is not yours to bypass.** Every applied write is recompiled
+   with diagnostics captured and the resource runs a per-action validate
+   canary; a failed gate reverts the file and reports why. `delete` also
+   refuses while anything still references the entity.
+4. **Boot contract: compile, don't start.** The task needs compiled DSL state
+   for name-path resolution — it works against a compiled checkout, not a
+   running server.
+
+stdout is pure JSON (`is_error?: true` on error reports), so the output
+chains into tooling rather than into a human's eyeball.
+
 ## Rules
 
 ### The domain

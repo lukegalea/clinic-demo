@@ -117,12 +117,11 @@ defmodule ClinicDemo.MixProject do
       {:ash_decisions, github: "lukegalea/ash_decisions"},
       {:ash_bpmn, github: "lukegalea/ash_bpmn"},
 
-      # Operator-defined compliance: rule bundles (via ash_rules) compiled into
-      # immutable policy bundles that guard the appointment state machine's
-      # transitions. Pinned by ref so the schema the migration creates stays
-      # in lockstep with the resources that read it.
-      {:ash_compliance,
-       github: "lukegalea/ash_compliance", ref: "75d6ae861f715f4c3b9485edf1b0f25f715aea9e"},
+      # Operator-defined compliance: rule bundles (via ash_rules) compiled
+      # into immutable policy bundles that guard the appointment state
+      # machine's transitions, plus the web surface (RulesetEditorLive) that
+      # lets an operator author them.
+      {:ash_compliance, github: "lukegalea/ash_compliance"},
 
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
@@ -152,6 +151,14 @@ defmodule ClinicDemo.MixProject do
       # Clarity's diagram engine (ER/policy views) — optional to Clarity and
       # genuinely dev-only.
       {:ash_diagram, "~> 0.2", only: :dev},
+
+      # Tidewave: an MCP server inside the running Phoenix dev server, so an
+      # agent can project_eval with the app's own reflection APIs, read the
+      # logs, and query the dev database. `runtime: false` rather than
+      # `only: :dev` — a dev-only restriction on this package diverges from
+      # the same package pulled unrestricted elsewhere — and the plug only
+      # ever mounts inside `if code_reloading?`, i.e. dev.
+      {:tidewave, "~> 0.9", runtime: false},
 
       # Ash's policy authorizer needs a SAT solver to compile policies.
       {:picosat_elixir, "~> 0.2"},

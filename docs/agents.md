@@ -329,12 +329,46 @@ changes. `bin/ash-agent` stays useful regardless: it is what a shell, a CI
 job or a person uses, and its allowlist entries in `.claude/settings.json`
 are kept for exactly that reason.
 
-## Why `tidewave` and `ash_ai_dev` are not here
+## `tidewave` — the dev server's own MCP endpoint
 
-Both attach over HTTP to a running Phoenix dev server, and both are
-dependencies this application does not have. It is a standalone demo, not the
-reference app they are configured in. Adding the entries without the
-dependencies would give you two servers that never connect.
+`tidewave` used to be absent (with `ash_ai_dev`, it was listed under "not
+here" below) because the dependency was not. That stance changed by operator
+directive: the dependency is in (`{:tidewave, "~> 0.9", only: :dev}`), the
+plug mounts inside `if code_reloading?` in `endpoint.ex`, and the `.mcp.json`
+entry points at `http://localhost:4000/tidewave/mcp`. It exists only while
+`mix phx.server` is running, and only in dev — the production endpoint never
+mounts it. Loopback tool; do not expose the dev server past 127.0.0.1.
+
+### The loop an agent should run against it
+
+Tidewave 0.9 removed `get_ash_resources` in favor of `project_eval` plus
+Ash's own reflection APIs — the reflection *is* the tool surface:
+
+- `project_eval` with `Ash.Domain.Info.resources/1` and
+  `Ash.Resource.Info.actions/1` (also `attributes/1`, `relationships/1`,
+  `calculations/1`) to answer "what exists and what can it do" from the
+  running app, not from a stale read of the source.
+- `project_eval` with the domain's code interfaces to exercise a real
+  action — booking an appointment through
+  `ClinicDemo.Scheduling.book_appointment/2` starts the visit process the
+  same way the UI does, and the guards run.
+- `get_docs` for a module or function, resolved at the *lockfile* versions
+  this checkout actually compiles against — not whatever the web says.
+- `get_logs` after any action: the Ash/engine debug output that explains
+  what the write touched.
+- `execute_sql_query` for verification that does not trust the happy path —
+  the row count, the lane label, the bundle hash as the database holds them.
+
+The rhythm: reflect (`project_eval` + Info APIs), act (a code interface),
+read the logs, then verify in SQL. A claim about this application's behavior
+that skipped all four is a guess.
+
+## Why `ash_ai_dev` is not here
+
+It attaches over HTTP to a running Phoenix dev server, and it is a
+dependency this application does not have. Adding the entry without the
+dependency would give you a server that never connects. (Tidewave used to
+share this section; see above.)
 
 ## The GPL boundary
 

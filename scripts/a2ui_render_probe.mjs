@@ -34,6 +34,8 @@ const routes = [
   { path: "/processes", kind: "surface" },
   { path: "/decisions", kind: "surface" },
   { path: "/evaluations", kind: "surface" },
+  { path: "/events", kind: "surface" },
+  { path: "/operator/rules", kind: "plain" },
   { path: "/emergencies", kind: "surface" },
   { path: "/operator", kind: "plain" },
   { path: "/acting-as", kind: "plain" },

@@ -49,12 +49,14 @@ defmodule ClinicDemoWeb.Router do
       live "/processes", A2ui.ProcessDefinitionsLive
       live "/decisions", A2ui.DecisionDefinitionsLive
       live "/evaluations", A2ui.EvaluationsLive
+      live "/events", A2ui.EventsLive
       live "/canvas", CanvasLive
       live "/agent", AgentLive
       live "/operator/tasks", Bpmn.TaskListLive
       live "/operator/processes/:key/designer", Bpmn.DesignerLive
       live "/operator/instances/:id", Bpmn.ViewerLive
       live "/operator/decisions/:key/editor", Decisions.EditorLive
+      live "/operator/rules", Compliance.RulesetEditorLive
     end
   end
 

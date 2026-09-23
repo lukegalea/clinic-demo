@@ -35,10 +35,13 @@
     "  a CI job, or a person uses. .claude/settings.json allowlists it so it",
     "  runs without a prompt. Same JSON on stdout either way.",
     "",
-    "tidewave and ash_ai_dev are deliberately absent. Both attach to a running",
-    "  dev server, and both are dependencies this demo does not have: it is a",
-    "  standalone application, not the ash_enterprise reference app. Add them",
-    "  only if you add the dependencies.",
+    "tidewave: the dev server's own MCP endpoint -- project_eval against the",
+    "  running application (Ash reflection APIs, code execution), get_logs,",
+    "  execute_sql_query. Mounts inside the Phoenix endpoint under /tidewave/mcp,",
+    "  dev-only (the plug sits inside `if code_reloading?` in endpoint.ex), so",
+    "  it exists only while `mix phx.server` is running. Loopback tool: do not",
+    "  expose the dev server past 127.0.0.1. See docs/agents.md for the",
+    "  teaching loop.",
     "",
     "${CLAUDE_PROJECT_DIR:-.} covers the two ways a client launches a project",
     "  server. If yours does neither, replace it with an absolute path."
@@ -53,6 +56,10 @@
     "ash_agent": {
       "type": "http",
       "url": "http://127.0.0.1:4100"
+    },
+    "tidewave": {
+      "type": "http",
+      "url": "http://localhost:4000/tidewave/mcp"
     }
   }
 }

@@ -118,6 +118,16 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
           "which rules matched."
     },
     %{
+      name: "events",
+      label: "Audit events",
+      ui: A2ui.EventUI,
+      path: "/events",
+      blurb: "The ash_events audit log, newest first. Read-only.",
+      description:
+        "The audit event log: recorded write events, newest first. Read-only — the log " <>
+          "is written by the event projector, never by hand from a grid."
+    },
+    %{
       name: "emergencies",
       label: "Emergency board",
       ui: A2ui.EmergencyBoardUI,

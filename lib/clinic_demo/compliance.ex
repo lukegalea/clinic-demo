@@ -16,6 +16,10 @@ defmodule ClinicDemo.Compliance do
 
   def organization_id, do: @org
 
+  # The arity-1 spelling the compliance editor's MFA contract calls
+  # (`module.function(args ++ [socket])`): same fixed org, socket ignored.
+  def organization_id(_socket), do: @org
+
   @doc """
   Puts the appointment rule bundle in force for the demo org.
 

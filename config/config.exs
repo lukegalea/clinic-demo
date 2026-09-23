@@ -13,6 +13,7 @@ config :clinic_demo,
     ClinicDemo.Scheduling,
     ClinicDemo.Decisions,
     ClinicDemo.Visits,
+    ClinicDemo.Events,
     AshCompliance.Domain
   ],
   generators: [timestamp_type: :utc_datetime]

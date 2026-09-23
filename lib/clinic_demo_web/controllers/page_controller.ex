@@ -10,8 +10,21 @@ defmodule ClinicDemoWeb.PageController do
   def operator(conn, _params) do
     render(conn, :operator,
       recent_instances: recent_instances(),
-      visit_machine_chart: ClinicDemo.Scheduling.VisitMachine.chart()
+      visit_machine_chart: ClinicDemo.Scheduling.VisitMachine.chart(),
+      active_bundle: active_guard_bundle()
     )
+  end
+
+  # The compliance bundle currently in force, for the hub's Audit section.
+  # Nil when nothing is active (a fresh database before the seeds run).
+  defp active_guard_bundle do
+    case AshCompliance.Domain.active_policy_bundle(
+           ClinicDemo.Compliance.organization_id(),
+           authorize?: false
+         ) do
+      {:ok, %AshCompliance.Resources.PolicyBundle{} = bundle} -> bundle
+      _ -> nil
+    end
   end
 
   # The latest visit instances for the hub's "Recent visit processes" list.

@@ -169,4 +169,51 @@ defmodule ClinicDemoWeb.A2ui.EvaluationsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.EvaluationUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  # Decision evidence and the raw audit feed answer different questions —
+  # "what did the rule decide?" versus "what did anyone do?" — so the two
+  # surfaces link to each other.
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <AshA2ui.LiveRenderer.surface_container />
+      <div class="flex flex-wrap gap-2">
+        <%!-- Live navigation: /events is inside live_session :a2ui. --%>
+        <.link
+          navigate="/events"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+        >
+          Open the audit event log
+        </.link>
+      </div>
+    </div>
+    """
+  end
+end
+
+defmodule ClinicDemoWeb.A2ui.EventsLive do
+  use AshA2ui.LiveRenderer,
+    ui: ClinicDemoWeb.A2ui.EventUI,
+    actor_fn: & &1.assigns.a2ui_actor
+
+  # The audit feed's companion: the decision evidence surface. Same link,
+  # read from the other side.
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <AshA2ui.LiveRenderer.surface_container />
+      <div class="flex flex-wrap gap-2">
+        <%!-- Live navigation: /evaluations is inside live_session :a2ui. --%>
+        <.link
+          navigate="/evaluations"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+        >
+          Open the decision evidence
+        </.link>
+      </div>
+    </div>
+    """
+  end
 end
