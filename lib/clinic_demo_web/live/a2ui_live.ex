@@ -82,7 +82,10 @@ defmodule ClinicDemoWeb.A2ui.IntakeLive do
            attrs mirror that contract on the host chrome (see
            AshA2ui.Combobox's moduledoc) and the hook observes it — focus
            hand-off and host affordances hang off this seam. --%>
-      <div phx-hook="AshA2uiCombobox" {AshA2ui.Combobox.data_attrs(field: "patient_id", searchable: true)}>
+      <div
+        phx-hook="AshA2uiCombobox"
+        {AshA2ui.Combobox.data_attrs(field: "patient_id", searchable: true)}
+      >
         <AshA2ui.LiveRenderer.surface_container />
       </div>
     </div>

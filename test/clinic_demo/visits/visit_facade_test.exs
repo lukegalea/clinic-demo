@@ -40,7 +40,8 @@ defmodule ClinicDemo.Visits.VisitFacadeTest do
         actor: @staff
       )
 
-    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Facade Nurse", role: :nurse}, actor: @staff)
+    {:ok, nurse} =
+      Scheduling.hire_clinician(%{full_name: "Facade Nurse", role: :nurse}, actor: @staff)
 
     %{vet: vet, nurse: nurse}
   end
@@ -56,7 +57,8 @@ defmodule ClinicDemo.Visits.VisitFacadeTest do
         actor: @staff
       )
 
-    if weight?, do: {:ok, _} = Scheduling.record_weight(patient, Decimal.new("9.1"), actor: @staff)
+    if weight?,
+      do: {:ok, _} = Scheduling.record_weight(patient, Decimal.new("9.1"), actor: @staff)
 
     {:ok, appointment} =
       Scheduling.book_appointment(

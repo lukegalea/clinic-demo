@@ -52,7 +52,17 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         title :patient_label
         badge :triage_urgency
         badge_text emergency: "Emergency", urgent: "Urgent", soon: "Soon", routine: "Routine"
-        meta [:clinician_label, :scheduled_at, :ends_at, :reason, :severity, :status, :discharged_at]
+
+        meta [
+          :clinician_label,
+          :scheduled_at,
+          :ends_at,
+          :reason,
+          :severity,
+          :status,
+          :discharged_at
+        ]
+
         columns 3
       end
 

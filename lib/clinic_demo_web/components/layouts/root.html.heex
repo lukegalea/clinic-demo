@@ -54,6 +54,7 @@
          down on click. One loud yellow pill for "Acting as" — the control
          every demo starts from. --%>
     <% current_path = assigns[:current_path] || ""
+
     nav_pill =
       "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-secondary-background px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
 
@@ -75,19 +76,63 @@
         />
       </.link>
       <nav class="flex flex-wrap gap-1.5" aria-label="Main">
-        <.link class={nav_pill} navigate={~p"/"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/")}>Board</.link>
-        <.link class={nav_pill} navigate={~p"/intake"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/intake")}>Intake</.link>
-        <.link class={nav_pill} navigate={~p"/schedule"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/schedule")}>Schedule</.link>
-        <.link class={nav_pill} navigate={~p"/worklist"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/worklist")}>Worklist</.link>
-        <.link class={nav_pill} navigate={~p"/visits"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/visits")}>Visits</.link>
-        <.link class={nav_pill} navigate={~p"/patients"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/patients")}>Patients</.link>
-        <.link class={nav_pill} navigate={~p"/clinicians"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/clinicians")}>Clinicians</.link>
-        <.link class={nav_pill} navigate={~p"/processes"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/processes")}>Processes</.link>
-        <.link class={nav_pill} navigate={~p"/decisions"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/decisions")}>Decisions</.link>
-        <.link class={nav_pill} navigate={~p"/evaluations"} {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/evaluations")}>Evidence</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/")}
+        >Board</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/intake"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/intake")}
+        >Intake</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/schedule"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/schedule")}
+        >Schedule</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/worklist"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/worklist")}
+        >Worklist</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/visits"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/visits")}
+        >Visits</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/patients"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/patients")}
+        >Patients</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/clinicians"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/clinicians")}
+        >Clinicians</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/processes"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/processes")}
+        >Processes</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/decisions"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/decisions")}
+        >Decisions</.link>
+        <.link
+          class={nav_pill}
+          navigate={~p"/evaluations"}
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/evaluations")}
+        >Evidence</.link>
         <%!-- /operator is a plain controller page, not a LiveView, so there
              is nothing to navigate to — this one stays a full load. --%>
-        <a class={nav_pill} href="/operator" {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/operator")}>Operator</a>
+        <a
+          class={nav_pill}
+          href="/operator"
+          {AshA2ui.PresenceBar.nav_current_attrs(current_path, "/operator")}
+        >Operator</a>
       </nav>
       <div class="ms-auto">
         <%!-- The picker shares the surfaces' live_session now, so this is
@@ -98,7 +143,9 @@
         <.link
           class={acting_as_pill}
           navigate="/acting-as"
-          aria-label={assigns[:a2ui_actor_label] && "Acting as #{@a2ui_actor_label}" || "No one is acting"}
+          aria-label={
+            (assigns[:a2ui_actor_label] && "Acting as #{@a2ui_actor_label}") || "No one is acting"
+          }
         >
           <%= if label = assigns[:a2ui_actor_label] do %>
             Acting as {label}

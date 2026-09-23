@@ -29,8 +29,11 @@ defmodule ClinicDemo.Visits.AppointmentVisitTest do
         actor: @staff
       )
 
-    {:ok, nurse} = Scheduling.hire_clinician(%{full_name: "Test Nurse", role: :nurse}, actor: @staff)
-    {:ok, tech} = Scheduling.hire_clinician(%{full_name: "Test Tech", role: :technician}, actor: @staff)
+    {:ok, nurse} =
+      Scheduling.hire_clinician(%{full_name: "Test Nurse", role: :nurse}, actor: @staff)
+
+    {:ok, tech} =
+      Scheduling.hire_clinician(%{full_name: "Test Tech", role: :technician}, actor: @staff)
 
     %{vet: vet, nurse: nurse, tech: tech}
   end
