@@ -1,9 +1,39 @@
 # One mount module per surface — the whole LiveView is the LiveRenderer use,
 # pointed at a standalone UI module and the actor the session hook assigns.
+#
+# Every surface here wires `ClinicDemoWeb.A2ui.SurfaceChrome`: presence is
+# mounted for the acting clinician (who-else-is-here, rendered by the header
+# bar), and `handle_info/2` routes presence broadcasts to the refresh
+# contract while everything else falls through to the LiveRenderer.
+defmodule ClinicDemoWeb.A2ui.Surface do
+  @moduledoc false
+
+  defmacro __using__(surface_id: surface_id) do
+    quote do
+      @doc false
+      @impl true
+      def mount(params, session, socket) do
+        {:ok, socket} = AshA2ui.LiveRenderer.mount(__ash_a2ui_config__(), params, session, socket)
+        {:ok, ClinicDemoWeb.A2ui.SurfaceChrome.mount_presence(socket, unquote(surface_id))}
+      end
+
+      @doc false
+      @impl true
+      def handle_info(msg, socket) do
+        ClinicDemoWeb.A2ui.SurfaceChrome.handle_info(msg, __ash_a2ui_config__(), socket)
+      end
+
+      defoverridable mount: 3, handle_info: 2
+    end
+  end
+end
+
 defmodule ClinicDemoWeb.A2ui.BoardLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.BoardUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_board"
 
   # Without an acting clinician, every card action is refused by the
   # actor_present policy — the error surfaces in the a2ui status banner
@@ -17,6 +47,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
@@ -35,6 +66,18 @@ defmodule ClinicDemoWeb.A2ui.IntakeLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.IntakeUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_intake"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.ScheduleLive do
@@ -42,10 +85,13 @@ defmodule ClinicDemoWeb.A2ui.ScheduleLive do
     ui: ClinicDemoWeb.A2ui.AppointmentUI,
     actor_fn: & &1.assigns.a2ui_actor
 
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_schedule"
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
@@ -67,12 +113,26 @@ defmodule ClinicDemoWeb.A2ui.WorklistLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.WorklistUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_worklist"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.VisitsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.VisitInstanceUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_visits"
 
   # The surface shows where each visit stands; the engine's own task inbox
   # is the view that carries the per-instance context — the BPMN viewer's
@@ -81,6 +141,7 @@ defmodule ClinicDemoWeb.A2ui.VisitsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /operator/tasks is inside live_session :a2ui,
@@ -101,18 +162,44 @@ defmodule ClinicDemoWeb.A2ui.PatientsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.PatientUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_patients"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.CliniciansLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.ClinicianUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_clinicians"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.ProcessDefinitionUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_process_definitions"
 
   # The surface shows the what; these links give the where-to-go. The
   # published version is read-only by construction — the designer is where
@@ -121,6 +208,7 @@ defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: the designer is inside live_session :a2ui. --%>
@@ -141,10 +229,13 @@ defmodule ClinicDemoWeb.A2ui.DecisionDefinitionsLive do
     ui: ClinicDemoWeb.A2ui.DecisionDefinitionUI,
     actor_fn: & &1.assigns.a2ui_actor
 
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_decision_definitions"
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: the DMN editor is inside live_session :a2ui. --%>
@@ -164,12 +255,26 @@ defmodule ClinicDemoWeb.A2ui.EmergencyBoardLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.EmergencyBoardUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_emergency_board"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
 end
 
 defmodule ClinicDemoWeb.A2ui.EvaluationsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.EvaluationUI,
     actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_evaluations"
 
   # Decision evidence and the raw audit feed answer different questions —
   # "what did the rule decide?" versus "what did anyone do?" — so the two
@@ -178,6 +283,7 @@ defmodule ClinicDemoWeb.A2ui.EvaluationsLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /events is inside live_session :a2ui. --%>
@@ -198,12 +304,15 @@ defmodule ClinicDemoWeb.A2ui.EventsLive do
     ui: ClinicDemoWeb.A2ui.EventUI,
     actor_fn: & &1.assigns.a2ui_actor
 
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_events"
+
   # The audit feed's companion: the decision evidence surface. Same link,
   # read from the other side.
   @impl true
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <ClinicDemoWeb.A2ui.SurfaceChrome.surface_header presences={@a2ui_presences} />
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /evaluations is inside live_session :a2ui. --%>

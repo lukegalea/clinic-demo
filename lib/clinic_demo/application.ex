@@ -13,6 +13,10 @@ defmodule ClinicDemo.Application do
         ClinicDemo.Repo,
         {DNSCluster, query: Application.get_env(:clinic_demo, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: ClinicDemo.PubSub},
+        # Who-else-is-here for the a2ui surfaces (avatar stack in the
+        # surface header). Rides the PubSub above; each host supervises its
+        # own presence module per AshA2ui.Presence's wiring contract.
+        ClinicDemoWeb.A2uiPresence,
         # Start a worker by calling: ClinicDemo.Worker.start_link(arg)
         # {ClinicDemo.Worker, arg},
         # Start to serve requests, typically the last entry
