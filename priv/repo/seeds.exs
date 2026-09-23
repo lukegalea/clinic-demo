@@ -1,7 +1,16 @@
 # Run with: mix run priv/repo/seeds.exs
 #
 # A day's worth of schedule, so the introspection tools have something to
-# describe and the queries have something to return.
+# describe and the queries have something to return — and a short HISTORY
+# behind it: bookings, triage decisions, check-ins that pass the weight
+# guard, write-ups, a discharge, a no-show, a cancellation, and process
+# instances with real token histories, so the operator surfaces (Audit,
+# Evidence, Evaluations, the instance viewers) have something to show on
+# first boot.
+#
+# Every action that policy gates runs WITH an acting clinician, so the logs
+# and instance records attribute each step to the person (or seed stand-in)
+# who took it.
 
 alias ClinicDemo.Scheduling
 
@@ -95,11 +104,14 @@ end
 {:ok, vet} =
   case clinician_by.(license_number: "ON-104422") do
     nil ->
-      Scheduling.hire_clinician(%{
-        full_name: "Dr. Amara Osei",
-        role: :veterinarian,
-        license_number: "ON-104422"
-      })
+      Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Amara Osei",
+          role: :veterinarian,
+          license_number: "ON-104422"
+        },
+        actor: staff
+      )
 
     clinician ->
       {:ok, clinician}
@@ -107,7 +119,7 @@ end
 
 {:ok, tech} =
   case clinician_by.(full_name: "Jonah Reyes") do
-    nil -> Scheduling.hire_clinician(%{full_name: "Jonah Reyes", role: :technician})
+    nil -> Scheduling.hire_clinician(%{full_name: "Jonah Reyes", role: :technician}, actor: staff)
     clinician -> {:ok, clinician}
   end
 
@@ -115,7 +127,7 @@ end
 # nurse, resolved out of this table rather than out of the diagram.
 {:ok, nurse} =
   case clinician_by.(full_name: "Ruth Vance") do
-    nil -> Scheduling.hire_clinician(%{full_name: "Ruth Vance", role: :nurse})
+    nil -> Scheduling.hire_clinician(%{full_name: "Ruth Vance", role: :nurse}, actor: staff)
     clinician -> {:ok, clinician}
   end
 
@@ -146,7 +158,7 @@ patients =
       ] do
     case patient_by.(owner_email: attrs.owner_email) do
       nil ->
-        {:ok, patient} = Scheduling.register_patient(attrs)
+        {:ok, patient} = Scheduling.register_patient(attrs, actor: staff)
         patient
 
       patient ->
@@ -208,16 +220,37 @@ end
     severity: 3
   })
 
-# ── Walking two visits through the process ─────────────────────────────────
+# Two more bookings, so the seeded history can show the closed sides of the
+# lifecycle (a no-show and a cancellation) rather than only open lanes.
+{:ok, biscuit_no_show_visit} =
+  book.(biscuit, vet, %{
+    scheduled_at: tomorrow_at.(13),
+    duration_minutes: 15,
+    reason: "Nail trim",
+    severity: 1
+  })
+
+{:ok, pepper_cancelled_visit} =
+  book.(pepper, vet, %{
+    scheduled_at: tomorrow_at.(14),
+    duration_minutes: 20,
+    reason: "Skin allergy recheck",
+    severity: 2
+  })
+
+# ── Walking visits through the process ─────────────────────────────────────
 #
-# Every appointment above already has an instance: booking started one. What
-# follows moves two of them along, so the seeded data is not three identical
-# rows sitting on the same node.
+# Every appointment above already has an instance: booking started one (and
+# every booking ran the triage decision, so the DMN evaluations pile up as
+# they do in a real clinic). What follows moves several of them along, so
+# the seeded data is not a row of identical cards: a full happy path ending
+# in a discharge, a visit parked on the lab wait, a no-show, a cancellation,
+# and one visit left standing at check-in.
 #
 # Nothing here reaches into the engine. Each step is a person completing the
-# work item in front of them, and the process does the rest.
-
-require Ash.Query
+# work item in front of them, and the process does the rest. On a re-run the
+# visits have already moved, so each step fires only when the visit is still
+# standing at the stage that makes it meaningful.
 
 open_task = fn appointment, node_id ->
   ClinicDemo.Visits.HumanTask
@@ -230,12 +263,9 @@ open_task = fn appointment, node_id ->
   end)
 end
 
-# Nothing here reaches into the engine. Each step is a person completing the
-# work item in front of them, and the process does the rest. On a re-run the
-# visits have already moved, so each step fires only when the visit is still
-# standing at the stage that makes it meaningful.
-
-# Pepper: in, seen, written up, out.
+# Pepper: in, seen, written up — and the process discharges her at the end of
+# the happy path, so `discharged_at` lands through the engine like everyone
+# else's.
 pepper_visit = Scheduling.get_appointment!(pepper_visit.id)
 
 if pepper_visit.status == :scheduled do
@@ -291,7 +321,75 @@ if clover_visit.status == :scheduled do
     )
 end
 
-{:ok, _} = Scheduling.record_weight(pepper, Decimal.new("4.35"))
+# Biscuit's dental follow-up: walked up to the write-up with the weight guard
+# in mind — the weigh-in comes FIRST, so the check-in would pass the guard
+# even with the bundle in force. The Consult task is left OPEN, so this visit
+# sits completed-but-not-discharged: the exact row a Discharge click on the
+# schedule/board wants, and one more token history for the instance viewer.
+biscuit_dental =
+  case appointment_by.(biscuit.id, "Dental cleaning follow-up") do
+    nil ->
+      {:ok, appointment} =
+        book.(biscuit, vet, %{
+          scheduled_at: tomorrow_at.(15),
+          duration_minutes: 40,
+          reason: "Dental cleaning follow-up",
+          severity: 2
+        })
+
+      appointment
+
+    appointment ->
+      appointment
+  end
+
+biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id)
+
+if biscuit_dental.status == :scheduled do
+  {:ok, _} = Scheduling.record_weight(biscuit, Decimal.new("11.8"), actor: staff)
+
+  {:ok, _} =
+    AshBpmn.complete_task(open_task.(biscuit_dental, "CheckIn"),
+      outcome: :arrived,
+      actor: %{id: nurse.id}
+    )
+
+  biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id)
+
+  {:ok, _} =
+    Scheduling.complete_appointment(
+      biscuit_dental,
+      "Scaling under sedation, no extractions needed. Discharging with soft-food advice.",
+      actor: staff
+    )
+end
+
+# Biscuit's nail trim: a no-show. The front desk closes the CheckIn task with
+# the :no_show outcome, and the process routes the token through MarkNoShow —
+# the machine transition lands exactly as it would from the board.
+biscuit_no_show_visit = Scheduling.get_appointment!(biscuit_no_show_visit.id)
+
+if biscuit_no_show_visit.status == :scheduled do
+  {:ok, _} =
+    AshBpmn.complete_task(open_task.(biscuit_no_show_visit, "CheckIn"),
+      outcome: :no_show,
+      comment: "Called twice, no answer.",
+      actor: %{id: nurse.id}
+    )
+end
+
+# Pepper's allergy recheck: cancelled before it happened, with the reason the
+# cancellation surface shows.
+pepper_cancelled_visit = Scheduling.get_appointment!(pepper_cancelled_visit.id)
+
+if pepper_cancelled_visit.status == :scheduled do
+  {:ok, _} =
+    Scheduling.cancel_appointment(pepper_cancelled_visit, "Owner is away; will rebook next month",
+      actor: staff
+    )
+end
+
+{:ok, _} = Scheduling.record_weight(pepper, Decimal.new("4.35"), actor: staff)
 
 waiting =
   ClinicDemo.Visits.HumanTask
@@ -299,16 +397,26 @@ waiting =
   |> Ash.Query.filter(status in [:open, :claimed])
   |> Ash.read!()
 
+appointments = Scheduling.list_appointments!()
+
+discharged = Enum.count(appointments, & &1.discharged_at)
+
+evaluation_count =
+  ClinicDemo.Decisions.Evaluation
+  |> Ash.Query.for_read(:read)
+  |> Ash.read!(authorize?: false)
+  |> length()
+
 IO.puts("""
 Seeded:
   #{length(Scheduling.list_clinicians!())} clinicians
   #{length(Scheduling.list_patients!())} patients
-  #{length(Scheduling.list_appointments!())} appointments
-  #{length(Scheduling.list_appointments!())} visit instances
+  #{length(appointments)} appointments (#{discharged} discharged)
   #{length(waiting)} work items waiting: #{waiting |> Enum.map(& &1.node_id) |> Enum.sort() |> Enum.join(", ")}
 
 Triage decided:
-#{Scheduling.list_appointments!() |> Enum.map_join("\n", fn a -> "  #{a.reason} -> #{a.triage_urgency}" end)}
+#{appointments |> Enum.map_join("\n", fn a -> "  #{a.reason} -> #{a.triage_urgency}" end)}
+  #{evaluation_count} DMN triage evaluations on file
 """)
 
 # ── Compliance: put the appointment rule bundle in force ───────────────────
@@ -321,6 +429,9 @@ Triage decided:
 #
 # From here on, :check_in without a recorded patient weight is refused with
 # the rule's gap text, and :complete without triage urgency is refused too.
+# A REFUSAL files no evidence row by design — the compliance evaluation is
+# recorded only for transitions that pass — so the seeded history contains
+# no refusal row; the honest refusal is a live demo: try checking Clover in.
 
 bundle = ClinicDemo.Compliance.activate_appointment_bundle!()
 
