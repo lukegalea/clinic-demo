@@ -130,7 +130,9 @@ defmodule ClinicDemo.Scheduling.AppointmentTest do
     test "cancelling works from both source states" do
       %{appointment: fresh} = fixtures()
 
-      assert {:ok, cancelled} = Scheduling.cancel_appointment(fresh, "Owner called", actor: @staff)
+      assert {:ok, cancelled} =
+               Scheduling.cancel_appointment(fresh, "Owner called", actor: @staff)
+
       assert cancelled.status == :cancelled
 
       # And from :checked_in, the machine's other legal source.

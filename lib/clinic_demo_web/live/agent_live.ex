@@ -140,7 +140,10 @@ defmodule ClinicDemoWeb.AgentLive do
   # the page stays exactly where it was.
   def handle_async(:interpret, {:exit, _reason}, socket) do
     {:noreply,
-     assign(socket, thinking: false, error: "the interpreter stopped before answering — ask again.")}
+     assign(socket,
+       thinking: false,
+       error: "the interpreter stopped before answering — ask again."
+     )}
   end
 
   @impl true

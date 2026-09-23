@@ -78,7 +78,8 @@ defmodule ClinicDemo.Visits.VisitFacade do
     end
   end
 
-  defp direct(appointment, :arrived, actor), do: Scheduling.check_in_appointment(appointment, actor: actor)
+  defp direct(appointment, :arrived, actor),
+    do: Scheduling.check_in_appointment(appointment, actor: actor)
 
   defp direct(appointment, :no_show, actor),
     do: Scheduling.mark_appointment_no_show(appointment, actor: actor)

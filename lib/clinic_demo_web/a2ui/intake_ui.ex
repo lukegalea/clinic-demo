@@ -41,6 +41,7 @@ defmodule ClinicDemoWeb.A2ui.IntakeUI do
 
       nested_form :patient do
         label "New patient — fill in only when they have never been in"
+
         fields [
           :name,
           :species,

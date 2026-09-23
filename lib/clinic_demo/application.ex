@@ -7,16 +7,17 @@ defmodule ClinicDemo.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      ClinicDemoWeb.Telemetry,
-      ClinicDemo.Repo,
-      {DNSCluster, query: Application.get_env(:clinic_demo, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: ClinicDemo.PubSub},
-      # Start a worker by calling: ClinicDemo.Worker.start_link(arg)
-      # {ClinicDemo.Worker, arg},
-      # Start to serve requests, typically the last entry
-      ClinicDemoWeb.Endpoint
-    ] ++ tidewave()
+    children =
+      [
+        ClinicDemoWeb.Telemetry,
+        ClinicDemo.Repo,
+        {DNSCluster, query: Application.get_env(:clinic_demo, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: ClinicDemo.PubSub},
+        # Start a worker by calling: ClinicDemo.Worker.start_link(arg)
+        # {ClinicDemo.Worker, arg},
+        # Start to serve requests, typically the last entry
+        ClinicDemoWeb.Endpoint
+      ] ++ tidewave()
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options

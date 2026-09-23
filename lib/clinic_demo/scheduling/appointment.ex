@@ -174,16 +174,16 @@ defmodule ClinicDemo.Scheduling.Appointment do
     # The lifecycle lives in the resource's own `:status` attribute (declared
     # in the attributes block, with its one_of constraint and default) —
     # pointed at explicitly rather than the extension's `:state` default.
-    state_attribute :status
+    state_attribute(:status)
 
-    initial_states [:scheduled, :checked_in, :completed, :cancelled, :no_show]
-    default_initial_state :scheduled
+    initial_states([:scheduled, :checked_in, :completed, :cancelled, :no_show])
+    default_initial_state(:scheduled)
 
     transitions do
-      transition :check_in, from: :scheduled, to: :checked_in
-      transition :complete, from: :checked_in, to: :completed
-      transition :cancel, from: [:scheduled, :checked_in], to: :cancelled
-      transition :mark_no_show, from: :scheduled, to: :no_show
+      transition(:check_in, from: :scheduled, to: :checked_in)
+      transition(:complete, from: :checked_in, to: :completed)
+      transition(:cancel, from: [:scheduled, :checked_in], to: :cancelled)
+      transition(:mark_no_show, from: :scheduled, to: :no_show)
     end
   end
 
@@ -246,7 +246,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
                type: :create,
                on_no_match: {:create, :register}
              ),
-        where: [present(:patient)]
+             where: [present(:patient)]
 
       # The either/or is a hard contract, not whichever write landed last.
       validate {ExactlyOneOf, arguments: [:patient_id, :patient]}
