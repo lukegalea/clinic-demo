@@ -17,6 +17,10 @@
 @source "../css";
 @source "../js";
 @source "../../lib/clinic_demo_web";
+/* Story files carry classes in slots/attributes (the palette story demos
+   textures); without scanning them the storybook build would drop every
+   class only a story uses — the storybook would lie by omission. */
+@source "../../storybook";
 /* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
 @source "../../_build/dev/phoenix-colocated/clinic_demo/*/";
 /* The same dep-scanned sources as the app: stories must be able to render

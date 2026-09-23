@@ -1,81 +1,86 @@
 <header class="mb-6">
-  <h1 class="text-2xl font-heading">Operator</h1>
+  <h1 class="text-2xl font-display">Operator</h1>
   <p class="text-foreground/70">
     Every tool that runs the clinic — the rules, the process, the discovery,
     and the helper agent.
   </p>
 </header>
 
-<%!-- Neobrutalist card grid: every card is a link, so each carries the
-     "press" — on hover it slides one shadow-width and the hard shadow
-     collapses under it. The shared class list is the card recipe from
-     assets/css/neobrutalism.css. --%>
-<% card =
-  "flex flex-col gap-4 rounded-base border-2 border-border bg-background px-4 py-4 font-base text-foreground shadow-shadow transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none" %>
+<%!-- Each section owns one accent color (chip in the heading, dotted strip
+      on its cards, colored lift-shadow on hover). The accents give the hub
+      a scavenger-hunt readability: you find the section by its color before
+      you read a word. Cards are the shared <.card> recipe; the palette is
+      the accent, never the fill — bodies stay white, borders stay black. --%>
+<% section_chip =
+  "mr-2 inline-block size-3.5 -rotate-6 rounded-base border-2 border-border" %>
 
 <section class="mb-8">
-  <h2 class="mb-3 text-lg font-heading">Rules &amp; process</h2>
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-violet"} aria-hidden="true" />Rules &amp; process
+  </h2>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <a href="/operator/decisions/appointment.triage/editor" class={card}>
+    <.card accent="violet" href="/operator/decisions/appointment.triage/editor">
       <h3 class="font-heading">Decision table editor</h3>
       <p class="text-sm text-foreground/70">
         Edit and publish the triage table. A changed rule takes effect on
         the next booking — no deploy.
       </p>
-    </a>
-    <a href="/operator/processes/appointment_visit/designer" class={card}>
+    </.card>
+    <.card accent="violet" href="/operator/processes/appointment_visit/designer">
       <h3 class="font-heading">Process designer</h3>
       <p class="text-sm text-foreground/70">
         Draw the visit process: triage, check-in, the consult, labs,
         discharge. Publish a new version of the graph.
       </p>
-    </a>
-    <a href="/decisions" class={card}>
+    </.card>
+    <.card accent="violet" href="/decisions">
       <h3 class="font-heading">Published rules</h3>
       <p class="text-sm text-foreground/70">
         Which version of each decision table and process is live, and what
         came before.
       </p>
-    </a>
-    <a href="/processes" class={card}>
+    </.card>
+    <.card accent="violet" href="/processes">
       <h3 class="font-heading">Published processes</h3>
       <p class="text-sm text-foreground/70">The visit process definitions, versioned.</p>
-    </a>
-    <a href="/worklist" class={card}>
+    </.card>
+    <.card accent="violet" href="/worklist">
       <h3 class="font-heading">Timers &amp; escalations</h3>
       <p class="text-sm text-foreground/70">
         Escalation timers ride the tasks themselves — the four-hour lab
         wait shows as a due date here. The engine ships no separate
         trigger UI.
       </p>
-    </a>
+    </.card>
   </div>
 </section>
 
 <section class="mb-8">
-  <h2 class="mb-3 text-lg font-heading">Work</h2>
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-orange"} aria-hidden="true" />Work
+  </h2>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <a href="/operator/tasks" class={card}>
+    <.card accent="orange" href="/operator/tasks">
       <h3 class="font-heading">My tasks</h3>
       <p class="text-sm text-foreground/70">
         The engine's own inbox for the acting clinician — claim, complete,
         delegate.
       </p>
-    </a>
-    <a href="/worklist" class={card}>
+    </.card>
+    <.card accent="orange" href="/worklist">
       <h3 class="font-heading">Worklist</h3>
       <p class="text-sm text-foreground/70">
         Every open task in one board, completed through the engine so the
         token advances.
       </p>
-    </a>
-    <a href="/visits" class={card}>
+    </.card>
+    <.card accent="orange" href="/visits">
       <h3 class="font-heading">Visit processes</h3>
       <p class="text-sm text-foreground/70">
         Where each visit stands; open one's instance viewer for the token
         overlay on the graph.
       </p>
-    </a>
+    </.card>
   </div>
 </section>
 
@@ -83,56 +88,62 @@
      surface DSL has no external row links), so this list is the bridge:
      latest instances, each a link into /operator/instances/:id. --%>
 <section class="mb-8">
-  <h2 class="mb-3 text-lg font-heading">Recent visit processes</h2>
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-main"} aria-hidden="true" />Recent visit processes
+  </h2>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <%= for instance <- @recent_instances do %>
-      <a href={"/operator/instances/#{instance.id}"} class={card}>
+      <.card accent="main" href={"/operator/instances/#{instance.id}"}>
         <h3 class="font-heading">{instance.subject_label}</h3>
         <p class="text-sm text-foreground/70">
           Standing at <span class="font-medium">{instance.current_node}</span>
-          · status {instance.status}<%= if instance.outcome, do: " · outcome #{instance.outcome}" %>
+          · status {instance.status}{if instance.outcome, do: " · outcome #{instance.outcome}"}
         </p>
-      </a>
+      </.card>
     <% end %>
     <%= if @recent_instances == [] do %>
-      <p class="text-sm text-foreground/70">
+      <.empty_state icon="hero-heart">
         No visit processes yet — book an appointment and one starts here.
-      </p>
+      </.empty_state>
     <% end %>
   </div>
 </section>
 
 <section class="mb-8">
-  <h2 class="mb-3 text-lg font-heading">Discovery &amp; insight</h2>
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-cyan"} aria-hidden="true" />Discovery &amp; insight
+  </h2>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <a href="/canvas" class={card}>
+    <.card accent="cyan" href="/canvas">
       <h3 class="font-heading">Data model canvas</h3>
       <p class="text-sm text-foreground/70">
         The whole clinic as a navigable graph — domains, resources,
         relationships — with a surface one click from every node.
       </p>
-    </a>
-    <a href="/clarity" class={card}>
+    </.card>
+    <.card accent="cyan" href="/clarity">
       <h3 class="font-heading">Clarity</h3>
       <p class="text-sm text-foreground/70">
         Deep introspection: the module graph, ER and policy diagrams,
         supply-chain and security reports. Dev routes only.
       </p>
-    </a>
-    <a href="/evaluations" class={card}>
+    </.card>
+    <.card accent="cyan" href="/evaluations">
       <h3 class="font-heading">Decision evidence</h3>
       <p class="text-sm text-foreground/70">
         Every rule evaluation, with the matched table rows — what the rule
         decided, and why.
       </p>
-    </a>
+    </.card>
   </div>
 </section>
 
 <section>
-  <h2 class="mb-3 text-lg font-heading">Helper agent</h2>
+  <h2 class="mb-3 text-lg font-heading">
+    <span class={section_chip <> " bg-green"} aria-hidden="true" />Helper agent
+  </h2>
   <div class="grid gap-4 sm:grid-cols-2">
-    <a href="/agent" class={card}>
+    <.card accent="green" href="/agent">
       <h3 class="font-heading">Ask &amp; compose</h3>
       <p class="text-sm text-foreground/70">
         Ask questions about the clinic's data, or ask for a new interface:
@@ -140,6 +151,6 @@
         beside the conversation. Works without an API key for browsing —
         composing needs one.
       </p>
-    </a>
+    </.card>
   </div>
 </section>

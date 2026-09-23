@@ -130,9 +130,9 @@ defmodule ClinicDemoWeb.CanvasLive do
         <%= if @selected do %>
           <.inspector object={@selected} destinations={destinations_for(@selected)} />
         <% else %>
-          <p class="text-sm opacity-60">
+          <.empty_state icon="hero-cursor-arrow-rays">
             Select a node in the graph to inspect it.
-          </p>
+          </.empty_state>
         <% end %>
       </div>
     </div>
@@ -150,10 +150,10 @@ defmodule ClinicDemoWeb.CanvasLive do
 
   def inspector(assigns) do
     ~H"""
-    <section class="flex flex-col gap-4 rounded-base border-2 border-border bg-secondary-background px-4 py-4 font-base text-foreground shadow-shadow">
+    <section class="flex flex-col gap-4 rounded-base border-2 border-border bg-secondary-background px-4 py-4 font-base text-foreground shadow-lift">
       <div class="flex flex-col gap-4">
         <div class="flex items-center gap-3">
-          <span class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 font-mono text-xs">{@object.ref.kind}</span>
+          <.badge tone="cyan" class="font-mono">{@object.ref.kind}</.badge>
           <h2 class="text-lg font-heading">{@object.label}</h2>
           <code class="font-mono text-xs opacity-60">{@object.ref.id}</code>
         </div>
@@ -176,22 +176,16 @@ defmodule ClinicDemoWeb.CanvasLive do
               class="flex flex-wrap items-center gap-2 py-1"
             >
               <span class="font-medium">{capability.label}</span>
-              <span class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 text-xs font-base">
-                {capability.consequence}
-              </span>
-              <span
-                :if={capability.confirmation == :required}
-                class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 text-xs font-base"
-              >
+              <.badge tone="neutral">{capability.consequence}</.badge>
+              <.badge :if={capability.confirmation == :required} tone="orange">
                 confirmation required
-              </span>
-              <span class={[
-                "rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base",
-                capability.authorized? && "bg-main text-main-foreground",
-                !capability.authorized? && "bg-background opacity-60"
-              ]}>
+              </.badge>
+              <.badge
+                tone={if capability.authorized?, do: "green"}
+                class={(!capability.authorized? && "opacity-60") || nil}
+              >
                 {if capability.authorized?, do: "authorized", else: "not authorized"}
-              </span>
+              </.badge>
             </li>
           </ul>
         </div>
@@ -199,18 +193,15 @@ defmodule ClinicDemoWeb.CanvasLive do
         <div>
           <h3 class="text-xs font-heading uppercase opacity-60">Projections</h3>
           <div class="flex flex-wrap gap-2">
-            <span
-              :for={projection <- @object.projections}
-              class="rounded-base border-2 border-border bg-background px-2.5 py-0.5 font-mono text-xs"
-            >
+            <.badge :for={projection <- @object.projections} tone="neutral" class="font-mono">
               {projection}
-            </span>
+            </.badge>
           </div>
           <div class="mt-3 flex flex-wrap gap-2">
             <.link
               :for={destination <- @destinations}
               navigate={destination.path}
-              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
             >
               <.icon name="hero-arrow-top-right-on-square" class="size-4" />
               {destination.label}

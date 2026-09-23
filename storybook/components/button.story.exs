@@ -2,9 +2,10 @@ defmodule Storybook.Components.Button do
   @moduledoc """
   Stories for `ClinicDemoWeb.CoreComponents.button/1`.
 
-  Shows both neobrutalist fills — the accent-blue `primary` variant and
-  the white default (neutral) — plus the link form, all carrying the
-  signature hover "press" (slide one shadow-width, shadow collapses).
+  Three fills — white default (neutral), accent-blue `primary`, and the
+  loud yellow `accent` (one per page, for the call-to-action) — plus the
+  link form. All share the motion pair: hover grows the hard shadow in
+  place, press nudges down into a 2px shadow.
   """
 
   use PhoenixStorybook.Story, :component
@@ -22,6 +23,12 @@ defmodule Storybook.Components.Button do
         id: :primary,
         attributes: %{variant: "primary"},
         slots: ["Save appointment"]
+      },
+      %Variation{
+        id: :accent,
+        description: "The yellow pop — reserve it for the single loudest action on a page.",
+        attributes: %{variant: "accent"},
+        slots: ["Get Started"]
       },
       %Variation{
         id: :as_link,

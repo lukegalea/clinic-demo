@@ -216,7 +216,7 @@ defmodule ClinicDemoWeb.AgentLive do
           />
           <button
             type="submit"
-            class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-4 py-2 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+            class="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-4 py-2 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
           >
             Ask
           </button>
@@ -236,7 +236,7 @@ defmodule ClinicDemoWeb.AgentLive do
             phx-click="show-surface"
             phx-value-name={surface.name}
             id={"open-#{surface.name}"}
-            class="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+            class="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-2.5 text-xs font-base text-foreground shadow-shadow transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
           >
             {surface.label}
           </button>
@@ -268,22 +268,22 @@ defmodule ClinicDemoWeb.AgentLive do
         <div :if={@presentation} class="space-y-3" data-role="surface">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h2 class="flex items-center gap-2 text-lg font-heading">
+              <h2 class="flex flex-wrap items-center gap-2 text-lg font-heading">
                 {@presentation.title}
-                <span
+                <.badge
                   :if={@presentation.kind == :dynamic}
-                  class="rounded-base border-2 border-border bg-secondary-background px-2.5 py-0.5 text-xs font-base"
+                  tone="violet"
                   title="Composed for this request, then validated against the schema"
                 >
                   composed
-                </span>
-                <span
+                </.badge>
+                <.badge
                   :if={@presentation.topics != []}
-                  class="rounded-base border-2 border-border bg-main px-2.5 py-0.5 text-xs font-base text-main-foreground"
+                  tone="green"
                   title="This surface updates itself when the underlying rows change"
                 >
                   live
-                </span>
+                </.badge>
               </h2>
               <p :if={@presentation.subtitle} class="text-foreground/60 text-sm">
                 {@presentation.subtitle}
@@ -291,7 +291,7 @@ defmodule ClinicDemoWeb.AgentLive do
             </div>
             <button
               phx-click="dismiss-surface"
-              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+              class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
             >
               Dismiss
             </button>

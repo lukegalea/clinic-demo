@@ -43,6 +43,22 @@
    * states need a red. A hard, warm red that holds a 2px black border. */
   --error: hsl(0, 100%, 45%);
 
+  /* ---- The vivid secondaries ------------------------------------------
+   * Saturated poster colors for badges, stickers, accent shadows and
+   * section identities. Every one of them is light enough to carry the
+   * system's only ink (black) — contrast stays ≥ 4.5:1 for small text
+   * and the palette never forks the typography. */
+  --yellow: hsl(48, 100%, 61%);
+  --pink: hsl(328, 100%, 71%);
+  --green: hsl(135, 72%, 55%);
+  --orange: hsl(31, 100%, 58%);
+  --violet: hsl(262, 100%, 78%);
+  --cyan: hsl(187, 95%, 55%);
+  --red: hsl(0, 100%, 64%);
+  /* Quiet filler for terminal states ("closed") that should read as
+   * present-but-inert next to the loud colors above. */
+  --neutral: hsl(220, 14%, 91%);
+
   /* ---- Shape ------------------------------------------------------- */
   /* Slight rounding, never square: 5px everywhere. */
   --radius-base: 5px;
@@ -71,6 +87,16 @@
   --color-overlay: var(--overlay);
   --color-error: var(--error);
 
+  /* Vivid secondaries → bg-yellow, bg-pink, ... (raw tokens above). */
+  --color-yellow: var(--yellow);
+  --color-pink: var(--pink);
+  --color-green: var(--green);
+  --color-orange: var(--orange);
+  --color-violet: var(--violet);
+  --color-cyan: var(--cyan);
+  --color-red: var(--red);
+  --color-neutral: var(--neutral);
+
   /* ---- Typography ---------------------------------------------------- */
   /* No --font-sans mapping is needed here: the raw :root --font-sans
    * above overrides Tailwind's default (layered) --font-sans, so both the
@@ -78,6 +104,11 @@
   /* font-base / font-heading utilities (weight namespace). */
   --font-weight-base: 500;
   --font-weight-heading: 700;
+  /* The display face for the loudest tier only (hero, section blocks,
+   * nav brand). Literal here on purpose: nothing outside utilities needs
+   * it at runtime, and self-named theme keys are the one Tailwind v4
+   * footgun this sheet avoids. */
+  --font-display: "Archivo Black", "DM Sans", ui-sans-serif, system-ui, sans-serif;
 
   /* ---- Radius -------------------------------------------------------- */
   /* rounded-base */
@@ -86,12 +117,27 @@
   /* ---- Shadow -------------------------------------------------------- */
   /* shadow-shadow (+ shadow-none to collapse it on hover). */
   --shadow-shadow: var(--shadow);
+  /* The motion pair: hover GROWS the shadow in place (the element reads
+   * as floating higher without moving), :active presses down into a
+   * 2px shadow. Literals here reference the raw color tokens directly. */
+  --shadow-lift: 6px 6px 0px 0px var(--border);
+  --shadow-press: 2px 2px 0px 0px var(--border);
+  /* Colored lifts at hover depth: the accent pattern for cards ("black
+   * card, yellow shadow" energy) — used as hover:shadow-yellow etc., a
+   * deliberate accent, never the default. */
+  --shadow-main: 6px 6px 0px 0px var(--main);
+  --shadow-yellow: 6px 6px 0px 0px var(--yellow);
+  --shadow-pink: 6px 6px 0px 0px var(--pink);
+  --shadow-green: 6px 6px 0px 0px var(--green);
+  --shadow-orange: 6px 6px 0px 0px var(--orange);
+  --shadow-violet: 6px 6px 0px 0px var(--violet);
+  --shadow-cyan: 6px 6px 0px 0px var(--cyan);
+  --shadow-red: 6px 6px 0px 0px var(--red);
 
-  /* ---- The "press" idiom --------------------------------------------- */
-  /* Named spacing keys feed translate-x/y-* so hovering a shadowed control
-   * can slide exactly one shadow-width: hover:translate-x-boxShadowX
-   * hover:translate-y-boxShadowY hover:shadow-none. The reverse pair powers
-   * the inverse variant (element rests flush, shadow appears on hover). */
+  /* ---- The "press" idiom (legacy hover) -------------------------------- */
+  /* Named spacing keys feed translate-x/y-* so a shadowed control can
+   * slide exactly one shadow-width. Still used by a few ad-hoc surfaces;
+   * core components have moved to the lift/press pair above. */
   --spacing-boxShadowX: 4px;
   --spacing-boxShadowY: 4px;
   --spacing-reverseBoxShadowX: -4px;
@@ -99,6 +145,42 @@
 
   /* Page container width. */
   --spacing-container: 1300px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Pattern utilities (Tailwind v4 @utility).
+ *
+ * Texture is drawn with gradients in currentColor, so a pattern's color and
+ * density come from the text-* utilities already on the element —
+ * `bg-dots text-foreground/10` is black dots at 10% over any fill. One set
+ * of utilities, every palette color, no per-color variants to maintain.
+ * ------------------------------------------------------------------------- */
+@utility bg-dots {
+  background-image: radial-gradient(currentColor 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+}
+
+@utility bg-checks {
+  background-image:
+    linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%),
+    linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+@utility bg-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    currentColor 0 2px,
+    transparent 2px 12px
+  );
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(currentColor 1px, transparent 1px),
+    linear-gradient(90deg, currentColor 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -122,9 +204,12 @@
   --a2ui-color-on-surface: var(--foreground);
   --a2ui-color-primary: var(--main);
   --a2ui-color-on-primary: var(--main-foreground);
-  /* Secondary chrome (default buttons, active tab headers) reads as the
-   * neutral button: white with a black border. */
-  --a2ui-color-secondary: var(--secondary-background);
+  /* Secondary chrome (default buttons, active tab header) goes YELLOW —
+   * the one place the vivid palette is allowed to reach inside shadow
+   * DOM, and the highest-traffic surface there is: every table's row
+   * buttons and quiet actions. Black ink keeps it legible; blue stays
+   * reserved for primary actions, so the two never compete. */
+  --a2ui-color-secondary: var(--yellow);
   --a2ui-color-on-secondary: var(--foreground);
   --a2ui-color-input: var(--secondary-background);
   --a2ui-color-on-input: var(--foreground);
@@ -174,7 +259,18 @@
   /* ---- Search pickers (merged-catalog combobox & chips) -------------- */
   --a2ui-combobox-max-height: 18rem;
   --a2ui-combobox-z-index: 30;
+  /* Selected chips follow the primary-blue = "chosen" convention, the
+   * same read as active tabs; unselected chips stay quiet. */
+  --a2ui-chip-selected-background: var(--main);
+  --a2ui-chip-selected-color: var(--main-foreground);
 
+  /* ---- Tabs --------------------------------------------------------- */
+  /* Active tab header leans primary blue ("you are here"), resting ones
+   * inherit the surface — matching how app nav treats the accent. */
+  --a2ui-tabs-header-background-active: var(--main);
+  --a2ui-tabs-header-color-active: var(--main-foreground);
+
+  /* ---- Field errors -------------------------------------------------- */
   /* Field-level error ink inside A2UI surfaces, mapped to the same red
    * the app's form components use (see --error above). */
   --a2ui-textfield-color-error: var(--error);

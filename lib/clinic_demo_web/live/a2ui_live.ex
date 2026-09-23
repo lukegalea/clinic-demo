@@ -78,7 +78,7 @@ defmodule ClinicDemoWeb.A2ui.VisitsLive do
       <div class="flex flex-wrap gap-2">
         <a
           href="/operator/tasks"
-          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
           Open instances in the process viewer (via tasks)
         </a>
@@ -116,7 +116,7 @@ defmodule ClinicDemoWeb.A2ui.ProcessDefinitionsLive do
       <div class="flex flex-wrap gap-2">
         <a
           href="/operator/processes/appointment_visit/designer"
-          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
           Draw appointment_visit in the designer
         </a>
@@ -139,7 +139,7 @@ defmodule ClinicDemoWeb.A2ui.DecisionDefinitionsLive do
       <div class="flex flex-wrap gap-2">
         <a
           href="/operator/decisions/appointment.triage/editor"
-          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+          class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
           Edit appointment.triage in the DMN editor
         </a>

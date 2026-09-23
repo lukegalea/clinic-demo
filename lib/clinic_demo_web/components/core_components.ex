@@ -71,20 +71,26 @@ defmodule ClinicDemoWeb.CoreComponents do
     >
       <div class={
         [
-          # The neobrutalist alert: hard shadow, 2px border; info rides the
-          # page background, errors invert to the destructive black card.
-          "relative grid w-80 max-w-80 gap-2 rounded-base border-2 border-border px-4 py-3 text-sm text-wrap shadow-shadow sm:w-96 sm:max-w-96",
+          # Banner with an icon chip: a saturated square carrying the icon,
+          # so info (blue chip) and error (red chip on the black card) are
+          # identifiable before a single word is read.
+          "relative grid w-80 max-w-80 grid-cols-[2rem_1fr_auto] items-start gap-3 rounded-base border-2 border-border px-4 py-3 text-sm text-wrap shadow-shadow sm:w-96 sm:max-w-96",
           @kind == :info && "bg-background text-foreground",
           @kind == :error && "bg-black text-white"
         ]
       }>
-        <.icon :if={@kind == :info} name="hero-information-circle" class="size-5 shrink-0" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5 shrink-0" />
-        <div>
+        <span class={[
+          "grid size-8 place-items-center rounded-base border-2 border-border",
+          @kind == :info && "bg-main",
+          @kind == :error && "bg-red"
+        ]}>
+          <.icon :if={@kind == :info} name="hero-information-circle" class="size-5" />
+          <.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5" />
+        </span>
+        <div class="min-w-0">
           <p :if={@title} class="font-heading">{@title}</p>
           <p>{msg}</p>
         </div>
-        <div class="flex-1" />
         <button type="button" class="group self-start cursor-pointer" aria-label="close">
           <.icon name="hero-x-mark" class="size-5 opacity-40 group-hover:opacity-70" />
         </button>
@@ -96,28 +102,31 @@ defmodule ClinicDemoWeb.CoreComponents do
   @doc """
   Renders a button with navigation support.
 
-  Both variants carry the neobrutalist "press": on hover the button slides
-  one shadow-width down-right and the hard shadow collapses under it.
+  The motion pair: hovering grows the hard shadow in place (the button
+  reads as floating higher without moving), pressing nudges the button
+  down into a 2px shadow — a physical press, not a fade.
 
   ## Examples
 
       <.button>Send!</.button>
       <.button phx-click="go" variant="primary">Send!</.button>
-      <.button navigate={~p"/"}>Home</.button>
+      <.button navigate={~p"/"} variant="accent">Home</.button>
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :any
-  attr :variant, :string, values: ~w(primary)
+  attr :variant, :string, values: ~w(primary accent)
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    # Shared recipe: sizing, focus ring and the press transition; variants
-    # only choose the fill.
+    # Shared recipe: sizing, focus ring and the lift/press motion;
+    # variants only choose the fill. "accent" is the yellow pop for the
+    # one loud call-to-action on a page.
     base =
-      "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border px-4 py-2 text-sm font-base shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+      "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border px-4 py-2 text-sm font-base shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
 
     variants = %{
       "primary" => "bg-main text-main-foreground",
+      "accent" => "bg-yellow text-foreground",
       nil => "bg-secondary-background text-foreground"
     }
 
@@ -139,6 +148,198 @@ defmodule ClinicDemoWeb.CoreComponents do
       </button>
       """
     end
+  end
+
+  @doc """
+  Renders a sticker-style badge: a small filled tag with the system border,
+  in the clinic's status vocabulary or a plain palette color.
+
+  The `status` variants carry fixed meanings that match the board lanes, so
+  a color reads the same everywhere a vet sees it:
+
+      booked      blue (the app accent — newly on the books)
+      low         green · medium yellow · high orange · emergency red
+      visit       violet (someone is in the room)
+      discharged  cyan (walking out the door)
+      closed      neutral gray (done, inert)
+
+  Pass `sticker` for the peel-and-stick look — hard shadow plus a white
+  halo that keeps it readable over patterned backgrounds. Rotation is left
+  to the caller (`class="-rotate-3"`): a wall of stickers all tilted the
+  same way reads as a bug, not a vibe.
+
+  ## Examples
+
+      <.badge status={:high}>High</.badge>
+      <.badge tone="pink" sticker class="rotate-2">v2</.badge>
+  """
+  attr :status, :string,
+    values: ~w(booked low medium high emergency visit discharged closed) ++ [nil],
+    default: nil,
+    doc: "a clinic lane/status; wins over :tone when both are given"
+
+  attr :tone, :string,
+    values: ~w(neutral main yellow pink green orange violet cyan red) ++ [nil],
+    default: nil
+
+  attr :sticker, :boolean, default: false, doc: "adds the hard shadow + white halo"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def badge(assigns) do
+    ~H"""
+    <span
+      class={[
+        "inline-flex w-fit items-center gap-1.5 rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base",
+        badge_fill(@status || @tone),
+        @sticker && "shadow-shadow ring-4 ring-secondary-background"
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  # Statuses map onto the palette; plain tones pass straight through so
+  # non-clinic uses (hero stickers, section chips) can pick any color.
+  defp badge_fill(status)
+       when status in ~w(booked low medium high emergency visit discharged closed) do
+    %{
+      "booked" => "bg-main",
+      "low" => "bg-green",
+      "medium" => "bg-yellow",
+      "high" => "bg-orange",
+      "emergency" => "bg-red",
+      "visit" => "bg-violet",
+      "discharged" => "bg-cyan",
+      "closed" => "bg-neutral"
+    }
+    |> Map.fetch!(status)
+  end
+
+  defp badge_fill(tone) do
+    %{tone => "bg-#{tone}"}[tone] || "bg-secondary-background"
+  end
+
+  @doc """
+  Renders a neobrutalist card: white fill, 2px border, hard shadow, and an
+  optional `accent`.
+
+  The accent does two things, and only on hover + in the header strip —
+  the black border and black resting shadow stay, so the palette stays an
+  accent rather than a wallpaper:
+
+    * a dotted color strip across the top of the card
+    * the hover lift shadow grows in the accent color instead of black
+
+  Renders as a link when given `href`/`navigate`/`patch` (see `button/1`),
+  which is how the operator hub uses it.
+
+  ## Examples
+
+      <.card accent="violet">
+        <h3 class="font-heading">Process designer</h3>
+        <p>Draw the visit process.</p>
+      </.card>
+  """
+  attr :accent, :string, values: ~w(main yellow pink green orange violet cyan red)
+  attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
+  attr :class, :any
+  slot :inner_block, required: true
+
+  def card(%{rest: rest} = assigns) do
+    # Static class maps (never dynamic string building) so Tailwind's
+    # scanner sees every class this component can emit.
+    strip_fills = %{
+      "main" => "bg-main",
+      "yellow" => "bg-yellow",
+      "pink" => "bg-pink",
+      "green" => "bg-green",
+      "orange" => "bg-orange",
+      "violet" => "bg-violet",
+      "cyan" => "bg-cyan",
+      "red" => "bg-red"
+    }
+
+    lift_shadows = %{
+      "main" => "hover:shadow-main",
+      "yellow" => "hover:shadow-yellow",
+      "pink" => "hover:shadow-pink",
+      "green" => "hover:shadow-green",
+      "orange" => "hover:shadow-orange",
+      "violet" => "hover:shadow-violet",
+      "cyan" => "hover:shadow-cyan",
+      "red" => "hover:shadow-red"
+    }
+
+    assigns =
+      assign_new(assigns, :class, fn ->
+        [
+          "flex flex-col gap-3 rounded-base border-2 border-border bg-secondary-background px-4 py-4 font-base text-foreground shadow-shadow transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 active:translate-x-0.5 active:translate-y-0.5 active:shadow-press",
+          assigns[:accent] && lift_shadows[assigns.accent]
+        ]
+      end)
+      |> assign(:strip_fill, assigns[:accent] && strip_fills[assigns.accent])
+      |> assign(:tagged, rest[:href] || rest[:navigate] || rest[:patch] || false)
+
+    ~H"""
+    <%= if @tagged do %>
+      <.link class={@class} {@rest}>
+        <span
+          :if={@strip_fill}
+          class={[
+            "bg-dots -mx-4 -mt-4 mb-1 h-6 rounded-t-base border-b-2 border-border text-foreground/25",
+            @strip_fill
+          ]}
+        />
+        {render_slot(@inner_block)}
+      </.link>
+    <% else %>
+      <div class={@class} {@rest}>
+        <span
+          :if={@strip_fill}
+          class={[
+            "bg-dots -mx-4 -mt-4 mb-1 h-6 rounded-t-base border-b-2 border-border text-foreground/25",
+            @strip_fill
+          ]}
+        />
+        {render_slot(@inner_block)}
+      </div>
+    <% end %>
+    """
+  end
+
+  @doc """
+  Renders an empty state: a dashed panel with a dotted tile and an icon,
+  for the "nothing here yet" moments that would otherwise be a bare
+  sentence. The dashes say "this space is waiting", the dot tile keeps the
+  panel from reading as an unfinished card.
+
+  ## Examples
+
+      <.empty_state icon="hero-magnifying-glass">
+        Select a node in the graph to inspect it.
+      </.empty_state>
+  """
+  attr :icon, :string, default: "hero-magnifying-glass"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def empty_state(assigns) do
+    ~H"""
+    <div
+      class="flex flex-col items-center gap-3 rounded-base border-2 border-dashed border-border bg-background px-6 py-10 text-center"
+      {@rest}
+    >
+      <div class="grid size-16 place-items-center rounded-base border-2 border-border bg-secondary-background">
+        <div class="grid size-10 place-items-center rounded-base bg-dots text-foreground/30">
+          <.icon name={@icon} class="size-5 text-foreground" />
+        </div>
+      </div>
+      <p class="max-w-sm text-sm text-foreground/70">{render_slot(@inner_block)}</p>
+    </div>
+    """
   end
 
   @doc """
@@ -182,9 +383,14 @@ defmodule ClinicDemoWeb.CoreComponents do
   [`options_for_select`](https://phoenix-html.hexdocs.pm/Phoenix.HTML.Form.html#options_for_select/2).
   """
   attr :id, :any, default: nil
-  attr :name, :any
+  # Optional with explicit nil defaults: the component templates read
+  # @name/@value directly, and without a default a caller who omits them
+  # (the storybook does) would crash on a KeyError rather than render the
+  # attribute-less input.
+  attr :name, :any, default: nil
+
+  attr :value, :any, default: nil
   attr :label, :string, default: nil
-  attr :value, :any
 
   attr :type, :string,
     default: "text",

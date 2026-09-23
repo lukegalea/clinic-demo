@@ -7,10 +7,10 @@
     <.live_title default="ClinicDemo" suffix=" · Phoenix Framework" phx-no-format>{assigns[:page_title]}</.live_title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- DM Sans: the neobrutalist typeface (body 500, headings 700 — see
-         assets/css/neobrutalism.css). -->
+    <!-- The type system: DM Sans (body 500, headings 700) + Archivo Black
+         for the loudest tier only — hero, section blocks, the brand. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
@@ -49,31 +49,38 @@
     </script>
   </head>
   <body class="bg-background text-foreground font-base">
-    <%!-- Neobrutalist nav: a bar of white "neutral" buttons on the blue page,
-         the accent-blue "Acting as" as the one colored control. Links share
-         one class list so the recipe stays a recipe. --%>
-    <% nav_link =
-      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none"
+    <%!-- Neobrutalist nav, turned up: chunky pills that lift and tilt on
+         hover (shadow grows, pill rises half a shadow, rotates 1°), press
+         down on click. One loud yellow pill for "Acting as" — the control
+         every demo starts from. --%>
+    <% nav_pill =
+      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-secondary-background px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
 
-    acting_as_link =
-      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none" %>
+    acting_as_pill =
+      "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-yellow px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press" %>
     <div class="sticky top-0 z-40 flex min-h-fit flex-wrap items-center gap-x-2 gap-y-1 border-b-2 border-border bg-background px-4 py-2">
-      <a class="px-2 text-lg font-heading" href="/">ClinicDemo</a>
-      <nav class="flex flex-wrap gap-1" aria-label="Main">
-        <a class={nav_link} href="/">Board</a>
-        <a class={nav_link} href="/intake">Intake</a>
-        <a class={nav_link} href="/schedule">Schedule</a>
-        <a class={nav_link} href="/worklist">Worklist</a>
-        <a class={nav_link} href="/visits">Visits</a>
-        <a class={nav_link} href="/patients">Patients</a>
-        <a class={nav_link} href="/clinicians">Clinicians</a>
-        <a class={nav_link} href="/processes">Processes</a>
-        <a class={nav_link} href="/decisions">Decisions</a>
-        <a class={nav_link} href="/evaluations">Evidence</a>
-        <a class={nav_link} href="/operator">Operator</a>
+      <a class="flex items-center gap-2 px-2 text-lg font-display" href="/">
+        ClinicDemo
+        <span
+          class="inline-block size-3 -rotate-12 rounded-base border-2 border-border bg-yellow"
+          aria-hidden="true"
+        />
+      </a>
+      <nav class="flex flex-wrap gap-1.5" aria-label="Main">
+        <a class={nav_pill} href="/">Board</a>
+        <a class={nav_pill} href="/intake">Intake</a>
+        <a class={nav_pill} href="/schedule">Schedule</a>
+        <a class={nav_pill} href="/worklist">Worklist</a>
+        <a class={nav_pill} href="/visits">Visits</a>
+        <a class={nav_pill} href="/patients">Patients</a>
+        <a class={nav_pill} href="/clinicians">Clinicians</a>
+        <a class={nav_pill} href="/processes">Processes</a>
+        <a class={nav_pill} href="/decisions">Decisions</a>
+        <a class={nav_pill} href="/evaluations">Evidence</a>
+        <a class={nav_pill} href="/operator">Operator</a>
       </nav>
       <div class="ms-auto">
-        <a class={acting_as_link} href="/acting-as">Acting as…</a>
+        <a class={acting_as_pill} href="/acting-as">Acting as…</a>
       </div>
     </div>
     <main class="mx-auto max-w-[1300px] px-4 py-6">
