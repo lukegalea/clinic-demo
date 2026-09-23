@@ -173,25 +173,14 @@
         overlay on the graph.
       </p>
     </.card>
-    <%!-- The lifecycle as a formal machine, rendered from its declaration
-         (AshStateMachine.Charts — derived from the resource, so it cannot
-         drift from it). The mermaid scan in app.js turns the
-         [data-mermaid] element's server-rendered source into an SVG. A
-         live diagram inside Clarity is a queued follow-up. --%>
-    <.card accent="orange" class="overflow-x-auto">
-      <h3 class="font-heading">Visit state machine</h3>
-      <div data-mermaid={@visit_machine_chart} class="min-w-0">
-        <pre class="text-foreground/60 text-xs whitespace-pre-wrap">{@visit_machine_chart}</pre>
-      </div>
-    </.card>
   </div>
 </section>
 
-<%!-- The diagram renderer is its own esbuild entry (mermaid is far too
-         heavy for app.js, which every page loads) — loaded by this page
-         alone. --%>
-<script defer phx-track-static type="text/javascript" src={~p"/assets/js/operator_diagram.js"}>
-</script>
+<%!-- The lifecycle as a formal machine, rendered from its declaration
+      (AshStateMachine.Charts — derived from the resource, so it cannot
+      drift from it). The <pre> is the no-JS fallback; operator_diagram.js
+      replaces it with the SVG. A live diagram inside Clarity is a queued
+      follow-up. --%>
 <section class="mb-8">
   <h2 class="mb-3 text-lg font-heading">
     <span class={section_chip <> " bg-orange"} aria-hidden="true" />Visit state machine
@@ -215,6 +204,12 @@
     </.card>
   </div>
 </section>
+
+<%!-- The diagram renderer is its own esbuild entry (mermaid is far too
+     heavy for app.js, which every page loads) — loaded by this page
+     alone. --%>
+<script defer phx-track-static type="text/javascript" src={~p"/assets/js/operator_diagram.js"}>
+</script>
 
 <%!-- The Visits surface can't link a row to its instance viewer (the a2ui
      surface DSL has no external row links), so this list is the bridge:
