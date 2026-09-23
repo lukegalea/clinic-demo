@@ -45,8 +45,13 @@ defmodule ClinicDemo.Visits.HumanTask do
       end
 
       run fn input, %{actor: actor} ->
-        input.arguments.record_id
-        |> Ash.get!(ClinicDemo.Visits.HumanTask, authorize?: false)
+        # Ash.get!/3 is (resource, id, opts) — the record id is the SECOND
+        # argument. Piping the id in made it the resource, which raised
+        # ArgumentError inside the LiveView process and took the surface's
+        # GenServer with it (the client saw a "Surface already exists"
+        # remount instead of an error).
+        ClinicDemo.Visits.HumanTask
+        |> Ash.get!(input.arguments.record_id, authorize?: false)
         |> AshBpmn.complete_task(
           outcome: input.arguments.outcome,
           comment: input.arguments.comment,
