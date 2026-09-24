@@ -23,6 +23,11 @@ end
 config :clinic_demo, ClinicDemoWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+# The bpmn engine's flight-view broadcast target (AshBpmn.FlightView's
+# subscription contract). Read at runtime by the engine on every token
+# transition; dev/test set the same value at compile time.
+config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
+
 if config_env() == :dev do
   # The helper agent's interpreter model, e.g.
   # AI_INTERPRETER_MODEL=openrouter:anthropic/claude-haiku-4.5 — format is

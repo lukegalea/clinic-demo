@@ -29,6 +29,11 @@ config :logger, level: :warning
 # patient mid-action, so async loads stay off for the whole suite.
 config :ash, disable_async?: true
 
+# The flight-view subscription contract rides the same always-started
+# ClinicDemo.PubSub the endpoint config already names (application.ex starts
+# it in every env), so tests subscribe and assert broadcasts on it directly.
+config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

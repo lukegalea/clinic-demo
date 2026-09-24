@@ -61,6 +61,11 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
 # compile out entirely.
 config :clinic_demo, dev_routes: true
 
+# The bpmn engine broadcasts every token transition on its flight-view topics
+# through this PubSub (AshBpmn.FlightView's subscription contract). The same
+# server the endpoint and presence already ride.
+config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 
