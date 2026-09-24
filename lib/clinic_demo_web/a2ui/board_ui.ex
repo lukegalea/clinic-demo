@@ -27,6 +27,7 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
     component :table, :board do
       fields [
         :patient_label,
+        :compliance_status,
         :triage_urgency,
         :clinician_label,
         :scheduled_at,
@@ -37,11 +38,29 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
 
       read_action :read
 
+      # The row badge is compliance: would the active bundle refuse this
+      # visit's check-in? Triage stays visible as the meta row's lead value —
+      # the lane colors live on the day view's dots either way.
       row_layout do
         title :patient_label
-        badge :triage_urgency
-        badge_text emergency: "Emergency", urgent: "Urgent", soon: "Soon", routine: "Routine"
-        meta [:clinician_label, :scheduled_at, :severity, :status, :discharged_at]
+        badge :compliance_status
+
+        badge_text(
+          compliant: "Compliant",
+          noncompliant: "Noncompliant",
+          no_rules: "No rules",
+          unknown: "Unknown"
+        )
+
+        meta [
+          :triage_urgency,
+          :clinician_label,
+          :scheduled_at,
+          :severity,
+          :status,
+          :discharged_at
+        ]
+
         columns 2
       end
 
@@ -109,6 +128,10 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
 
     field :triage_urgency do
       label "Triage"
+    end
+
+    field :compliance_status do
+      label "Compliance"
     end
 
     field :discharged_at do

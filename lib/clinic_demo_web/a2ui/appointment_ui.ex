@@ -42,18 +42,28 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         :severity,
         :status,
         :discharged_at,
-        :triage_urgency
+        :triage_urgency,
+        :compliance_status
       ]
 
       read_action :read
       query :default
 
+      # Same badge as the board: would the active bundle refuse this visit's
+      # check-in? Triage stays visible as the meta row's lead value.
       row_layout do
         title :patient_label
-        badge :triage_urgency
-        badge_text emergency: "Emergency", urgent: "Urgent", soon: "Soon", routine: "Routine"
+        badge :compliance_status
+
+        badge_text(
+          compliant: "Compliant",
+          noncompliant: "Noncompliant",
+          no_rules: "No rules",
+          unknown: "Unknown"
+        )
 
         meta [
+          :triage_urgency,
           :clinician_label,
           :scheduled_at,
           :ends_at,
@@ -127,6 +137,10 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
     field :triage_urgency do
       label "Triage"
+    end
+
+    field :compliance_status do
+      label "Compliance"
     end
 
     field :discharged_at do

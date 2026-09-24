@@ -143,6 +143,17 @@ defmodule ClinicDemo.Scheduling.Appointment do
       public? true
     end
 
+    # The row badge on the appointment surfaces: would the active bundle
+    # refuse this visit's check-in? The calculation is module-based and
+    # batched — one bundle read + decode per page, in-memory evaluation per
+    # row (see ClinicDemo.Compliance.appointment_status_page/2). The same
+    # value feeds the day view's detail chip.
+    calculate :compliance_status, :atom, ClinicDemo.Scheduling.Calculations.ComplianceStatus do
+      public? true
+      constraints one_of: [:compliant, :noncompliant, :no_rules, :unknown]
+      description "Whether the active compliance bundle permits this visit's check-in."
+    end
+
     # The board's lane key: the one dimension the kanban cards sort by. It
     # reads the same state the process engine moves (status + triage
     # urgency), so a lane move IS a state transition — never a parallel

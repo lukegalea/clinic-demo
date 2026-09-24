@@ -34,6 +34,7 @@ defmodule ClinicDemoWeb.DayLive do
   require Ash.Query
 
   alias ClinicDemo.Scheduling.Appointment
+  alias ClinicDemo.Compliance
   alias ClinicDemoWeb.A2ui.SurfaceChrome
 
   @surface_id "clinic_day"
@@ -168,6 +169,9 @@ defmodule ClinicDemoWeb.DayLive do
           <span class={"rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base #{status_fill(@detail)}"}>
             {status_label(@detail)}
           </span>
+          <span class={"rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base #{compliance_fill(@compliance[@detail.id])}"}>
+            {compliance_label(@compliance[@detail.id])}
+          </span>
           <span class="rounded-base border-2 border-border bg-secondary-background px-2.5 py-0.5 text-xs font-base">
             {time_range(@detail)}
           </span>
@@ -226,6 +230,11 @@ defmodule ClinicDemoWeb.DayLive do
   # Demo scale: the whole book once per mount (the board loads the same
   # world). Live navigation from intake re-mounts this view, so a fresh
   # booking is on the calendar the moment the visitor lands here.
+  #
+  # The compliance statuses ride the same mount: one pass over the rows
+  # (one active-bundle read + decode, in-memory evaluation per row — the
+  # batch contract in ClinicDemo.Compliance.appointment_status_page/2),
+  # keyed by id for the rows and the detail sheet's chip.
   defp load_appointments(socket) do
     appointments =
       Appointment
@@ -233,10 +242,19 @@ defmodule ClinicDemoWeb.DayLive do
       |> Ash.Query.filter(status != :cancelled)
       |> Ash.Query.load(:patient_label)
       |> Ash.Query.load(:clinician_label)
+      |> Ash.Query.load(:patient)
       |> Ash.Query.sort(scheduled_at: :asc)
       |> Ash.read!(authorize?: false)
 
-    assign(socket, :appointments, appointments)
+    compliance =
+      appointments
+      |> Compliance.appointment_status_page()
+      |> Enum.zip(appointments)
+      |> Map.new(fn {status, appointment} -> {appointment.id, status} end)
+
+    socket
+    |> assign(:appointments, appointments)
+    |> assign(:compliance, compliance)
   end
 
   # Derives everything the template reads from the base assigns, so every
@@ -326,6 +344,19 @@ defmodule ClinicDemoWeb.DayLive do
       _ -> "Closed"
     end
   end
+
+  # The compliance chip mirrors the surfaces' row badge, in the host layer's
+  # own palette: green when the active bundle permits check-in, red when a
+  # rule fires, quiet when there is nothing in force to answer with.
+  # Static class strings so the Tailwind scan sees every color.
+  defp compliance_fill(:compliant), do: "bg-green"
+  defp compliance_fill(:noncompliant), do: "bg-red"
+  defp compliance_fill(_), do: "bg-secondary-background"
+
+  defp compliance_label(:compliant), do: "Compliant"
+  defp compliance_label(:noncompliant), do: "Noncompliant"
+  defp compliance_label(:no_rules), do: "No rules in force"
+  defp compliance_label(_), do: "Compliance unknown"
 
   defp time_range(%Appointment{} = appointment) do
     start_time = Calendar.strftime(appointment.scheduled_at, "%H:%M")

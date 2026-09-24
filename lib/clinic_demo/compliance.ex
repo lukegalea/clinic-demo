@@ -20,6 +20,80 @@ defmodule ClinicDemo.Compliance do
   # (`module.function(args ++ [socket])`): same fixed org, socket ignored.
   def organization_id(_socket), do: @org
 
+  @type page_status :: :compliant | :noncompliant | :no_rules | :unknown
+
+  @doc """
+  The compliance status of a page of appointments, in one pass over the rows.
+
+  The status surfaces' batch entry point. The expensive steps — the active
+  bundle read and its IR decode — run once per call; each row is then
+  evaluated in memory through `AshCompliance.status_for/2` with the shared
+  pre-decoded bundle (its `:bundle` option bypasses the per-row bundle read,
+  which is what would make a naive per-row loop N+1). Facts come from
+  `ClinicDemo.Compliance.AppointmentFacts`; records are expected to have
+  `:patient` preloaded (the badge calculation declares the load).
+
+  Options:
+
+    * `:transition_to` — the transition the rules are asked about (default
+      `:checked_in`, the gate a row badge answers for).
+
+  Returns one value per appointment, in order:
+
+    * `:compliant` — the active bundle permits (including "no rule applied";
+      the guard's own settle/1 treats that as a pass);
+    * `:noncompliant` — a rule fired against it;
+    * `:no_rules` — the organization has no active bundle: absence is
+      meaningful, and the badge says so instead of pretending compliance;
+    * `:unknown` — the bundle could not be read, decoded or evaluated: the
+      guard's fail-closed posture, reported rather than refused.
+  """
+  @spec appointment_status_page([ClinicDemo.Scheduling.Appointment.t()], keyword()) :: [
+          page_status()
+        ]
+  def appointment_status_page(appointments, opts \\ []) do
+    transition_to = Keyword.get(opts, :transition_to, :checked_in)
+
+    case AshCompliance.Domain.active_policy_bundle(organization_id(), authorize?: false) do
+      {:ok, nil} ->
+        Enum.map(appointments, fn _appointment -> :no_rules end)
+
+      {:ok, bundle} ->
+        decode =
+          case AshRules.Ir.decode(bundle.rules_json) do
+            {:ok, ir} -> ir
+            {:error, _reason} -> :error
+          end
+
+        Enum.map(appointments, fn appointment ->
+          appointment
+          |> AshCompliance.status_for(
+            organization: {__MODULE__, :organization_id, []},
+            fact_builder: ClinicDemo.Compliance.AppointmentFacts,
+            bundle: decode,
+            transition_to: transition_to
+          )
+          |> page_status()
+        end)
+
+      {:error, _reason} ->
+        Enum.map(appointments, fn _appointment -> :unknown end)
+    end
+  end
+
+  # The outcome lattice to badge vocabulary. :not_applicable maps to
+  # :compliant because that is the system's own semantic — the guard's
+  # settle/1 refuses only :noncompliant, :unknown and :error, so a bundle
+  # with nothing to say about a row permits it.
+  defp page_status({:ok, %{status: overall}}), do: overall_to_badge(overall)
+  defp page_status({:error, :no_active_bundle}), do: :no_rules
+  defp page_status({:error, _reason}), do: :unknown
+
+  defp overall_to_badge(:noncompliant), do: :noncompliant
+  defp overall_to_badge(:unknown), do: :unknown
+  defp overall_to_badge(:error), do: :unknown
+  defp overall_to_badge(_permitted), do: :compliant
+
   @doc """
   Puts the appointment rule bundle in force for the demo org.
 
