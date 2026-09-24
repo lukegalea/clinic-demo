@@ -33,8 +33,8 @@ defmodule ClinicDemoWeb.DayLive do
 
   require Ash.Query
 
-  alias ClinicDemo.Scheduling.Appointment
   alias ClinicDemo.Compliance
+  alias ClinicDemo.Scheduling.Appointment
   alias ClinicDemoWeb.A2ui.SurfaceChrome
 
   @surface_id "clinic_day"

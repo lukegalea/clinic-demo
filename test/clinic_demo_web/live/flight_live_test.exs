@@ -13,7 +13,7 @@ defmodule ClinicDemoWeb.FlightLiveTest do
   alias ClinicDemo.Rules
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Visits
-  alias ClinicDemo.Visits.Instance
+  alias ClinicDemo.Visits.{Instance, Token, VisitFacade}
 
   require Ash.Query
 
@@ -114,20 +114,25 @@ defmodule ClinicDemoWeb.FlightLiveTest do
     appointment = book(patient, vet)
     Scheduling.record_weight!(patient, Decimal.new("5.0"), actor: @staff)
 
+    instance = instance_for(appointment)
+    check_in_token = live_token(instance)
+
     {:ok, view, _html} = live(conn, "/flight")
 
     # The board's check-in path: the click completes the visit's CheckIn
     # work item through the engine, the token advances, and the engine
     # broadcasts the movement the flight view is watching for.
     {:ok, _appointment} =
-      ClinicDemo.Visits.VisitFacade.check_in_task(
+      VisitFacade.check_in_task(
         %{record: appointment, action: :check_in, actor: @staff},
         "flight test"
       )
 
     assert_push_event(view, "flight_positions", %{positions: positions})
-    # The CheckIn token was consumed; what is live now stands past it.
-    refute Enum.any?(positions, &(&1.node_id == "CheckIn"))
+    # This visit's CheckIn token was consumed — whatever node the visit's
+    # live tokens stand on now, none of them is the consumed one. (Other
+    # seeded visits may legitimately still be standing at CheckIn.)
+    refute Enum.any?(positions, &(&1.token_id == check_in_token.id))
   end
 
   # --- fixtures -----------------------------------------------------------------
