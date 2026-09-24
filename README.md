@@ -420,14 +420,14 @@ mix ash_agent.describe --pretty
     "ClinicDemo.Visits"
   ],
   "resources": [
-    "ClinicDemo.Decisions.Definition",
+    "ClinicDemo.Decisions.DecisionTable",
     "ClinicDemo.Decisions.Evaluation",
     "ClinicDemo.Scheduling.Appointment",
     "ClinicDemo.Scheduling.Clinician",
     "ClinicDemo.Scheduling.Patient",
-    "ClinicDemo.Visits.Definition",
     "ClinicDemo.Visits.HumanTask",
     "ClinicDemo.Visits.Instance",
+    "ClinicDemo.Visits.Process",
     "ClinicDemo.Visits.ProcessEvent",
     "ClinicDemo.Visits.TaskCandidate",
     "ClinicDemo.Visits.Token"

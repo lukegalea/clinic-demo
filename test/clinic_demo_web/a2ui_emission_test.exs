@@ -29,8 +29,8 @@ defmodule ClinicDemoWeb.A2uiEmissionTest do
     ClinicDemoWeb.A2ui.VisitInstanceUI,
     ClinicDemoWeb.A2ui.PatientUI,
     ClinicDemoWeb.A2ui.ClinicianUI,
-    ClinicDemoWeb.A2ui.ProcessDefinitionUI,
-    ClinicDemoWeb.A2ui.DecisionDefinitionUI,
+    ClinicDemoWeb.A2ui.ProcessUI,
+    ClinicDemoWeb.A2ui.DecisionTableUI,
     ClinicDemoWeb.A2ui.EvaluationUI,
     ClinicDemoWeb.A2ui.EventUI,
     ClinicDemoWeb.A2ui.EmergencyBoardUI

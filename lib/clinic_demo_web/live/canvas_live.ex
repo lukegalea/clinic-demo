@@ -466,14 +466,14 @@ defmodule ClinicDemoWeb.CanvasLive do
     ClinicDemo.Visits.ProcessEvent => %{browse: {"Visits board", "/visits"}}
   }
 
-  # `:diagram` resolves to the same catalogue as `:browse` for a definition,
-  # because that catalogue *is* where its diagram is opened -- the designer
-  # needs a key, and picking one is what the catalogue is for. Labelled by the
+  # `:diagram` resolves to the same catalogue as `:browse` for a process or
+  # decision table, because that catalogue *is* where its diagram is opened -- the
+  # designer needs a key, and picking one is what the catalogue is for. Labelled by the
   # projection rather than the route so the inspector says which claim the link
   # is honouring.
   @diagram_labels %{
-    ClinicDemo.Visits.Definition => {"Draw a process", "/processes"},
-    ClinicDemo.Decisions.Definition => {"Draw a decision", "/decisions"}
+    ClinicDemo.Visits.Process => {"Draw a process", "/processes"},
+    ClinicDemo.Decisions.DecisionTable => {"Draw a decision", "/decisions"}
   }
 
   @doc false

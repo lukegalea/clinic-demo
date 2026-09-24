@@ -4,7 +4,7 @@ defmodule ClinicDemo.Visits.Instance do
   use AshBpmn.Resources.Instance,
     domain: ClinicDemo.Visits,
     repo: ClinicDemo.Repo,
-    definition: ClinicDemo.Visits.Definition,
+    definition: ClinicDemo.Visits.Process,
     table: "bpmn_instances"
 
   calculations do

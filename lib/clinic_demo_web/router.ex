@@ -58,8 +58,8 @@ defmodule ClinicDemoWeb.Router do
       live "/visits", A2ui.VisitsLive
       live "/patients", A2ui.PatientsLive
       live "/clinicians", A2ui.CliniciansLive
-      live "/processes", A2ui.ProcessDefinitionsLive
-      live "/decisions", A2ui.DecisionDefinitionsLive
+      live "/processes", A2ui.ProcessesLive
+      live "/decisions", A2ui.DecisionTablesLive
       live "/evaluations", A2ui.EvaluationsLive
       live "/events", A2ui.EventsLive
       live "/canvas", CanvasLive

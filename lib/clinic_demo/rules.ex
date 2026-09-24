@@ -41,8 +41,8 @@ defmodule ClinicDemo.Rules do
   Publishes both documents, in order, and returns the published rows.
 
   `:actor` is whoever is deploying the rules. Publishing is a write, and the
-  `Definition` resources ask for an actor like every other write in this
-  application does.
+  `DecisionTable` and `Process` resources ask for an actor like every other
+  write in this application does.
   """
   @spec install!(keyword()) :: %{decision: struct(), process: struct()}
   def install!(opts \\ []) do
@@ -50,7 +50,7 @@ defmodule ClinicDemo.Rules do
 
     decision =
       install_document(
-        Decisions.Definition,
+        Decisions.DecisionTable,
         @decision_key,
         @decision_name,
         read!(@decision_path),
@@ -61,7 +61,7 @@ defmodule ClinicDemo.Rules do
 
     process =
       install_document(
-        Visits.Definition,
+        Visits.Process,
         @process_key,
         @process_name,
         read!(@process_path),

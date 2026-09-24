@@ -24,7 +24,7 @@ defmodule ClinicDemo.Decisions.Resolver do
 
   @behaviour AshBpmn.DecisionResolver
 
-  alias ClinicDemo.Decisions.Definition
+  alias ClinicDemo.Decisions.DecisionTable
   alias ClinicDemo.Decisions.Evaluation
 
   @impl true
@@ -55,7 +55,7 @@ defmodule ClinicDemo.Decisions.Resolver do
   defp outputs(value), do: %{"urgency" => value}
 
   defp latest_published(ref) do
-    case Definition.latest_published!(ref) do
+    case DecisionTable.latest_published!(ref) do
       [definition | _] -> {:ok, definition}
       [] -> {:error, "no published decision for #{inspect(ref)}"}
     end

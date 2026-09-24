@@ -1,4 +1,4 @@
-defmodule ClinicDemo.Decisions.Definition do
+defmodule ClinicDemo.Decisions.DecisionTable do
   @moduledoc """
   A versioned DMN document.
 
