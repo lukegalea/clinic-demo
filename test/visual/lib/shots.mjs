@@ -33,7 +33,17 @@ export async function prepareForScreenshot(page) {
 
 export async function capture(page) {
   await page.evaluate(() => document.fonts.ready);
-  return page.screenshot({ fullPage: true, animations: "disabled" });
+  // The first fullPage capture after a browser launch can die with a
+  // "Protocol error (Page.captureScreenshot): Unable to capture screenshot"
+  // — a Chromium compositing race, not a page defect (it reproduces on
+  // long-standing pages too, and the immediate retry always passes). Retry
+  // once before calling it a failure.
+  try {
+    return await page.screenshot({ fullPage: true, animations: "disabled" });
+  } catch (error) {
+    if (!/captureScreenshot/i.test(String(error))) throw error;
+    return page.screenshot({ fullPage: true, animations: "disabled" });
+  }
 }
 
 async function ensureDir() {

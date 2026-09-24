@@ -1,0 +1,39 @@
+{
+  // Deliberately narrow (see "Maximalist IDE Architecture for Ash, Serena,
+  // and Tidewave"): one editor language server, Ash-aware navigation, and
+  // orthogonal tooling. NEVER add a second Elixir language server to this
+  // workspace — Expert/NextLS/Lexical would duplicate completions,
+  // diagnostics, formatting and build traffic against ElixirLS, and ElixirLS
+  // is the only server with Spark's DSL completion for Ash.
+  //
+  // IDs below are the Marketplace IDs. code-server (open-vsx) resolves the
+  // same set under its own publishing names where they differ — notably
+  // ElixirLS, which is `elixir-lsp.elixir-ls` on open-vsx (what
+  // clinic-ide installs) and `JakeBecker.elixir-ls` on the Marketplace.
+  "recommendations": [
+    // ElixirLS — THE editor language server: Spark/Ash DSL completion,
+    // debugger (DAP), test lenses, dialyzer. Non-negotiable.
+    "JakeBecker.elixir-ls",
+    // Ash Studio — Ash DSL section sidebar, section search, outline,
+    // Mermaid CodeLens. The human half of Ash navigation.
+    "ketupia.ash-studio",
+    // Mermaid preview — the state machine / process diagrams render where
+    // you read them.
+    "bierner.markdown-mermaid",
+    // Orthogonal quality-of-life, no second opinions about your code:
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    // Config surfaces this repo actually carries:
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "ms-azuretools.vscode-docker"
+
+    // NOT recommended here, on purpose:
+    //  * Expert / Next LS / Lexical — second language servers; see above.
+    //  * ms-vscode-remote.remote-ssh + remote-containers — desktop-VS Code
+    //    remote machinery. code-server IS the remote; these do nothing in
+    //    this workspace and their servers can't run here.
+    //  * A formatter other than the ElixirLS/mix format one. There is one
+    //    formatter: `mix format`.
+  ]
+}

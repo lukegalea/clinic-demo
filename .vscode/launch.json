@@ -1,0 +1,41 @@
+{
+  // Debug the app with ElixirLS's debugger (DAP). Two honest notes:
+  //
+  // 1. The standing dev server does NOT run here — it is the clinic-demo
+  //    container (port 4000, tidewave's MCP on /tidewave/mcp). These configs
+  //    boot a second node on PORT=4001 so you can debug without touching it.
+  //    Two nodes against one dev database is fine for reading, but prefer a
+  //    reset (`gate: test` or `mix reset`) if you start writing.
+  // 2. ElixirLS builds what it debugs under MIX_ENV=dev in _build/dev — the
+  //    app container's tree. That is why the debug configs set MIX_ENV=dev
+  //    explicitly: never let a debugger quietly compile a third env.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "elixir-ls",
+      "request": "launch",
+      "name": "mix phx.server (debug, :4001)",
+      "task": "phx.server",
+      "taskPaths": [],
+      "projectDir": "${workspaceFolder}",
+      "env": {
+        "PORT": "4001",
+        "MIX_ENV": "dev"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "elixir-ls",
+      "request": "launch",
+      "name": "mix test (current file, debug)",
+      "task": "test",
+      "taskArgs": ["${relativeFile}"],
+      "taskPaths": [],
+      "projectDir": "${workspaceFolder}",
+      "env": {
+        "MIX_TEST_PARTITION": "ide"
+      },
+      "console": "integratedTerminal"
+    }
+  ]
+}

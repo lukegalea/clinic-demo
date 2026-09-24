@@ -41,6 +41,15 @@ export const PAGES = [
   },
   { route: "/operator", name: "operator-hub", marker: { kind: "h1", text: "Operator" }, navCurrent: "/operator" },
   {
+    // The static capstone slideshow (CLIN-6): a standalone page — no app
+    // chrome, no nav pill (that is the deck's whole point), so `noChrome`
+    // skips the chrome check. The arrow-key pin below proves it navigates.
+    route: "/deck",
+    name: "deck",
+    marker: { kind: "h1", text: "The Vet Clinic Capstone" },
+    noChrome: true,
+  },
+  {
     route: "/operator/rules",
     name: "operator-rules",
     marker: { kind: "h1", text: "Rule sets" },

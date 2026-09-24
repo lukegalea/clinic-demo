@@ -208,19 +208,23 @@ async function checkPage(reporter, baseUrl, pageDef, state) {
     reporter.fail(id("app-js"), describeError(error));
   }
 
-  // The app chrome: nav row, main region, acting-as pill.
-  try {
-    const nav = page.locator('nav[aria-label="Main"]');
-    const main = page.locator("main");
-    const pill = page.locator('a[href="/acting-as"]');
-    await Promise.all([
-      nav.waitFor({ state: "visible", timeout: 8_000 }),
-      main.first().waitFor({ state: "visible", timeout: 8_000 }),
-      pill.first().waitFor({ state: "visible", timeout: 8_000 }),
-    ]);
-    reporter.pass(id("chrome"), "nav, main and acting-as pill present");
-  } catch (error) {
-    reporter.fail(id("chrome"), describeError(error));
+  // The app chrome: nav row, main region, acting-as pill. Standalone pages
+  // (the /deck slideshow) opt out with `noChrome` — they are chrome-free by
+  // design.
+  if (!pageDef.noChrome) {
+    try {
+      const nav = page.locator('nav[aria-label="Main"]');
+      const main = page.locator("main");
+      const pill = page.locator('a[href="/acting-as"]');
+      await Promise.all([
+        nav.waitFor({ state: "visible", timeout: 8_000 }),
+        main.first().waitFor({ state: "visible", timeout: 8_000 }),
+        pill.first().waitFor({ state: "visible", timeout: 8_000 }),
+      ]);
+      reporter.pass(id("chrome"), "nav, main and acting-as pill present");
+    } catch (error) {
+      reporter.fail(id("chrome"), describeError(error));
+    }
   }
 
   // The per-surface marker(s). A style/script marker (the ruleset editor's
@@ -513,6 +517,93 @@ async function pinIntakePicker(reporter, baseUrl, page) {
   }
 }
 
+// The deck (CLIN-6): the static slideshow must actually navigate with the
+// arrow keys — a deck you cannot drive is a page with screenshots on it.
+// Pins: slide 1 active on load, ArrowRight advances (data-current + the
+// location hash agree), Home returns, End jumps to the closing slide.
+async function pinDeckArrowKeys(reporter, baseUrl, page) {
+  const pageId = "behavior:deck-arrow-keys";
+  try {
+    await goToPage(page, baseUrl, "/deck");
+    const deck = page.locator('main[data-testid="deck"]');
+    const current = () => deck.getAttribute("data-current");
+
+    if ((await current()) !== "1") {
+      reporter.fail(pageId, `deck opens on slide ${await current()}, not 1`);
+      return;
+    }
+
+    await page.keyboard.press("ArrowRight");
+    await deck.waitFor({ state: "visible" });
+    await page.waitForFunction(
+      () => document.querySelector('main[data-testid="deck"]').getAttribute("data-current") === "2",
+      null,
+      { timeout: 5_000 }
+    );
+    if (new URL(page.url()).hash !== "#2") {
+      reporter.fail(pageId, `ArrowRight moved to slide 2 but hash is ${JSON.stringify(new URL(page.url()).hash)}`);
+      return;
+    }
+    const active = await page.locator(".slide.is-active").getAttribute("id");
+    if (active !== "slide-2") {
+      reporter.fail(pageId, `active slide is #${active}, not #slide-2`);
+      return;
+    }
+
+    await page.keyboard.press("End");
+    await page.waitForFunction(
+      () => document.querySelector('main[data-testid="deck"]').getAttribute("data-current") === "12",
+      null,
+      { timeout: 5_000 }
+    );
+    await page.keyboard.press("Home");
+    await page.waitForFunction(
+      () => document.querySelector('main[data-testid="deck"]').getAttribute("data-current") === "1",
+      null,
+      { timeout: 5_000 }
+    );
+
+    reporter.pass(pageId, "ArrowRight advances (hash syncs), End reaches slide 12, Home returns to 1");
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  }
+}
+
+// The collapsed operations index (CLIN-5): the grid must be inside a native
+// <details> that starts CLOSED and opens on the summary — the Day view's
+// Earlier-today fold, applied to the hub.
+async function pinOperatorIndexCollapsed(reporter, baseUrl, page) {
+  const pageId = "behavior:operator-index-collapsed";
+  try {
+    await goToPage(page, baseUrl, "/operator");
+    const details = page.locator('details[data-testid="operations-index-details"]');
+    await details.waitFor({ state: "attached", timeout: 10_000 });
+
+    if (await details.evaluate((el) => el.open)) {
+      reporter.fail(pageId, "operations index renders expanded — must be collapsed by default");
+      return;
+    }
+    const grid = page.locator('[data-testid="operations-index"] .grid');
+    if (await grid.isVisible()) {
+      reporter.fail(pageId, "index cards visible while the details is closed");
+      return;
+    }
+
+    await details.locator("summary").click();
+    await details.evaluate((el) => el.open).then((open) => {
+      if (!open) throw new Error("summary click did not open the details");
+    });
+    if (!(await grid.isVisible())) {
+      reporter.fail(pageId, "index cards still hidden after opening the details");
+      return;
+    }
+
+    reporter.pass(pageId, "operations index collapsed by default; summary opens it; cards visible after");
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  }
+}
+
 // The designer's catalogue renders as a datalist under the action field once
 // a service task is selected — the "unconsumed framework skin" class of
 // regression hides exactly here. Mounting the designer also get-or-creates
@@ -637,6 +728,12 @@ async function main() {
     }
     if (reporter.shouldRun("behavior:intake-picker-composite")) {
       await pinIntakePicker(reporter, options.baseUrl, main.page);
+    }
+    if (reporter.shouldRun("behavior:deck-arrow-keys")) {
+      await pinDeckArrowKeys(reporter, options.baseUrl, main.page);
+    }
+    if (reporter.shouldRun("behavior:operator-index-collapsed")) {
+      await pinOperatorIndexCollapsed(reporter, options.baseUrl, main.page);
     }
 
     // Cleanup of the long-lived contexts.

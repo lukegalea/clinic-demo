@@ -1,0 +1,28 @@
+# .dev-access.template — copy to .dev-access and fill in. That file is
+# gitignored; it is where the local-only development credentials live.
+#
+# The development IDE (clinic-ide, VS Code in the browser):
+#
+#   URL:      http://docke:8444        (tailnet MagicDNS; the raw IP works
+#             too: http://100.99.173.94:8444)
+#   Auth:     password — the HASHED_PASSWORD below (code-server wants the
+#             sha256 hex of the plaintext; keep both lines in sync).
+#
+#   Generate:  printf '%s' 'your-password' | sha256sum | awk '{print $1}'
+#
+#   Install:  scripts/dev-ide.sh build && scripts/dev-ide.sh start \
+#             && scripts/dev-ide.sh extensions
+#
+#   opencode (the primary agent) runs in the IDE's terminal:
+#   task "dev: opencode (primary agent)", or /home/coder/.opencode/bin/opencode.
+#   Install/refresh it inside the container with:
+#
+#     docker exec -u 1000:1000 -e HOME=/home/coder clinic-ide \
+#       sh -c 'curl -fsSL https://opencode.ai/install | bash'
+#
+# Exposure: the container binds 0.0.0.0:8444 (restart unless-stopped), so it
+# is reachable on the LAN too — the password is the gate. The tailnet path is
+# the intended one.
+
+PASSWORD=change-me
+HASHED_PASSWORD=0000000000000000000000000000000000000000000000000000000000000000

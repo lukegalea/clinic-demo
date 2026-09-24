@@ -31,6 +31,11 @@ defmodule ClinicDemoWeb.Router do
     get "/home", PageController, :home
     get "/operator", PageController, :operator
 
+    # The capstone slideshow (CLIN-6): the static deck directory is served by
+    # Plug.Static (priv/static/deck/ — deck.js, screenshots, the pptx); this
+    # route is the directory index so the card on /operator can link /deck.
+    get "/deck", PageController, :deck
+
     # The operator's system window: request timings, process tree, VM
     # metrics, channel traffic — everything the Telemetry module already
     # emits, made visible. Linked from the operator hub's Infrastructure

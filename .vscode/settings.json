@@ -1,0 +1,59 @@
+{
+  // ── ElixirLS ────────────────────────────────────────────────────────────
+  //
+  // The toolchain caveat, up front: **this project builds through Docker.**
+  // There is no Elixir on the host; the canonical toolchain is the
+  // `clinic-elixir:1.20-otp-27` image (OTP 27.3.4.17 / Elixir 1.20.4), and the
+  // CI-parity gates are the `gate:*` tasks in tasks.json, which run `mix` in
+  // that image with the shared `mixhome`/`hexcache` volumes and the host uid.
+  //
+  // Inside the clinic-ide code-server container the pinned toolchain is
+  // installed at /usr/local (baked into the image from the same
+  // `elixir:1.20-otp-27` base), so ElixirLS runs natively there and compiles
+  // the project with the exact versions the gates use — same `_build`,
+  // same deps, no drift. `elixirLS.projectDir` stays unset on purpose: the
+  // workspace root (/w) IS the Mix project root, and the repo must stay
+  // mounted at /w everywhere (the app container mounts the same tree at /w),
+  // because _build and deps carry absolute-path assumptions.
+  //
+  // `mixEnv: "test"` puts ElixirLS's build in _build/test — alongside the
+  // gate runs, never against the dev server's _build/dev (that tree belongs
+  // to the running clinic-demo container).
+  "elixirLS.autoBuild": true,
+  "elixirLS.dialyzerEnabled": true,
+  "elixirLS.incrementalDialyzer": true,
+  // Dependencies are fetched explicitly by the gates/bootstrap, never by the
+  // language server — an LSP-triggered `deps.get` races the editor's index.
+  "elixirLS.fetchDeps": false,
+  "elixirLS.enableTestLenses": true,
+  "elixirLS.mixEnv": "test",
+  "elixirLS.mixTarget": "host",
+
+  // ── Editor ──────────────────────────────────────────────────────────────
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  },
+  "elixir.formatOnSave": true,
+
+  // ── Keep the indexes out of search/watch ────────────────────────────────
+  "files.watcherExclude": {
+    "**/_build/**": true,
+    "**/deps/**": true,
+    "**/.elixir_ls/**": true,
+    "**/cover/**": true,
+    "**/assets/node_modules/**": true,
+    "**/test/visual/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/_build": true,
+    "**/deps": true,
+    "**/.elixir_ls": true,
+    "**/cover": true,
+    "**/assets/node_modules": true,
+    "**/test/visual/node_modules": true
+  },
+  "files.associations": {
+    "*.html.heex": "html"
+  }
+}

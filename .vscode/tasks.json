@@ -1,0 +1,120 @@
+{
+  // ── The docker gates ────────────────────────────────────────────────────
+  //
+  // Every gate task runs mix inside the same image CI effectively uses —
+  // `clinic-elixir:1.20-otp-27` (OTP 27.3.4.17 / Elixir 1.20.4) — with:
+  //
+  //   * the repo mounted at /w          (the app container's path too)
+  //   * `mixhome:/m` as MIX_HOME        (the shared Mix archives volume)
+  //   * `hexcache:/tmp/.cache`          (the shared Hex cache — HOME=/tmp
+  //                                      so Hex's XDG cache lands there)
+  //   * -u $(id -u):$(id -g)            (the HOST uid, so nothing the gate
+  //                                      writes is root-owned)
+  //   * --network host                  (Postgres on localhost:5432)
+  //   * `set -o pipefail`               (the exit code IS the gate)
+  //
+  // Test runs set MIX_TEST_PARTITION=ide so they use the clinic_demo_testide
+  // database — a partition of one, never racing CI's or anyone else's.
+  //
+  // These tasks need the docker CLI and /var/run/docker.sock, which the
+  // clinic-ide container carries; from a plain shell the same commands work
+  // verbatim.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "gate: format",
+      "type": "shell",
+      "command": "docker run --rm --network host -u $(id -u):$(id -g) -e HOME=/tmp -e MIX_HOME=/m -v '${workspaceFolder}:/w' -v mixhome:/m -v hexcache:/tmp/.cache -w /w clinic-elixir:1.20-otp-27 bash -c 'set -o pipefail; mix format --check-formatted'",
+      "problemMatcher": []
+    },
+    {
+      "label": "gate: compile --warnings-as-errors",
+      "type": "shell",
+      "command": "docker run --rm --network host -u $(id -u):$(id -g) -e HOME=/tmp -e MIX_HOME=/m -e MIX_ENV=test -v '${workspaceFolder}:/w' -v mixhome:/m -v hexcache:/tmp/.cache -w /w clinic-elixir:1.20-otp-27 bash -c 'set -o pipefail; mix compile --warnings-as-errors'",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["mixCompileError"]
+    },
+    {
+      "label": "gate: test (partition: ide)",
+      "type": "shell",
+      "command": "docker run --rm --network host -u $(id -u):$(id -g) -e HOME=/tmp -e MIX_HOME=/m -e MIX_TEST_PARTITION=ide -v '${workspaceFolder}:/w' -v mixhome:/m -v hexcache:/tmp/.cache -w /w clinic-elixir:1.20-otp-27 bash -c 'set -o pipefail; mix test'",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": ["mixCompileError", "mixTestFailure"]
+    },
+    {
+      "label": "gate: credo --strict",
+      "type": "shell",
+      "command": "docker run --rm --network host -u $(id -u):$(id -g) -e HOME=/tmp -e MIX_HOME=/m -e MIX_ENV=test -v '${workspaceFolder}:/w' -v mixhome:/m -v hexcache:/tmp/.cache -w /w clinic-elixir:1.20-otp-27 bash -c 'set -o pipefail; mix credo --strict'",
+      "problemMatcher": []
+    },
+    {
+      "label": "gate: dialyzer",
+      "type": "shell",
+      "command": "docker run --rm --network host -u $(id -u):$(id -g) -e HOME=/tmp -e MIX_HOME=/m -e MIX_ENV=dev -v '${workspaceFolder}:/w' -v mixhome:/m -v hexcache:/tmp/.cache -w /w clinic-elixir:1.20-otp-27 bash -c 'set -o pipefail; mix dialyzer --format short'",
+      "problemMatcher": [],
+      // The PLT lives under _build/dev and the first build is slow — run it
+      // when you want it, not on a folder open.
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      // The whole local preflight, in CI order. Same list `mix precommit`
+      // covers, but through the pinned image.
+      "label": "gate: everything (format, compile, test, credo)",
+      "type": "shell",
+      "command": "docker run --rm --network host -u $(id -u):$(id -g) -e HOME=/tmp -e MIX_HOME=/m -e MIX_ENV=test -e MIX_TEST_PARTITION=ide -v '${workspaceFolder}:/w' -v mixhome:/m -v hexcache:/tmp/.cache -w /w clinic-elixir:1.20-otp-27 bash -c 'set -euo pipefail; mix format --check-formatted && mix compile --warnings-as-errors && mix test && mix credo --strict'",
+      "problemMatcher": ["mixCompileError", "mixTestFailure"]
+    },
+
+    // ── Dev servers ─────────────────────────────────────────────────────
+    //
+    // The standing `mix phx.server` (with tidewave's MCP endpoint on
+    // :4000/tidewave/mcp) runs in the clinic-demo container. This task boots
+    // a second node on :4001 for debugging (see launch.json).
+    {
+      "label": "dev: phoenix+tidewave (:4001)",
+      "type": "shell",
+      "command": "iex -S mix phx.server",
+      "options": {
+        "env": {
+          "PORT": "4001"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: ash semantic daemon (:4100)",
+      "type": "shell",
+      "command": "mix ash_agent.serve --port 4100",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+
+    // ── The primary agent ───────────────────────────────────────────────
+    //
+    // opencode is installed into the persistent home volume at
+    // /home/coder/.opencode/bin (see .dev-access for the install command).
+    // Run this task and the agent takes the terminal, reading this repo's
+    // AGENTS.md, opencode.json (serena + ash_agent + tidewave) and
+    // usage-rules.md.
+    {
+      "label": "dev: opencode (primary agent)",
+      "type": "shell",
+      "command": "/home/coder/.opencode/bin/opencode",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": true
+      }
+    }
+  ]
+}

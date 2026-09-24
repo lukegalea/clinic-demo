@@ -339,6 +339,13 @@ entry points at `http://localhost:4000/tidewave/mcp`. It exists only while
 `mix phx.server` is running, and only in dev — the production endpoint never
 mounts it. Loopback tool; do not expose the dev server past 127.0.0.1.
 
+opencode carries the same registration (`opencode.json`, `type: "remote"`,
+same URL) since the CLIN-2 IDE work, and the endpoint is verified answering
+end to end: a raw MCP `initialize` → `tools/list` → `tools/call
+project_eval` round trip against the running server returns evaluated
+values from the node (`Application.get_env(:clinic_demo, :tidewave?)` →
+`true`). Transcript: [docs/evidence/08-tidewave-mcp.md](evidence/08-tidewave-mcp.md).
+
 ### The loop an agent should run against it
 
 Tidewave 0.9 removed `get_ash_resources` in favor of `project_eval` plus
