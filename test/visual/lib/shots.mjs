@@ -27,7 +27,20 @@ const PIXELMATCH_THRESHOLD = 0.2; // per-pixel color distance tolerance (AA nois
 export const VIEWPORT = { width: 1280, height: 800 };
 
 export async function prepareForScreenshot(page) {
-  await page.evaluate(() => window.__hidePresenceChips());
+  // Presence chips are real people — hide them before any capture. This is
+  // done from the DRIVER, not from in-page script: the a2ui surfaces render
+  // the nav inside CLOSED shadow roots, which no in-page stylesheet can
+  // reach, while Playwright locators pierce them. Inline display (not a
+  // hidden-but-boxed visibility) because a 20px ghost chip is exactly the
+  // width that reflows the nav's knife-edge row into a second row — a real
+  // clinician browsing the live demo must not move a baseline.
+  const chips = page.locator('nav[aria-label="Main"] span[aria-label*=" is on"]');
+  const count = await chips.count();
+  for (let i = 0; i < count; i++) {
+    await chips.nth(i).evaluate((el) => {
+      el.style.display = "none";
+    });
+  }
   await page.evaluate(() => window.__sanitizeVolatileText());
 }
 
@@ -35,13 +48,16 @@ export async function capture(page) {
   await page.evaluate(() => document.fonts.ready);
   // The first fullPage capture after a browser launch can die with a
   // "Protocol error (Page.captureScreenshot): Unable to capture screenshot"
-  // — a Chromium compositing race, not a page defect (it reproduces on
-  // long-standing pages too, and the immediate retry always passes). Retry
-  // once before calling it a failure.
+  // — a Chromium compositing race, not a page defect. Retry ONCE, after a
+  // pause: the tallest page here (the day grid, 10004x10794) allocates a
+  // ~430MB raster per attempt, and an immediate second allocation lands
+  // before the failed one is reclaimed — which takes the renderer down and
+  // every check after it with it.
   try {
     return await page.screenshot({ fullPage: true, animations: "disabled" });
   } catch (error) {
     if (!/captureScreenshot/i.test(String(error))) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     return page.screenshot({ fullPage: true, animations: "disabled" });
   }
 }

@@ -8,14 +8,13 @@ defmodule ClinicDemoWeb.Router do
     plug :put_root_layout, html: {ClinicDemoWeb.Layouts, :root}
     plug :protect_from_forgery
     # A2UI components inline their styles into shadow DOM; without
-    # 'unsafe-inline' on style-src every surface renders unstyled. The
-    # theme-switcher bootstrap is the one inline script — pinned by hash
-    # rather than opening script-src up entirely. The Google Fonts origins
-    # serve DM Sans, the design system's typeface (linked in the root
-    # layout).
+    # 'unsafe-inline' on style-src every surface renders unstyled. The theme-
+    # switcher bootstrap is the one inline script — pinned by hash rather than
+    # opening script-src up entirely. The typefaces (DM Sans, Archivo Black)
+    # are self-hosted from /fonts — no third-party origins needed.
     plug :put_secure_browser_headers, %{
       "content-security-policy" =>
-        "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'sha256-BK52NP1e8rQFFVZCoDYB4YoCL0cZc/KAVl4dkMM7/QM='; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss:"
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-BK52NP1e8rQFFVZCoDYB4YoCL0cZc/KAVl4dkMM7/QM='; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:"
     }
   end
 

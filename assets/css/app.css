@@ -1,6 +1,35 @@
 /* See the Tailwind configuration guide for advanced usage
    https://tailwindcss.com/docs/configuration */
 
+/* The type system is SELF-HOSTED: priv/static/fonts carries the exact
+   files Google's CDN served when this was pinned. A visual-golden repo
+   cannot share a metrics dependency with a third party's font server —
+   a silent version bump there reflows every baseline (it happened: the
+   DM Sans v17 rollout wrapped the nav). The files are the latin subsets
+   Google served for DM Sans (variable wght 100-1000 → we declare the
+   weights the design system uses) and Archivo Black. font-src 'self'
+   already permits this. */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dm-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo Black";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/archivo-black-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @import "tailwindcss" source(none);
 @import "phoenix-colocated/clinic_demo/colocated.css";
 /* A2UI's neutral theme must be imported before our overrides: both land at

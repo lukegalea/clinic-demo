@@ -381,6 +381,23 @@ slides.push(
 // it unchanged.
 
 const CSS = `
+/* Self-hosted type (same files as the app: /fonts/, pinned in
+   priv/static/fonts) — the deck's text metrics must not depend on a
+   third party's font CDN either. */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dm-sans-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Archivo Black";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/archivo-black-latin.woff2") format("woff2");
+}
 :root {
   --ink: #141414;
   --paper: #ffffff;
@@ -656,11 +673,6 @@ const html = `<!doctype html>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The Vet Clinic Capstone — Maximal Code</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&display=swap"
-  />
   <link rel="stylesheet" href="/deck/deck.css" />
   <script src="/deck/deck.js" defer></script>
 </head>

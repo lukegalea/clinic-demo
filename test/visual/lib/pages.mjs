@@ -22,6 +22,16 @@ export const PAGES = [
     marker: { kind: "h1", text: "Day" },
     extraMarker: { kind: "host", selector: "#day-calendar" },
     navCurrent: "/day",
+    // The month grid is drawn CLIENT-side by the DayCalendar hook into the
+    // custom element's shadow root, long after the document settles —
+    // capturing too early freezes a mid-draw 10004px canvas into the
+    // baseline (the old artifact), and racing the hook mid-mutation can
+    // take the renderer down. Wait for the grid to actually exist.
+    settle: (page) =>
+      page.waitForFunction(() => {
+        const cal = document.querySelector("#day-calendar");
+        return Boolean(cal && cal.shadowRoot && cal.shadowRoot.childElementCount > 0);
+      }, null, { timeout: 20_000 }),
   },
   { route: "/worklist", name: "worklist", marker: { kind: "a2ui" }, navCurrent: "/worklist" },
   { route: "/visits", name: "visits", marker: { kind: "a2ui" }, navCurrent: "/visits" },
@@ -54,12 +64,31 @@ export const PAGES = [
     name: "operator-rules",
     marker: { kind: "h1", text: "Rule sets" },
     extraMarker: { kind: "host", selector: "style#ruleset-editor-skin", hidden_ok: true },
+    // The ruleset table is drawn by the editor's own bootstrap; capturing
+    // before it has laid out froze a giant mid-init canvas into the
+    // baseline once. Wait for real rows.
+    settle: (page) =>
+      page.locator("table tr").first().waitFor({ state: "visible", timeout: 20_000 }),
   },
   {
     route: "/operator/surfaces",
     name: "operator-surface-editor",
     marker: { kind: "h1", text: "Surface editor" },
     extraMarker: { kind: "text", text: "Import" },
+    // The surface list renders before the stylesheet has applied on a cold
+    // load, which once froze an unstyled flash into the baseline. Wait for
+    // the list AND the app's typography (app.css loaded, DM Sans active).
+    settle: (page) =>
+      page.waitForFunction(
+        () => {
+          const h = [...document.querySelectorAll("h2, h3")].find((e) =>
+            /AppointmentUI/.test(e.textContent)
+          );
+          return Boolean(h && getComputedStyle(h).fontFamily.includes("DM Sans"));
+        },
+        null,
+        { timeout: 20_000 }
+      ),
   },
   {
     route: "/canvas",

@@ -196,6 +196,18 @@ async function checkPage(reporter, baseUrl, pageDef, state) {
     reporter.fail(id("http"), `GET ${pageDef.route} → ${response ? response.status() : "no response"}`);
   }
 
+  // Per-page settle hook: pages whose main content is drawn by a client-side
+  // hook (the day view's month grid) must be captured SETTLED, not mid-draw.
+  if (pageDef.settle) {
+    try {
+      await pageDef.settle(page);
+      reporter.pass(id("settle"), "client-drawn content settled");
+    } catch (error) {
+      reporter.fail(id("settle"), describeError(error));
+      return; // the remaining checks would pin a mid-draw page
+    }
+  }
+
   // The wiped-asset guard.
   try {
     const asset = await page.context().request.get(`${baseUrl}/assets/js/app.js`);

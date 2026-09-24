@@ -102,17 +102,31 @@ export const DOM_INIT_SCRIPT = /* js */ `
   // a capture — all structural checks run on the real content.
   window.__sanitizeVolatileText = () => {
     let touched = 0;
+    // Weekday and month names change with the calendar, not with the code:
+    // the day view's heading reads "Thursday, 24 September" one day and
+    // "Friday, 25 September" the next. Swap them for fixed tokens FIRST
+    // (same scrub for every run of the week), then let the digit scrub
+    // handle the numbers.
+    const CAL_WORDS =
+      /\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)\b/g;
     const scrub = (r) => {
       for (const node of r.querySelectorAll("*")) {
+        // Never touch stylesheet/script text: a <style> is a live stylesheet,
+        // and mutating one mid-capture takes the renderer down (this crashed
+        // captures of pages with in-shadow <style> blocks — the calendar's).
+        if (node.nodeName === "STYLE" || node.nodeName === "SCRIPT") continue;
         for (const child of node.childNodes) {
           if (child.nodeType === 3) {
             const text = child.textContent;
-            if (/[0-9]/.test(text) || /[0-9a-f]{8,}/i.test(text)) {
+            if (/[0-9]/.test(text) || /[0-9a-f]{8,}/i.test(text) || CAL_WORDS.test(text)) {
+              CAL_WORDS.lastIndex = 0;
               child.textContent = text
+                .replace(CAL_WORDS, (word) => "DayInYear".slice(0, word.length))
                 .replace(/[0-9a-f]{8,}/gi, (run) => run.replace(/[0-9a-f]/gi, "8"))
                 .replace(/[0-9]/g, "8");
               touched++;
             }
+            CAL_WORDS.lastIndex = 0;
           }
         }
         if (node.shadowRoot) scrub(node.shadowRoot);

@@ -59,5 +59,11 @@ export async function importPlaywright() {
 }
 
 export function chromiumOptions() {
-  return process.env.CHROME ? { executablePath: process.env.CHROME } : {};
+  if (process.env.CHROME) return { executablePath: process.env.CHROME };
+  // Software rasterization, no /dev/shm dependency. The typefaces are
+  // self-hosted (priv/static/fonts), so these flags cannot drift text
+  // metrics — they only remove the GPU/EGL path, whose init fails
+  // intermittently on a memory-pressured host and takes full-page captures
+  // of the tall pages (the day grid is 10004x10794) down with it.
+  return { args: ["--disable-gpu", "--disable-dev-shm-usage"] };
 }

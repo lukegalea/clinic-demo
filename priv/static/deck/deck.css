@@ -1,4 +1,21 @@
 
+/* Self-hosted type (same files as the app: /fonts/, pinned in
+   priv/static/fonts) — the deck's text metrics must not depend on a
+   third party's font CDN either. */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dm-sans-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Archivo Black";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/archivo-black-latin.woff2") format("woff2");
+}
 :root {
   --ink: #141414;
   --paper: #ffffff;
