@@ -28,18 +28,38 @@ export const VIEWPORT = { width: 1280, height: 800 };
 
 export async function prepareForScreenshot(page) {
   // Presence chips are real people — they must never stabilise a baseline
-  // nor shift one. The whole chip SLOT is removed from the DOM (not hidden:
-  // an emptied slot keeps its margin/flex box, and 20px of ghost reflows the
-  // nav's knife-edge row into a second row). Done from the DRIVER with
-  // locators because the a2ui surfaces render the nav inside CLOSED shadow
-  // roots, which no in-page stylesheet or querySelector can reach —
-  // Playwright pierces them.
-  const slots = page.locator(
-    'nav[aria-label="Main"] a > span:has(span[aria-label*=" is on"]), nav[aria-label="Main"] a > span.ml-1:empty'
-  );
-  const count = await slots.count();
+  // nor shift one. Only the chip ELEMENT is removed; its slot (the wrapper
+  // span NavPresenceLive always renders) stays, so a box with a live
+  // clinician browsing and a box with an empty slot produce the SAME DOM.
+  // Done from the DRIVER with locators because the a2ui surfaces render the
+  // nav inside CLOSED shadow roots, which no in-page stylesheet or
+  // querySelector can reach — Playwright pierces them. (Hiding instead of
+  // removing kept the chip's box, and a 20px ghost reflowed the nav's
+  // knife-edge row into a second row.)
+  const chips = page.locator('nav[aria-label="Main"] span[aria-label*=" is on"]');
+  const count = await chips.count();
   for (let i = 0; i < count; i++) {
-    await slots.nth(i).evaluate((el) => el.remove());
+    await chips.nth(i).evaluate((el) => {
+      const slot = el.parentElement;
+      el.remove();
+      // A slot left holding only whitespace still renders a line box
+      // (~8px of nav height). When nothing real remains in it, it goes
+      // too — a machine with no live clinicians has no chip in the DOM at
+      // all, and both machines must render the same nav.
+      if (slot && slot.textContent.trim() === "") slot.remove();
+    });
+  }
+  // Slots that were born empty (no chip ever streamed in) carry whitespace
+  // of their own; they render a line box on some machines and not others.
+  // They go the same way, so every machine renders no slot at all.
+  const emptySlots = page.locator(
+    'nav[aria-label="Main"] a > span.ml-1'
+  );
+  const emptyCount = await emptySlots.count();
+  for (let i = 0; i < emptyCount; i++) {
+    await emptySlots.nth(i).evaluate((el) => {
+      if (el.textContent.trim() === "") el.remove();
+    });
   }
   await page.evaluate(() => window.__sanitizeVolatileText());
 }
