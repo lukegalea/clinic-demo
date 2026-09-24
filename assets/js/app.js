@@ -105,9 +105,10 @@ const FlightDiagram = {
     })
 
     import("/assets/js/flight_view.js")
-      .then((engine) => {
-        this._engine = engine
-        return engine.mount(this.el)
+      .then(() => {
+        this._engine = window.FlightViewEngine
+        if (!this._engine) throw new Error("flight_view.js loaded but registered no engine")
+        return this._engine.mount(this.el)
       })
       .catch((error) => {
         console.error("FlightDiagram: could not load the flight view engine", error)

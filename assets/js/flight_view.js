@@ -20,7 +20,11 @@ let sequence = 0
 
 // Draws the diagram into the element's canvas child. Idempotent: the hook
 // may call it again after a LiveView patch without re-rendering.
-export async function mount(el) {
+//
+// The entry is bundled by esbuild as an IIFE (app.js is a classic script,
+// so the shared esbuild invocation can't emit ESM), which strips `export` —
+// so the engine publishes itself on `window.FlightViewEngine` for the hook.
+async function mount(el) {
   if (el.dataset.flightMounted) return
   el.dataset.flightMounted = "true"
 
@@ -42,7 +46,7 @@ export async function mount(el) {
 
 // Moves the markers to the latest positions. Replaces the marker layer's
 // content in one pass — no LiveView re-render involved.
-export function place(el, positions) {
+function place(el, positions) {
   const canvas = canvasOf(el)
   const layer = layerOf(el)
   if (!canvas || !layer) return
@@ -71,14 +75,20 @@ export function place(el, positions) {
   }
 }
 
-// The mermaid node id round-trips as either data-id or the element id
-// (FlightView sanitizes ids to exactly this); either attribute is a safe
-// CSS selector by construction.
+// Mermaid v12 renders node g elements with the id wrapped in its render
+// prefix: "<render id>-flowchart-<node id>-<n>". The node id itself is
+// sanitized to [A-Za-z_][A-Za-z0-9_]* (AshBpmn.FlightView's documented
+// rule), so the wrapped form is matched by a word-boundary regex on the
+// g.node ids; direct id/data-id matches stay first for older mermaids.
 function findNode(canvas, nodeId) {
   return (
     canvas.querySelector(`[data-id="${nodeId}"]`) ||
     canvas.querySelector(`g.node[id="${nodeId}"]`) ||
-    canvas.querySelector(`[id="${nodeId}"]`)
+    canvas.querySelector(`[id="${nodeId}"]`) ||
+    Array.from(canvas.querySelectorAll("g.node")).find((node) => {
+      const id = node.getAttribute("id") || ""
+      return new RegExp(`(^|-)${nodeId}(-[0-9]+)?$`).test(id)
+    })
   )
 }
 
@@ -97,3 +107,5 @@ function positionsOf(el) {
     return []
   }
 }
+
+window.FlightViewEngine = {mount, place}
