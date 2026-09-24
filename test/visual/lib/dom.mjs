@@ -136,20 +136,9 @@ export const DOM_INIT_SCRIPT = /* js */ `
     return touched;
   };
 
-  // Presence chips ("RV is on Board") are real people — they must not
-  // stabilise a baseline nor break one. display:none (not visibility:hidden:
-  // a hidden chip KEEPS its box, and ~20px of ghost chip reflows the nav
-  // into a second row — a real clinician browsing the live demo shifts every
-  // baseline) and adopted into every shadow root, because the a2ui surfaces
-  // render the nav inside their own. Runs right before a capture.
-  window.__hidePresenceChips = () => {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(
-      'nav[aria-label="Main"] span[aria-label*=" is on"] { display: none !important; }'
-    );
-    for (const root of window.__allRoots()) {
-      root.adoptedStyleSheets = [...(root.adoptedStyleSheets || []), sheet];
-    }
-  };
+  // NOTE: presence chips ("RV is on Board") are removed by the DRIVER before
+  // a capture (shots.mjs / prepareForScreenshot) — they are real people and
+  // must never stabilise a baseline nor shift one, and only a Playwright
+  // locator reaches the nav inside the a2ui surfaces' CLOSED shadow roots.
 })();
 `;

@@ -27,19 +27,19 @@ const PIXELMATCH_THRESHOLD = 0.2; // per-pixel color distance tolerance (AA nois
 export const VIEWPORT = { width: 1280, height: 800 };
 
 export async function prepareForScreenshot(page) {
-  // Presence chips are real people — hide them before any capture. This is
-  // done from the DRIVER, not from in-page script: the a2ui surfaces render
-  // the nav inside CLOSED shadow roots, which no in-page stylesheet can
-  // reach, while Playwright locators pierce them. Inline display (not a
-  // hidden-but-boxed visibility) because a 20px ghost chip is exactly the
-  // width that reflows the nav's knife-edge row into a second row — a real
-  // clinician browsing the live demo must not move a baseline.
-  const chips = page.locator('nav[aria-label="Main"] span[aria-label*=" is on"]');
-  const count = await chips.count();
+  // Presence chips are real people — they must never stabilise a baseline
+  // nor shift one. The whole chip SLOT is removed from the DOM (not hidden:
+  // an emptied slot keeps its margin/flex box, and 20px of ghost reflows the
+  // nav's knife-edge row into a second row). Done from the DRIVER with
+  // locators because the a2ui surfaces render the nav inside CLOSED shadow
+  // roots, which no in-page stylesheet or querySelector can reach —
+  // Playwright pierces them.
+  const slots = page.locator(
+    'nav[aria-label="Main"] a > span:has(span[aria-label*=" is on"]), nav[aria-label="Main"] a > span.ml-1:empty'
+  );
+  const count = await slots.count();
   for (let i = 0; i < count; i++) {
-    await chips.nth(i).evaluate((el) => {
-      el.style.display = "none";
-    });
+    await slots.nth(i).evaluate((el) => el.remove());
   }
   await page.evaluate(() => window.__sanitizeVolatileText());
 }
