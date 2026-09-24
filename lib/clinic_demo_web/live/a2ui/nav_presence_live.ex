@@ -39,6 +39,7 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
   @entries [
     {"Board", "/", "clinic_board"},
     {"Day", "/day", "clinic_day"},
+    {"Flight", "/flight", "clinic_flight"},
     {"Intake", "/intake", "clinic_intake"},
     {"Schedule", "/schedule", "clinic_schedule"},
     {"Worklist", "/worklist", "clinic_worklist"},

@@ -51,6 +51,9 @@ defmodule ClinicDemoWeb.Router do
       # read-only detail sheet) over the same actor session, so presence
       # and the "No one is acting" contract behave like every surface.
       live "/day", DayLive
+      # The flight view: every live visit on the process diagram, real-time
+      # (CLIN-1). Host LiveView over AshBpmn.FlightView, like the Day view.
+      live "/flight", FlightLive
       live "/intake", A2ui.IntakeLive
       live "/emergencies", A2ui.EmergencyBoardLive
       live "/schedule", A2ui.ScheduleLive

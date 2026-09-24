@@ -55,6 +55,26 @@ defmodule ClinicDemoWeb.DayLive do
     {:ok, SurfaceChrome.mount_presence(socket, @surface_id)}
   end
 
+  # The ?date= deep-link: the flight view's avatars (and any other caller)
+  # land the calendar on a visit's day. An absent or unparseable date keeps
+  # today selected.
+  @impl true
+  def handle_params(%{"date" => date}, _uri, socket) do
+    case Date.from_iso8601(date) do
+      {:ok, day} ->
+        {:noreply,
+         socket
+         |> assign(selected_day: day, detail_id: nil)
+         |> roll_month(day)
+         |> recompute()}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
+
   @impl true
   def handle_event("select_day", %{"date" => date}, socket) do
     case Date.from_iso8601(date) do

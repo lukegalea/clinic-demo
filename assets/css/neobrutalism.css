@@ -358,3 +358,67 @@
     animation: none !important;
   }
 }
+
+/* ── The flight view's live markers (/flight) ────────────────────────────
+ *
+ * Patient avatars positioned on the mermaid diagram's nodes by the
+ * flight_view.js engine. Status styling follows the bpmn viewer's marker
+ * vocabulary (ash_bpmn.css): waiting is dashed and hollow, executing
+ * pulses, active is the solid base look. The avatars carry the nav's
+ * initials-chip look (border-2, rounded-full, bold initials).
+ */
+.flight-marker {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 2rem;
+  height: 2rem;
+  margin: -1rem 0 0 -1rem; /* centered on the computed node point */
+  border: 2px solid var(--border);
+  border-radius: 9999px;
+  background: var(--main);
+  color: var(--main-foreground);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: var(--shadow-shadow, 4px 4px 0px 0px var(--border));
+  pointer-events: auto;
+}
+
+.flight-marker:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-lift, 6px 6px 0px 0px var(--border));
+}
+
+.flight-marker--waiting {
+  border-style: dashed;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+.flight-marker--executing {
+  animation: flight-executing-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes flight-executing-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flight-marker,
+  .flight-marker--executing {
+    animation: none !important;
+    transition: none !important;
+  }
+}

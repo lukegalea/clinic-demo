@@ -89,10 +89,36 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 // Day view's elements upgrade in the first patch.
 defineNbComponents()
 
+// The flight view's diagram hook (/flight): a deliberately thin delegate —
+// the mermaid bundle is megabytes and must stay off every other page, so the
+// engine lives in the flight_view.js entry and is imported at runtime from
+// its /assets URL (left external by esbuild; the entry ships next to this
+// bundle). The server's token-moved pushes arrive here via handleEvent.
+const FlightDiagram = {
+  mounted() {
+    this.handleEvent("flight_positions", (payload) => {
+      if (this._engine) {
+        this._engine.place(this.el, payload.positions)
+      } else {
+        this.el.dataset.positions = JSON.stringify(payload.positions || [])
+      }
+    })
+
+    import("/assets/js/flight_view.js")
+      .then((engine) => {
+        this._engine = engine
+        return engine.mount(this.el)
+      })
+      .catch((error) => {
+        console.error("FlightDiagram: could not load the flight view engine", error)
+      })
+  },
+}
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AshA2ui, AshCanvas, AshBpmnDesigner, AshBpmnViewer, AshDecisionsEditor, CanvasSplitter, NbScroller, AshA2uiCombobox, DayCalendar, DaySheet},
+  hooks: {...colocatedHooks, AshA2ui, AshCanvas, AshBpmnDesigner, AshBpmnViewer, AshDecisionsEditor, CanvasSplitter, FlightDiagram, NbScroller, AshA2uiCombobox, DayCalendar, DaySheet},
 })
 
 // Show progress bar on live navigation and form submits
