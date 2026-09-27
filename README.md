@@ -328,7 +328,7 @@ packages:
 
 ## Running it
 
-Requires Elixir 1.17 or newer and a Postgres reachable at
+Requires Elixir 1.20 or newer (OTP 27) and a Postgres reachable at
 `localhost:5432` as `postgres`/`postgres`. Override with the usual
 `ClinicDemo.Repo` settings in `config/dev.exs` if yours differs.
 
@@ -339,7 +339,7 @@ without it, every model fails to load with `:schema_validator_unavailable`.
 ```
 mix setup           # deps, database, migrations, seed data, assets
 mix phx.server      # http://localhost:4000
-mix test            # 43 tests, all green
+mix test            # 100 tests, all green
 ```
 
 `mix setup` publishes the two rule documents, then seeds three clinicians,
@@ -968,6 +968,35 @@ no Mix task for `explain_forbidden/2` (`bin/ash-agent` works around it with
   `errors` list. That is real and this demo relies on it — it is what step 7
   shows — but the overlaps in the triage table have been reasoned about by
   hand rather than proved by a tool.
+
+## What's next: System One
+
+**Planned, not built.** Nothing in this section runs in this checkout —
+no route, resource, or process named here exists yet. The three packages
+above declare what the clinic knows, decides, and does; the next planned
+addition gives the clinic's *guesses* a place to live as guesses, typed and
+never mistaken for a decision. The short version: a small local model
+answers a declared, typed question — a yes/no, a choice from a closed list,
+a score in a range — and only the clinic's existing decision layer (DMN,
+`ash_rules`, an Ash action) turns an answer into anything authoritative.
+
+The planned demonstrations span the same three audiences this repository
+already speaks to: coding agents get an advisory pre-flight risk check and
+laws-judge triage that never overrides a deterministic verdict; the `/agent`
+console's intent routing is planned to move onto a local model with a
+confidence fallback to the LLM path it uses today; and the headline
+demonstration extends the compliance rulebook with real (entirely synthetic)
+credential documents, so a lapsed or unsupported clinician credential blocks
+booking with an "appointment at risk" gap — the same shape any platform
+reconciling a supplier's documents against a customer's requirements would
+need, mapped here onto clinician credentials checked against what an
+appointment requires.
+
+Read [`docs/system-one-roadmap.md`](docs/system-one-roadmap.md) for the full
+plan, including what data it will use (synthetic, clearly marked, never
+real), how a replayed answer is labelled apart from a live one, and the
+fences this is designed to never cross — no model call inside a policy
+check, a FEEL expression, or a rules evaluation, ever.
 
 ## Layout
 
