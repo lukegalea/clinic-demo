@@ -51,16 +51,6 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       # The `mix test` alias runs `ash.setup --quiet` (create + migrate)
       # itself, so there is no setup task here.
@@ -97,13 +87,6 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       - name: Set up the database and the seed catalog
         run: |
@@ -162,16 +145,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       - run: mix compile --force --warnings-as-errors
 
@@ -182,16 +155,6 @@ jobs:
       MIX_ENV: dev
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
         with:
           mix-env: dev
@@ -204,16 +167,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       - run: mix format --check-formatted
 
@@ -222,16 +175,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       - run: mix credo --strict
 
@@ -242,16 +185,6 @@ jobs:
       MIX_ENV: dev
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
         with:
           mix-env: dev
@@ -266,16 +199,6 @@ jobs:
       MIX_ENV: dev
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
         with:
           mix-env: dev
@@ -286,16 +209,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       - run: mix deps.unlock --check-unused
 
@@ -304,16 +217,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: ./.github/actions/setup-elixir
       - run: mix deps.audit
 
@@ -322,14 +225,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Private git deps (ash_compliance, ash_rules) are fetched by mix with
-      # this PAT. A composite action cannot read the secrets context, so the
-      # git rewrite lives here, ahead of the setup action's `mix deps.get`.
-      - name: Give mix access to private git deps
-        env:
-          PRIVATE_DEPS_TOKEN: ${{ secrets.PRIVATE_DEPS_TOKEN }}
-        run: |
-          if [ -n "$PRIVATE_DEPS_TOKEN" ]; then
-            git config --global url."https://x-access-token:${PRIVATE_DEPS_TOKEN}@github.com/".insteadOf "https://github.com/"
-          fi
       - uses: fsfe/reuse-action@v6
