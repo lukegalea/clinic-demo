@@ -43,6 +43,20 @@ defmodule ClinicDemoWeb.A2ui.EmergencyBoardUI do
       fields [:patient_label, :scheduled_at, :triage_urgency, :status, :reason]
       read_action :read
       query :default
+
+      # The urgent-care page carries sticker energy (CLIN-10 finding #12):
+      # card rows with the triage emergency as a FILLED badge — red fill,
+      # black border, black ink — instead of a flat caption cell. The
+      # preset pins every row to :emergency, so the badge is the page's
+      # rhythm: the one surface where saturated red is the resting state.
+      row_layout do
+        title :patient_label
+        badge :triage_urgency
+        meta [:scheduled_at, :status, :reason]
+        columns 3
+      end
+
+      row_actions [:check_in]
     end
 
     field :patient_label do

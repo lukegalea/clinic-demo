@@ -8,9 +8,11 @@
 //   { kind: "text", text }      — literal (shadow-piercing) text content
 //
 // `navCurrent` is set for surfaces that own a nav pill: the pill with
-// aria-current="page" must point at this route. /events deliberately has no
-// nav pill (the nav's a2ui entries stop at Evidence), and the operator
-// sub-pages, /canvas and /agent are reachable from the operator hub.
+// aria-current="page" must point at this route. The operator/system routes
+// (patients, clinicians, processes, decisions, evaluations) collapsed into
+// the Operator hub pill (CLIN-10 §4) and carry no pill of their own;
+// /events, the operator sub-pages, /canvas and /agent were already
+// pill-less — the operator hub is their door.
 
 export const PAGES = [
   { route: "/", name: "board", marker: { kind: "a2ui" }, navCurrent: "/" },
@@ -35,11 +37,11 @@ export const PAGES = [
   },
   { route: "/worklist", name: "worklist", marker: { kind: "a2ui" }, navCurrent: "/worklist" },
   { route: "/visits", name: "visits", marker: { kind: "a2ui" }, navCurrent: "/visits" },
-  { route: "/patients", name: "patients", marker: { kind: "a2ui" }, navCurrent: "/patients" },
-  { route: "/clinicians", name: "clinicians", marker: { kind: "a2ui" }, navCurrent: "/clinicians" },
-  { route: "/processes", name: "processes", marker: { kind: "a2ui" }, navCurrent: "/processes" },
-  { route: "/decisions", name: "decisions", marker: { kind: "a2ui" }, navCurrent: "/decisions" },
-  { route: "/evaluations", name: "evaluations", marker: { kind: "a2ui" }, navCurrent: "/evaluations" },
+  { route: "/patients", name: "patients", marker: { kind: "a2ui" }, navCurrent: null // collapsed into the Operator hub pill },
+  { route: "/clinicians", name: "clinicians", marker: { kind: "a2ui" }, navCurrent: null // collapsed into the Operator hub pill },
+  { route: "/processes", name: "processes", marker: { kind: "a2ui" }, navCurrent: null // collapsed into the Operator hub pill },
+  { route: "/decisions", name: "decisions", marker: { kind: "a2ui" }, navCurrent: null // collapsed into the Operator hub pill },
+  { route: "/evaluations", name: "evaluations", marker: { kind: "a2ui" }, navCurrent: null // collapsed into the Operator hub pill },
   {
     route: "/events",
     name: "events",

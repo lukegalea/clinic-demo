@@ -117,6 +117,12 @@ defmodule ClinicDemoWeb.Router do
   if Mix.env() == :dev do
     import PhoenixStorybook.Router
 
+    scope "/", ClinicDemoWeb do
+      pipe_through :browser
+
+      get "/gallery", PageController, :gallery
+    end
+
     scope "/" do
       storybook_assets()
     end

@@ -1,0 +1,39 @@
+<%!-- The surface gallery (CLIN-10 finding #15): every declared surface
+     in sequence, one section per surface. The phoenix storybook renders
+     host HEEx function components — it cannot render an A2UI surface
+     (a shadow-DOM wire composition hydrated by the LiveRenderer), so
+     the design system's spec page was blind to the layer where the
+     anatomy lives. This is the honest complement: each surface in its
+     real route, framed, under a presence-style header. Deliberately
+     dumb — an iframe per surface, no orchestration — because the
+     surfaces are live; anything clever would fight them for events.
+     Dev-only by route. --%>
+<header class="mb-6">
+  <h1 class="text-2xl font-display">Surface gallery</h1>
+  <p class="text-foreground/70">
+    Every declared surface, live — the spec page for the wire compositions the component storybook cannot render. Dev-only.
+  </p>
+</header>
+
+<section
+  :for={{label, route, surface_id} <- @surfaces}
+  id={"gallery-#{surface_id}"}
+  class="mb-8"
+  aria-label={label}
+>
+  <h2 class="mb-3 text-lg font-heading">
+    <span class="mr-2 inline-block size-3.5 -rotate-6 rounded-base border-2 border-border bg-main" aria-hidden="true" />
+    {label}
+    <span class="ml-2 text-sm font-base text-foreground/60">{route} · {surface_id}</span>
+  </h2>
+  <%!-- Tall frame per surface: the surfaces are the point, not the
+       scroll. Loading=lazy so the page boots without paying for every
+       hydration at once. --%>
+  <iframe
+    src={route}
+    title={label}
+    loading="lazy"
+    class="h-[28rem] w-full rounded-base border-2 border-border bg-secondary-background shadow-shadow"
+  >
+  </iframe>
+</section>

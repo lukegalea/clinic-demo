@@ -37,8 +37,11 @@ defmodule ClinicDemoWeb.A2ui.EvaluationUI do
 
       row_layout do
         title :visit_label
-        badge :definition_version
-        meta [:matched_rule_ids, :duration_us, :definition_key, :hit_policy]
+        # The version is metadata, not a status (finding #13): a badge
+        # fill over "3" would be color saying nothing. It leads the meta
+        # row instead; the matched-rules count is the row's real signal
+        # and keeps the title's weight.
+        meta [:definition_version, :definition_key, :matched_rule_ids, :hit_policy]
         columns 2
       end
     end

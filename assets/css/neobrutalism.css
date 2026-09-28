@@ -204,16 +204,38 @@
   --a2ui-color-on-surface: var(--foreground);
   --a2ui-color-primary: var(--main);
   --a2ui-color-on-primary: var(--main-foreground);
-  /* Secondary chrome (default buttons, active tab header) goes YELLOW —
-   * the one place the vivid palette is allowed to reach inside shadow
-   * DOM, and the highest-traffic surface there is: every table's row
-   * buttons and quiet actions. Black ink keeps it legible; blue stays
-   * reserved for primary actions, so the two never compete. */
-  --a2ui-color-secondary: var(--yellow);
+  /* De-conflated (CLIN-10 finding #9): secondary-yellow used to do five
+   * jobs — default button fill, combobox-option hover, chip rest,
+   * skeleton bars, admin hover tint — spraying the accent across every
+   * rest/hover state while the app reserves yellow for the one loud CTA.
+   * Secondary is now the QUIET tint (the page's own pastel): option
+   * hovers, chips and skeletons read as subtle, and default buttons get
+   * an explicit white fill. Yellow inside surfaces now appears only
+   * where the anatomy fills it on purpose (badge tones, banners). */
+  --a2ui-color-secondary: var(--background);
   --a2ui-color-on-secondary: var(--foreground);
+  /* Default buttons: white bodies (the digest's neutral variant) — the
+   * quiet utility tier and hovers tint with the pastel, never yellow. */
+  --a2ui-button-background: var(--secondary-background);
+  --a2ui-button-quiet-hover: var(--background);
   --a2ui-color-input: var(--secondary-background);
   --a2ui-color-on-input: var(--foreground);
   --a2ui-color-border: var(--border);
+
+  /* ---- Type scale (finding #10) ----------------------------------------
+   * The surface type tiers, tied to the host's: body/controls at
+   * text-sm, a 12px floor for badges/captions, headings stepped. These
+   * match ash_a2ui_theme.css's own defaults — restated here so the
+   * bridge (not the framework's neutral fallbacks) is the source of
+   * truth a host audits. */
+  --a2ui-font-size: 0.875rem;
+  --a2ui-font-size-xs: 0.75rem;
+  --a2ui-font-size-s: 0.8125rem;
+  --a2ui-font-size-m: 0.875rem;
+  --a2ui-font-size-l: 1rem;
+  --a2ui-font-size-xl: 1.25rem;
+  --a2ui-font-size-2xl: 1.5rem;
+  --a2ui-button-font-size: var(--a2ui-font-size-m);
 
   /* ---- Shape --------------------------------------------------------- */
   /* --a2ui-border-width feeds the border shorthand fallbacks inside the

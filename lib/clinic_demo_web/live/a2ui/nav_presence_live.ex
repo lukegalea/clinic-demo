@@ -32,23 +32,30 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
   alias AshA2ui.PresenceBar
   alias ClinicDemoWeb.A2uiPresence
 
-  # The nav's a2ui entries: {label, path, surface_id}. /operator is a
-  # controller page with no presence topic and is appended in the render.
-  # The Day view is a host LiveView (NB components, not a surface) but
-  # rides the same presence wiring on its own topic, so it lists here.
-  @entries [
+  # The nav's clinic cluster (sm density, presence chips kept): the
+  # working set — board, day, flight, intake, schedule, worklist, visits.
+  # The operator/system routes collapsed into the Operator hub pill
+  # (CLIN-10 §4: nav is clinic-first, the operator area is one door);
+  # their presence topics AGGREGATE onto that pill so who-else-is-here
+  # survives the collapse.
+  @clinic_entries [
     {"Board", "/", "clinic_board"},
     {"Day", "/day", "clinic_day"},
     {"Flight", "/flight", "clinic_flight"},
     {"Intake", "/intake", "clinic_intake"},
     {"Schedule", "/schedule", "clinic_schedule"},
     {"Worklist", "/worklist", "clinic_worklist"},
-    {"Visits", "/visits", "clinic_visits"},
-    {"Patients", "/patients", "clinic_patients"},
-    {"Clinicians", "/clinicians", "clinic_clinicians"},
-    {"Processes", "/processes", "clinic_process_definitions"},
-    {"Decisions", "/decisions", "clinic_decision_definitions"},
-    {"Evidence", "/evaluations", "clinic_evaluations"}
+    {"Visits", "/visits", "clinic_visits"}
+  ]
+
+  # The collapsed operator cluster: {path, surface_id}. Their pills are
+  # cards on /operator; their presence merges into the Operator pill.
+  @operator_entries [
+    {"/patients", "clinic_patients"},
+    {"/clinicians", "clinic_clinicians"},
+    {"/processes", "clinic_process_definitions"},
+    {"/decisions", "clinic_decision_definitions"},
+    {"/evaluations", "clinic_evaluations"}
   ]
 
   @presence_events ["presence_state", "presence_diff"]
@@ -56,25 +63,37 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
   @impl true
   def mount(_params, session, socket) do
     if connected?(socket) do
-      for {_label, _path, surface_id} <- @entries do
+      for {_label, _path, surface_id} <- @clinic_entries do
+        Presence.subscribe(A2uiPresence, surface_id)
+      end
+
+      for {_path, surface_id} <- @operator_entries do
         Presence.subscribe(A2uiPresence, surface_id)
       end
     end
 
     actor_id = session["actor_id"]
+    {clinic, operator_others} = snapshot(actor_id)
 
     {:ok,
      assign(socket,
        actor_id: actor_id,
        current_path: session["current_path"] || "",
-       snapshot: snapshot(actor_id)
+       snapshot: clinic,
+       operator_others: operator_others
      )}
   end
 
   @impl true
   def handle_info(%Phoenix.Socket.Broadcast{event: event}, socket)
       when event in @presence_events do
-    {:noreply, assign(socket, :snapshot, snapshot(socket.assigns.actor_id))}
+    {clinic, operator_others} = snapshot(socket.assigns.actor_id)
+
+    {:noreply,
+     assign(socket,
+       snapshot: clinic,
+       operator_others: operator_others
+     )}
   end
 
   def handle_info(_other, socket), do: {:noreply, socket}
@@ -82,16 +101,19 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <nav class="flex flex-wrap gap-1.5" aria-label="Main" data-testid="nav-presence">
+    <nav
+      class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+      aria-label="Main"
+      data-testid="nav-presence"
+    >
       <.nav_pill :for={entry <- @snapshot} entry={entry} current_path={@current_path} />
-      <%!-- /operator is a plain controller page, not a LiveView, so there
-           is nothing to navigate to — this one stays a full load. --%>
-      <a
-        class={pill_class()}
-        href="/operator"
-        {PresenceBar.nav_current_attrs(@current_path, "/operator")}
-      >
+      <%!-- The Operator hub: a plain controller page (full load, not live
+           navigation) carrying the collapsed operator/system routes, with
+           their presence aggregated — the one door into the operator
+           area. --%>
+      <a class={pill_class()} href="/operator" {PresenceBar.nav_current_attrs(@current_path, "/operator")}>
         Operator
+        <.chips others={@operator_others} label="Operator" />
       </a>
     </nav>
     """
@@ -146,22 +168,34 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
     """
   end
 
-  # The nav pill classes, unchanged from the design lane's root layout.
+  # The sm-density pill, per the digest's Menubar spec: FLAT at rest —
+  # the transparent border-2 RESERVES the outline's space so the hover
+  # state cannot shift layout — and hover/open is the full inversion
+  # (bg-main, black text, border turns black). No shadow, no translate:
+  # nav is chrome; only the objects below carry shadows.
   defp pill_class do
-    "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-secondary-background px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+    "inline-flex h-8 flex-none items-center justify-center gap-2 rounded-full border-2 border-transparent px-3 text-xs font-base text-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 hover:border-border hover:bg-main hover:text-main-foreground aria-current:border-border aria-current:bg-main aria-current:text-main-foreground"
   end
 
-  # The nav-wide snapshot: every nav surface topic, others only. A key is
-  # the actor's stable id, so the caller's own row (tracked by whichever
-  # surface LiveView they are on) is filtered out; nil (anonymous) matches
-  # nothing and sees everyone.
+  # The clinic snapshot: per-surface others. The operator pill's others
+  # AGGREGATE the collapsed routes' topics (deduped by key — one clinician
+  # on two operator surfaces is one chip).
   defp snapshot(actor_id) do
-    Enum.map(@entries, fn {label, path, surface_id} ->
-      others =
-        Presence.list(A2uiPresence, surface_id)
-        |> Enum.reject(&(&1.key == actor_id))
+    clinic =
+      Enum.map(@clinic_entries, fn {label, path, surface_id} ->
+        others =
+          Presence.list(A2uiPresence, surface_id)
+          |> Enum.reject(&(&1.key == actor_id))
 
-      %{label: label, path: path, others: others}
-    end)
+        %{label: label, path: path, others: others}
+      end)
+
+    operator_others =
+      @operator_entries
+      |> Enum.flat_map(fn {_path, surface_id} -> Presence.list(A2uiPresence, surface_id) end)
+      |> Enum.uniq_by(& &1.key)
+      |> Enum.reject(&(&1.key == actor_id))
+
+    {clinic, operator_others}
   end
 end

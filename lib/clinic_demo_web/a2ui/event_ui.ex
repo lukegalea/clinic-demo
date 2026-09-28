@@ -32,10 +32,14 @@ defmodule ClinicDemoWeb.A2ui.EventUI do
       read_action :read
       query :default
 
+      # The action_type carries 20+ audit values with no tone vocabulary —
+      # a badge there would be meaningless color (CLIN-10 finding #13), so
+      # it rides the meta row as metadata: white-chip reads, no fill
+      # pretending to mean something. `what` stays the title; the feed's
+      # scannability is the timeline, not the type column.
       row_layout do
         title :what
-        badge :action_type
-        meta [:record_id, :occurred_at]
+        meta [:action_type, :record_id, :user_id, :occurred_at]
         columns 2
       end
     end

@@ -396,5 +396,26 @@
         VM and telemetry metrics, PubSub and channel traffic.
       </p>
     </.card>
+    <%!-- The design system's two spec pages, dev-only (CLIN-10 finding
+         #15): the storybook covers the host HEEx components; the surface
+         gallery covers the a2ui surfaces the storybook CANNOT render
+         (shadow-DOM wire compositions, not function components). Both
+         routes compile out of test/prod, so the cards hide with them. --%>
+    <.card :if={@dev_routes} accent="cyan" href="/storybook">
+      <h3 class="font-heading">Component storybook</h3>
+      <p class="text-sm text-foreground/70">
+        The host components — badge, button, card, empty state, input,
+        palette — each with their stories. Dev-only: the route exists
+        nowhere but this machine.
+      </p>
+    </.card>
+    <.card :if={@dev_routes} accent="cyan" href="/gallery">
+      <h3 class="font-heading">Surface gallery</h3>
+      <p class="text-sm text-foreground/70">
+        Every declared surface in sequence — the honest spec page for the
+        wire compositions the storybook cannot render. One section per
+        surface, live. Dev-only.
+      </p>
+    </.card>
   </div>
 </section>

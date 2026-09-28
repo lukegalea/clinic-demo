@@ -12,8 +12,39 @@ defmodule ClinicDemoWeb.PageController do
     render(conn, :operator,
       recent_instances: recent_instances(),
       visit_machine_chart: VisitMachine.chart(),
-      active_bundle: active_guard_bundle()
+      active_bundle: active_guard_bundle(),
+      # The dev-only spec pages (storybook, surface gallery) link from the
+      # hub's Infrastructure section only where their routes exist.
+      dev_routes: Application.get_env(:clinic_demo, :dev_routes, false)
     )
+  end
+
+  # The surface gallery (dev-only route): every declared surface framed
+  # in sequence — the spec page the storybook cannot be (see
+  # PageHTML.Gallery's moduledoc). The list is the router's surface set,
+  # restated here with labels; presence-style headers carry the route and
+  # the surface_id so the page doubles as an inventory.
+  def gallery(conn, _params) do
+    surfaces = [
+      {"Board", "/", "clinic_board"},
+      {"Day", "/day", "clinic_day"},
+      {"Flight", "/flight", "clinic_flight"},
+      {"Intake", "/intake", "clinic_intake"},
+      {"Schedule", "/schedule", "clinic_schedule"},
+      {"Worklist", "/worklist", "clinic_worklist"},
+      {"Visits", "/visits", "clinic_visits"},
+      {"Patients", "/patients", "clinic_patients"},
+      {"Clinicians", "/clinicians", "clinic_clinicians"},
+      {"Processes", "/processes", "clinic_process_definitions"},
+      {"Decisions", "/decisions", "clinic_decision_definitions"},
+      {"Evidence", "/evaluations", "clinic_evaluations"},
+      {"Emergency board", "/emergencies", "clinic_emergency_board"},
+      {"Audit events", "/events", "clinic_events"},
+      {"Canvas", "/canvas", "clinic_canvas"},
+      {"Agent", "/agent", "clinic_agent"}
+    ]
+
+    render(conn, :gallery, surfaces: surfaces)
   end
 
   # The capstone slideshow: a static page (priv/static/deck/index.html,

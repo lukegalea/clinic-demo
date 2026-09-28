@@ -285,6 +285,67 @@ async function checkPage(reporter, baseUrl, pageDef, state) {
     }
   }
 
+  // CLIN-10 structural pin — the menubar is ONE line: the header's height
+  // stays the h-11 anatomy (44px + the 2px border) at the canonical 1280
+  // viewport. A wrapped bar grows past it; the pill collapse was the fix.
+  if (!pageDef.noChrome) {
+    try {
+      const bar = await page
+        .locator("header.sticky")
+        .first()
+        .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+      if (bar <= 46) {
+        reporter.pass(id("menubar-one-line"), `menubar height ${bar}px (single line)`);
+      } else {
+        reporter.fail(id("menubar-one-line"), `menubar wrapped: ${bar}px tall at 1280`);
+      }
+    } catch (error) {
+      reporter.fail(id("menubar-one-line"), describeError(error));
+    }
+  }
+
+  // CLIN-10 structural pin — surfaces carry their title: every a2ui page's
+  // first heading is the surface's own h1 (the v2 surface_title), not a
+  // table heading mislabeling the page.
+  if (pageDef.marker?.kind === "a2ui") {
+    try {
+      const title = page.locator("a2ui-surface h1").first();
+      await title.waitFor({state: "visible", timeout: 8_000});
+      const text = (await title.textContent()).trim();
+      if (text.length > 0) {
+        reporter.pass(id("surface-title"), `surface h1: "${text}"`);
+      } else {
+        reporter.fail(id("surface-title"), "surface h1 rendered empty");
+      }
+    } catch (error) {
+      reporter.fail(id("surface-title"), describeError(error));
+    }
+  }
+
+  // CLIN-10 structural pin — the badge anatomy, spot-checked wherever the
+  // page renders one: 2px border minimum on the first visible badge.
+  try {
+    const badge = await page.evaluate(() => {
+      for (const root of window.__allRoots()) {
+        for (const el of root.querySelectorAll(".a2ui-badge")) {
+          if (!window.__visible(el)) continue;
+          const cs = getComputedStyle(el);
+          return {border: parseFloat(cs.borderTopWidth), fill: cs.backgroundColor};
+        }
+      }
+      return null;
+    });
+    if (badge === null) {
+      reporter.pass(id("badge-anatomy"), "no badges on this page (skip)");
+    } else if (badge.border >= 2) {
+      reporter.pass(id("badge-anatomy"), `badge border ${badge.border}px, fill ${badge.fill}`);
+    } else {
+      reporter.fail(id("badge-anatomy"), `badge border ${badge.border}px < 2px`);
+    }
+  } catch (error) {
+    reporter.fail(id("badge-anatomy"), describeError(error));
+  }
+
   // The dead-CSS detector: every visible labeled button in app chrome and
   // framework chrome (one shadow level for a2ui hosts) must compute real
   // styling. A bare (preflight-only) or browser-default (outset border)
@@ -529,6 +590,139 @@ async function pinIntakePicker(reporter, baseUrl, page) {
   }
 }
 
+// The menubar's layout contract (CLIN-10 §4): ONE line at the canonical
+// 1280 viewport AND at a cramped 1000 — the bar never wraps, it scrolls.
+// Also pins the density (h-11 anatomy), the clinic-cluster size (sm pills,
+// h-8), and that a long Acting-as label TRUNCATES instead of wrapping the
+// bar (the pill caps at max-w-56; the aria-label keeps the full name).
+async function pinMenubarSingleLine(browser, reporter, baseUrl) {
+  const pageId = "behavior:menubar-single-line";
+  const { context, page } = await newPageWithHelpers(browser);
+  try {
+    await page.goto(`${baseUrl}/`, { waitUntil: "networkidle", timeout: 30_000 });
+    const bar = page.locator("header.sticky").first();
+    await bar.waitFor({ state: "visible", timeout: 8_000 });
+
+    const measure = () =>
+      bar.evaluate((el) => ({
+        height: Math.round(el.getBoundingClientRect().height),
+        pillCount: el.querySelectorAll('nav[aria-label="Main"] a').length,
+        minPillHeight: Math.min(
+          ...[...el.querySelectorAll('nav[aria-label="Main"] a')].map((a) =>
+            Math.round(a.getBoundingClientRect().height)
+          )
+        ),
+      }));
+
+    const wide = await measure();
+    await page.setViewportSize({ width: 1000, height: 800 });
+    await page.waitForTimeout(250);
+    const narrow = await measure();
+
+    const problems = [];
+    if (wide.height > 46) problems.push(`wrapped at 1280 (${wide.height}px)`);
+    if (narrow.height > 46) problems.push(`wrapped at 1000 (${narrow.height}px)`);
+    if (wide.pillCount > 9) problems.push(`${wide.pillCount} pills (expected ≤9 after the collapse)`);
+    if (wide.minPillHeight > 34) problems.push(`nav pills h ${wide.minPillHeight}px (sm tier is h-8)`);
+
+    // Truncation: force a long label into the pill and measure — the pill
+    // must cap (max-w-56 = 224px) while the aria-label carries the name.
+    const actingAs = page.locator('a[href="/acting-as"]').first();
+    const truncate = await actingAs.evaluate((el) => {
+      el.setAttribute("aria-label", "Acting as A Very Long Clinician Name That Would Wrap");
+      const span = el.querySelector("span") || el;
+      span.textContent = "Acting as A Very Long Clinician Name That Would Wrap";
+      return {
+        width: Math.round(el.getBoundingClientRect().width),
+        label: el.getAttribute("aria-label"),
+      };
+    });
+    const barAfter = (await measure()).height;
+    if (truncate.width > 240) problems.push(`acting-as pill ${truncate.width}px (max-w-56 not capping)`);
+    if (barAfter > 46) problems.push(`long label wrapped the bar (${barAfter}px)`);
+
+    if (problems.length === 0) {
+      reporter.pass(
+        pageId,
+        `one line at 1280 (${wide.height}px) and 1000 (${narrow.height}px); ${wide.pillCount} pills @ ${wide.minPillHeight}px; acting-as truncates at ${truncate.width}px`
+      );
+    } else {
+      reporter.fail(pageId, problems.join("; "));
+    }
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  } finally {
+    await context.close();
+  }
+}
+
+// The emergency board's sticker energy (CLIN-10 finding #12): the
+// urgent-care page renders card rows whose triage badge is a FILLED red
+// chip (not a flat caption cell) — red-dominant fill, black ink.
+async function pinEmergencyStickerEnergy(browser, reporter, baseUrl) {
+  const pageId = "behavior:emergency-sticker-energy";
+  const { context, page } = await newPageWithHelpers(browser);
+  try {
+    await page.goto(`${baseUrl}/emergencies`, { waitUntil: "networkidle", timeout: 30_000 });
+    const surface = page.locator("a2ui-surface");
+    await surface.first().waitFor({ state: "visible", timeout: 10_000 });
+    const badge = page.locator(".a2ui-badge").first();
+    await badge.waitFor({ state: "visible", timeout: 8_000 });
+    const anatomy = await badge.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      const rgb = (cs.backgroundColor.match(/\d+/g) ?? []).map(Number);
+      return {
+        border: parseFloat(cs.borderTopWidth),
+        fill: rgb.slice(0, 3),
+        color: (cs.color.match(/\d+/g) ?? []).map(Number).slice(0, 3),
+        text: el.textContent.trim(),
+      };
+    });
+    const problems = [];
+    if (anatomy.border < 2) problems.push(`border ${anatomy.border}px`);
+    if (!(anatomy.fill[0] > anatomy.fill[1])) problems.push(`fill not red (rgb(${anatomy.fill}))`);
+    if (!(anatomy.color[0] < 60 && anatomy.color[1] < 60)) problems.push(`ink not black (rgb(${anatomy.color}))`);
+    if (!/emergen/i.test(anatomy.text)) problems.push(`label ${JSON.stringify(anatomy.text)}`);
+    if (problems.length === 0) {
+      reporter.pass(
+        pageId,
+        `red sticker badge: border ${anatomy.border}px, fill rgb(${anatomy.fill}), black ink, "${anatomy.text}"`
+      );
+    } else {
+      reporter.fail(pageId, problems.join("; "));
+    }
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  } finally {
+    await context.close();
+  }
+}
+
+// The surface gallery (dev-only): one section per declared surface, each
+// framing the live route — the spec page the storybook cannot be.
+async function pinGalleryRendersSurfaces(browser, reporter, baseUrl) {
+  const pageId = "behavior:gallery-renders-surfaces";
+  const { context, page } = await newPageWithHelpers(browser);
+  try {
+    const response = await page.goto(`${baseUrl}/gallery`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    if (!response || response.status() !== 200) {
+      reporter.fail(pageId, `/gallery → ${response ? response.status() : "no response"} (dev-only route)`);
+      return;
+    }
+    const sections = await page.locator("section[id^='gallery-']").count();
+    const frames = await page.locator("iframe[loading='lazy']").count();
+    if (sections >= 14 && frames === sections) {
+      reporter.pass(pageId, `${sections} surface sections, each with its live frame`);
+    } else {
+      reporter.fail(pageId, `${sections} sections / ${frames} frames (expected ≥14 paired)`);
+    }
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  } finally {
+    await context.close();
+  }
+}
+
 // The deck (CLIN-6): the static slideshow must actually navigate with the
 // arrow keys — a deck you cannot drive is a page with screenshots on it.
 // Pins: slide 1 active on load, ArrowRight advances (data-current + the
@@ -746,6 +940,15 @@ async function main() {
     }
     if (reporter.shouldRun("behavior:operator-index-collapsed")) {
       await pinOperatorIndexCollapsed(reporter, options.baseUrl, main.page);
+    }
+    if (reporter.shouldRun("behavior:menubar-single-line")) {
+      await pinMenubarSingleLine(browser, reporter, options.baseUrl);
+    }
+    if (reporter.shouldRun("behavior:emergency-sticker-energy")) {
+      await pinEmergencyStickerEnergy(browser, reporter, options.baseUrl);
+    }
+    if (reporter.shouldRun("behavior:gallery-renders-surfaces")) {
+      await pinGalleryRendersSurfaces(browser, reporter, options.baseUrl);
     }
 
     // Cleanup of the long-lived contexts.
