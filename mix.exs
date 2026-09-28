@@ -24,7 +24,7 @@ defmodule ClinicDemo.MixProject do
 
       # The one known finding — injected by `use AshBpmn.Web.DesignerLive` —
       # is documented in the ignore file rather than suppressed inline.
-      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"]
+      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs", plt_add_apps: [:mix]]
     ]
   end
 
