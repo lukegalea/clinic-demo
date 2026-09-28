@@ -53,7 +53,7 @@ and if they do, the BPMN namespace changes too, which invalidates nothing
 
 ### 2c. Nix store hashes — parameterize or keep (8 files)
 
-- `docs/agents.md` line 62: already elided (`/nix/store/...-elixir-1.19.5`).
+- `docs/agents.md` line 62: already elided (`/nix/store/...-elixir-1.20.4`).
 - `docs/evidence/README.md` line 37 and
   `docs/evidence/bin/serena-mcp-smoke.exs` line 233: carry the full store
   hash `iqc2jyh…` of *this machine's* Elixir. Harmless (store hashes are not
@@ -101,10 +101,10 @@ mix setup && mix precommit && bin/ash-agent describe ClinicDemo.Scheduling.Appoi
 
 `mix setup` needs the environment from the README: Postgres on
 `localhost:5432` (`postgres`/`postgres`), `xmllint` on PATH
-(`libxml2`), and Elixir ≥ 1.17 reachable (`mix` on PATH or `ELIXIR_BIN_DIR`
+(`libxml2`), and Elixir 1.20 or newer on OTP 27 reachable (`mix` on PATH or `ELIXIR_BIN_DIR`
 set — both `bin/ash-agent` and `bin/serena-mcp` prepend it themselves).
 `mix precommit` is compile-with-warnings-as-errors, unused-deps check,
-format, and the 43-test suite; `bin/ash-agent describe` then proves the
+format, and the test suite; `bin/ash-agent describe` then proves the
 introspection surface answers on a stranger's machine. Expected at the end:
 `"name": "complete"` and `"accept": []` in the JSON, exit 0.
 

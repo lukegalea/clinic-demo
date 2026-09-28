@@ -59,7 +59,7 @@ If Elixir is not on your PATH — a Nix or devbox setup, typically — set
 `ELIXIR_BIN_DIR` and both scripts will prepend it:
 
 ```sh
-export ELIXIR_BIN_DIR=/nix/store/...-elixir-1.19.5/bin
+export ELIXIR_BIN_DIR=/nix/store/...-elixir-1.20.4/bin
 ```
 
 One more command, found the same way, for the work that is not agent
