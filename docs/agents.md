@@ -107,33 +107,33 @@ document store — which is every file Serena indexes without opening first. The
 result is a `FunctionClauseError` instead of a symbol list. Serena's own test
 suite carries an xfail for it.
 
-Commit `537338b` on our fork widens the API with a clause for the
-unresolvable case, returning an empty list. In the current build a file
-that was never opened is in fact answered one layer earlier, by the
-request pipeline, with a structured *document could not be loaded* error —
-ask `documentSymbol` for a URI no `didOpen` ever named and you get a
-well-formed error response while the server stays up. Either shape is
-honest LSP; what Serena must never see again is the crash. Build and
-install it:
+Upstream Expert v0.1.10 does not crash there: ask `documentSymbol` for a
+URI no `didOpen` ever named, or for a path that does not exist, and it
+answers `null` while the server stays up. (Our fork's `537338b`, proposed
+as expert-lsp/expert#903 and closed unmerged, answered the same requests
+with an empty list or a structured *document could not be loaded* error;
+evidence 04 records that build.) Either shape is honest LSP; what Serena
+must never see again is the crash. Install the release binary:
 
 ```sh
-cd ~/ast-forks/expert                       # branch fix/document-symbol-crashes
+cd "$(mktemp -d)"
+gh release download v0.1.10 -R expert-lsp/expert \
+  -p expert_linux_amd64 -p expert_checksums.txt
+grep linux_amd64 expert_checksums.txt | sha256sum -c -
 
-# deps for both apps, with the EPMD flags the justfile uses
-(cd apps/engine && elixir --erl "-start_epmd false -epmd_module Elixir.Forge.EPMD" -S mix deps.get)
-(cd apps/expert && elixir --erl "-start_epmd false -epmd_module Elixir.Forge.EPMD" -S mix deps.get)
-
-# a plain release -- no Zig, unlike the burrito default
-(cd apps/expert && MIX_ENV=prod mix release plain --overwrite)
-
-mkdir -p ~/.local/bin ~/.local/libexec
+mkdir -p ~/.local/bin
 rm -rf ~/.local/libexec/expert
-cp -a apps/expert/_build/prod/rel/plain ~/.local/libexec/expert
-ln -sf ../libexec/expert/bin/start_expert ~/.local/bin/expert
+mkdir -p ~/.local/libexec/expert/bin
+install -m 0755 expert_linux_amd64 ~/.local/libexec/expert/bin/expert
+ln -sfn ../libexec/expert/bin/expert ~/.local/bin/expert
+expert --version                            # 0.1.10
 ```
 
-That is `just install` unrolled, for a machine without `just`. Point
-`EXPERT_BIN` somewhere else if you keep it somewhere else.
+On another platform, use `darwin_arm64`, `darwin_amd64` or `linux_arm64` in
+place of `linux_amd64`. Point `EXPERT_BIN` somewhere else if you keep it
+somewhere else. Expert builds the project engine with whatever `elixir` and
+`erl` it finds on PATH; if it finds neither, it shuts the project down and
+`documentSymbol` never answers with symbols.
 
 Check it answers before you wire anything to it:
 
@@ -418,11 +418,13 @@ Verified headlessly, on this machine, 2026-09-21:
 - `bin/ash-agent` end to end — `describe`, `validate`, `search`, `context`,
   `laws`, `forbidden` — run from a directory that is not the repository root,
   each returning parseable JSON
-- the Expert binary built from `537338b`, starting under `--stdio` and
+- the Expert v0.1.10 release binary (re-verified 2026-09-29, when it
+  replaced the `537338b` fork build), starting under `--stdio` and
   answering `initialize` and `textDocument/documentSymbol` for
   `lib/clinic_demo/scheduling/appointment.ex` (`bin/expert-smoke.exs`)
 - the same binary asked for `documentSymbol` on a file no `didOpen` ever
-  named — the rc.6 crash shape — answering a structured error with the
+  named, and on a path that does not exist — the rc.6 crash shape —
+  answering `null` (`docs/evidence/bin/expert-unopened.exs`) with the
   server still up
 - `mix precommit`, green: 43 tests, no warnings-as-errors, once `xmllint`
   is on PATH
