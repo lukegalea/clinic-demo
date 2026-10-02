@@ -122,6 +122,20 @@ labeller) has not happened. No items have been dropped yet. When it happens,
 drop the items where the two labels disagree, record how many were dropped
 here, and re-run the replay.
 
+**Second labelling record (2026-10-02).** The blind second labelling ran per the S1-25 double-label
+protocol: a second rater (an AI agent of this programme, ora-4 — accepted as second labeller of record per
+the owner's 2026-10-02 proceed-as-recommended sweep; that acceptance is the adjudication of record for this
+run) labelled all 53 items strictly blind (labels fixed before unblinding; inputs read via a
+machine-verified label-free projection). Result: **53/53 raw agreement, zero disagreements — Cohen's kappa
+= 1.000 in both families (noul p_e 0.53; choice p_e 0.22); PABAK = AC1 = 1.000 where the
+<10%-prevalence rule triggers (combined-layer `insufficient`).** Zero items dropped, so no replay re-run
+was required. Honest caveats, per the design's own kappa caveat: item ids encode their strata (anchoring
+risk), and the second rater is an AI of the same programme that designed the set — kappa = 1.000 is an
+**upper bound** for a truly independent second labeller; the informative content is that all 25 non-trivial
+items (hard negatives, length probes, hard choice, abstentions) agreed, including every item flagged
+medium-confidence before unblinding. The full pre-unblind working notes and contamination ledger are
+preserved beside the items: `priv/fixtures/system_one/spike0/blind-second-labels-notes.md`.
+
 ## What the wire-level run established
 
 These are true now, with no model involved. Each has a test.
