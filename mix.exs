@@ -203,7 +203,16 @@ defmodule ClinicDemo.MixProject do
         "esbuild clinic_demo --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
+      # scripts/iron-laws.sh runs the laws judge over what this change adds and
+      # over the tree against its reviewed baseline. It sets MIX_ENV=dev for the
+      # judge itself, since ash_agent_tools is dev-only. See docs/IRON-LAWS.md.
+      precommit: [
+        "compile --warnings-as-errors",
+        "deps.unlock --unused",
+        "format",
+        "cmd scripts/iron-laws.sh",
+        "test"
+      ]
     ]
   end
 

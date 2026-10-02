@@ -162,6 +162,34 @@ jobs:
       # compiles, so its warnings surface here too.
       - run: mix compile --force --warnings-as-errors
 
+  # Blocking from the start: the full tree was judged at the review floor
+  # before this gate landed, and every hit at the `likely` floor is either
+  # fixed or accounted for in scripts/iron-laws.baseline.json. The diff mode
+  # only ever judges lines a change adds, so it can only fail a change on
+  # code that change wrote. See docs/IRON-LAWS.md.
+  iron-laws:
+    name: iron laws judge
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: dev
+    steps:
+      # Full history: the gate judges the lines added since the merge base
+      # with the PR's target (or with the commit a push started from).
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      # dev is where the dev-only `ash_agent_tools` (the judge) compiles.
+      - uses: ./.github/actions/setup-elixir
+        with:
+          mix-env: dev
+      # Its own step so the dep's compile log stays out of the gate's output.
+      - name: Compile dev-only dependencies
+        run: mix deps.compile
+      - name: Iron laws judge
+        env:
+          IRON_LAWS_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: scripts/iron-laws.sh
+
   format:
     name: mix format --check-formatted
     runs-on: ubuntu-latest

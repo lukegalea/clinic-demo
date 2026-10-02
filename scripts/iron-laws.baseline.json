@@ -1,0 +1,68 @@
+[
+  {
+    "law": "10",
+    "file": "storybook/components/badge.story.exs",
+    "text": "id: String.to_atom(status),",
+    "reason": "Compile-time constant: `status` ranges over a `~w()` sigil of developer-authored storybook variant names, not user input -- the exception the law names. Storybook stories are checked-in code."
+  },
+  {
+    "law": "10",
+    "file": "storybook/components/badge.story.exs",
+    "text": "id: String.to_atom(tone),",
+    "reason": "Compile-time constant: `tone` ranges over a `~w()` sigil of developer-authored palette names, not user input -- the exception the law names. Storybook stories are checked-in code."
+  },
+  {
+    "law": "10",
+    "file": "storybook/components/card.story.exs",
+    "text": "id: String.to_atom(accent),",
+    "reason": "Compile-time constant: `accent` ranges over a `~w()` sigil of developer-authored palette names, not user input -- the exception the law names. Storybook stories are checked-in code."
+  },
+  {
+    "law": "11",
+    "file": "lib/clinic_demo_web/live/agent_live.ex",
+    "text": "def handle_event(\"propose\", %{\"request\" => request}, socket) do",
+    "reason": "The handler only assigns and starts the async interpretation; every Ash-backed read it can trigger flows through carry_out/present, which pass the signed-in viewer as actor (`Host.present(..., actor: socket.assigns[:a2ui_actor])`). The detector only looks for Ash.can? in the file."
+  },
+  {
+    "law": "11",
+    "file": "lib/clinic_demo_web/live/canvas_live.ex",
+    "text": "def handle_event(\"canvas:select\", %{\"ref\" => ref}, socket) when is_binary(ref) do",
+    "reason": "Authorized: the only client event resolves the opaque ref through AshA2ui.Canvas.resolve/2 under the signed-in actor (socket.assigns[:a2ui_actor]); a ref the actor cannot read fails closed with {:error, :unknown_object}. The detector only looks for Ash.can? in the file."
+  },
+  {
+    "law": "11",
+    "file": "lib/clinic_demo_web/live/day_live.ex",
+    "text": "def handle_event(\"select_day\", %{\"date\" => date}, socket) do",
+    "reason": "The handler performs no Ash call: it parses an ISO date and filters the appointments already loaded into assigns at mount (load_appointments/1, the documented demo-scale one-read-per-mount)."
+  },
+  {
+    "law": "21",
+    "file": "lib/clinic_demo_web/components/core_components.ex",
+    "text": "assign_new(assigns, :checked, fn ->",
+    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
+  },
+  {
+    "law": "21",
+    "file": "lib/clinic_demo_web/components/core_components.ex",
+    "text": "assign_new(assigns, :class, fn ->",
+    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
+  },
+  {
+    "law": "21",
+    "file": "lib/clinic_demo_web/components/core_components.ex",
+    "text": "assigns = assign_new(assigns, :id, fn -> \"flash-#{assigns.kind}\" end)",
+    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
+  },
+  {
+    "law": "21",
+    "file": "lib/clinic_demo_web/components/core_components.ex",
+    "text": "|> assign_new(:name, fn -> if assigns.multiple, do: field.name <> \"[]\", else: field.name end)",
+    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
+  },
+  {
+    "law": "21",
+    "file": "lib/clinic_demo_web/components/core_components.ex",
+    "text": "|> assign_new(:value, fn -> field.value end)",
+    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
+  }
+]
