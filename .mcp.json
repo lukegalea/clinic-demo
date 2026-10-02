@@ -7,7 +7,7 @@
     "  rename_symbol, safe_delete_symbol -- over an Elixir language server.",
     "  Serena is GPL-3.0+ and is not linked, imported or vendored here; this is a",
     "  path handed to a separate published process. bin/serena-mcp starts it,",
-    "  and puts our Expert build ahead of the version Serena would download.",
+    "  and puts upstream Expert v0.1.10 ahead of the rc.6 Serena would download.",
     "  Two things it needs that are easy to miss: the project must be COMPILED",
     "  (.serena/project.yml runs `mix compile` on activation), and cross-file",
     "  answers need about ten seconds of indexing after that before they are",
