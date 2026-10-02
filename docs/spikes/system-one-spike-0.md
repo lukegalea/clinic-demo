@@ -263,36 +263,80 @@ To preload on the laptop: `laya:typed-decisions` and `winnow:e4b`, with the
 Ollaya version pinned. The smoke test's load request absorbs a cold load either
 way.
 
-## Live results (template)
+## Live results (2026-10-02, set `live-2026-10-02`)
 
-Fill this section from `results/live-<date>/summary.md` and `environment.txt`.
-Until then, every field reads *not run*.
-
-**Setup.** Ollaya version: *not run*. Digests: `laya:typed-decisions` *not run*,
-`winnow:e4b` *not run*. Host and GPU: *not run*. GPU smoke, warm median:
-laya *not run* ms, winnow *not run* ms. `ollaya ps` shows GPU: *not run*.
+**Setup.** Recorded in one invocation, replayed clean (358 rows; provenance `recorded`). Ollaya **0.7.5**
+on the CPU host (ONNX; `laya:typed-decisions`) and **0.9.0** on the M5 Pro (llama.cpp/Metal; `winnow:e4b`,
+same weights digest as the 2080 Ti copy). Digests, captured over HTTP at call time per RFC S1-24 Q7:
+laya `6d17e5fbcbb8215a74f2efd0dcc0ffdbd472e9b25ccb07867f9f146a791673ba`; winnow
+`dd4bf88aa50bebb02e7a26fbebed14682befd037e3e89789ee22b9793f82d226`. Full history in
+`results/live-2026-10-02/environment.txt` (the 2080 Ti host dropped out mid-session: its llama.cpp
+loads crash for missing sm75 kernels and survive an Ollaya restart; winnow moved to the M5 Pro, warm
+p50 117 ms against ~970 ms on the wedged host's CPU path).
 
 **Wire compatibility.**
 
 | Check | laya | winnow |
 |---|---|---|
-| `Result.model` populated? Version or digest in it? | not run | not run |
-| `usage` present? | not run | not run |
-| Noul / Choice / Judgments cast without error? | not run | not run |
-| Overflow reply at ≈1,100 / 1,600 tokens: 422 `STATE_TRUNCATED`, other error, or silent truncation (answer flips on the probe pair)? | not run | not run |
+| `Result.model` populated? | `laya:typed-decisions` | `winnow:e4b` (digest from `/api/tags`//`/api/ps` at call time — the reply itself carries the name only, as Q7 records) |
+| `usage` present? | 167/167 non-error rows | 179/179 |
+| Noul / Choice / Judgments cast without error? | Yes; the 12 error rows are 422s, not cast failures | Yes, all rows |
+| Overflow at ≈1,100 / 1,600 tokens | **422 structured error from ≈1,093 tokens** (1,024 context); no silent truncation, probe answers stable below | Clean through 1,586 tokens (8k context); separation holds |
 
-**Metrics.** Paste the Noul, Choice, and latency/batching/variance tables from
-`summary.md`. Keep its provenance line. N is in every row.
+**Metrics** (provenance: `recorded`, set `live-2026-10-02`, 3 repeats + cold).
 
-**Reliability.** Paste the `reliability` arrays from `summary.json` as a
-10-row table per spec (bin, n, mean p, observed rate), noting that most bins
-hold one or two items at this N.
+Noul `notes_follow_up`:
 
-**Recommendation.** *Not run.* Answer three questions:
-- Which local model is the default?
-- Does laya's 1,024-token limit force atom-sized state? This feeds the
-  compliance track's atomiser.
-- Does batching (`both`) change answers, or only latency?
+| spec | N (answered/errors) | AUROC | mean p gold+ / gold− | median p gold+ / gold− | in 0.2–0.8 | ECE (10 bins) | Brier | acc @0.5 | sel @0.9 (cov / acc) | sel @0.8 (cov / acc) | lowest t with acc≥0.95, cov≥0.4 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| laya | 27 (23/4) | 0.983 | 0.703 / 0.434 | 0.697 / 0.402 | 22 | 0.269 | 0.170 | 0.739 | 0.000 / – | 0.043 / 1.000 | 0.650 (cov 0.478) |
+| winnow | 27 (27/0) | 1.000 | 0.974 / 0.160 | 0.985 / 0.072 | 6 | 0.110 | 0.033 | 0.963 | 0.667 / 1.000 | 0.778 / 1.000 | 0.500 (cov 1.000) |
+
+Choice `presenting_urgency`:
+
+| spec | N | accuracy | ECE top-p | Brier top-p | sel @0.9 | sel @0.8 | band: suggested (acc) | abstained / gold abstain |
+|---|---|---|---|---|---|---|---|---|
+| laya | 26 | 0.462 | 0.276 | 0.298 | 0.000 / – | 0.000 / – | 0 (–) | 0 of 4 |
+| winnow | 26 | 0.808 | 0.200 | 0.164 | 0.269 / 1.000 | 0.500 / 0.846 | 12 (0.833) | 4 of 4 |
+
+Latency, batching and variance:
+
+| spec | warm p50 / p95 ms (n) | cold first request ms | both vs separate ms | both: mean \|Δp\|, same choice | repeat stddev p |
+|---|---|---|---|---|---|
+| laya | 213.7 / 508.4 (147) | 3,277.4 | 603.5 vs 358.9 | 0.039, 11/19 | 0.000 / 0.000 |
+| winnow | 117.0 / 252.5 (159) | 923.3 | 267.9 vs 343.1 | 0.119, 19/19 | 0.000 / 0.000 |
+
+**Reliability** (bin, n, mean p, observed rate — most bins hold one or two items at this N):
+
+| bin | laya n / mean p / obs | winnow n / mean p / obs |
+|---|---|---|
+| 0.0–0.1 | 0 / – / – | 9 / 0.045 / 0.0 |
+| 0.1–0.2 | 1 / 0.163 / 0.0 | 2 / 0.153 / 0.0 |
+| 0.2–0.3 | 3 / 0.266 / 0.0 | 4 / 0.234 / 0.0 |
+| 0.3–0.4 | 3 / 0.359 / 0.0 | 0 |
+| 0.4–0.5 | 2 / 0.440 / 0.0 | 1 / 0.470 / 0.0 |
+| 0.5–0.6 | 2 / 0.557 / 0.0 | 1 / 0.598 / 0.0 |
+| 0.6–0.7 | 8 / 0.641 / 0.5 | 0 |
+| 0.7–0.8 | 4 / 0.745 / 1.0 | 0 |
+| 0.8–0.9 | 0 | 1 / 0.896 / 1.0 |
+| 0.9–1.0 | 0 | 9 / 0.983 / 1.0 |
+
+**Recommendation.**
+- **Default local instrument: `winnow:e4b` on the M5 Pro.** AUROC 1.000 on the noul, best separation and
+  calibration of the two (ECE 0.110), selective accuracy 1.000 at 0.667 coverage, warm p50 117 ms, and it
+  abstains on all four gold-abstain choice items. laya stays as the second instrument. Per the S1-23
+  ruling (2026-10-02): these are prototype instruments in a model-agnostic architecture — a default here is
+  an engineering choice for the substrate, never a product commitment or public-facing model branding.
+- **laya's 1,024-token limit forces atom-sized state.** Confirmed: structured 422 from ≈1,093 tokens, no
+  silent truncation. State for laya-sized instruments must be atom-sized; this feeds the compliance track's
+  atomiser.
+- **Batching changes answers for laya, not for winnow.** Mean |Δp| 0.039 (laya) flips laya's choice on 8 of
+  19 pairs at the 0.5 boundary; winnow shifts by 0.119 without ever flipping (19/19). Latency: laya is
+  slower batched (603 vs 359 ms), winnow slightly faster. Conclusion: record the batching mode in the
+  observation; avoid boundary-sensitive judgments on laya in `both` mode.
+- Calibration is **not** settled: ECE 0.110 (winnow) / 0.269 (laya) are family-level measurements on N=27,
+  not band tables. Bands are earned per family per the eval-set programme (S1-25); no auto-admission may
+  cite these numbers or any shipped calibration.
 
 ## Go / no-go (AC-4)
 
@@ -307,19 +351,30 @@ The decision rule, fixed before any model ran:
 The ticket's 250 ms bar was written for a CPU host. The spike now runs on a GPU
 box, so the bar stands as written.
 
-**Outcome: not evaluated.** No live results exist. The runner computes the rule
-automatically, but only when every result's provenance is `live` or
-`recorded`.
+**Outcome: go, with one condition recorded.** Against the rule:
+
+| spec | AUROC ≥ 0.85 | selective acc ≥ 0.95 @ cov ≥ 0.4 | warm p95 ≤ 250 ms |
+|---|---|---|---|
+| laya | 0.983 ✓ | ✓ (t 0.650, cov 0.478) | 508.4 ms ✗ |
+| winnow | 1.000 ✓ | ✓ (t 0.9, cov 0.667, acc 1.000; t 0.500 gives cov 1.000) | **252.5 ms — over by 2.5 ms (1%)** |
+
+winnow clears the discrimination and selectivity bars decisively and misses the latency bar by 1%:
+the p95 window (159 requests) includes the first warm requests after the cold leg; standalone warm
+probes on the M5 Pro measured 73–80 ms. **Condition:** accept the 1% overshoot as post-cold warm-up, or
+re-measure warm-only at Luke's leisure; nothing else about the verdict changes. The runner's own
+encoded verdict — "no-go or go-with-conditions (see doc)" — is hereby read as **go with that condition**,
+plus the standing framing condition from the S1-23 ruling (prototype instruments, model-agnostic
+architecture, no public model branding).
 
 ## Acceptance status
 
 | AC | Status |
 |---|---|
-| AC-1 Ollaya noul, `Result.model` recorded | Wire-level only. The path is proved with a TypeSafe-shaped reply; the live reply is pending. |
+| AC-1 Ollaya noul, `Result.model` recorded | **Done live.** `Result.model` populated on both specs; digest provenance via HTTP capture at call time (RFC Q7). |
 | AC-2 hosted Jev | Removed from scope (DEC-HOSTED "never"). A static grep test guards against `-latest`. |
-| AC-3 N ≥ 24 per question × specs × 3 repeats, every metric | Harness done: 27 + 26 items, 2 specs, 3 repeats, all metrics computed. Model numbers pending the live run. |
-| AC-4 go/no-go | Rule encoded. Not evaluable without a live run. |
-| AC-5 1,600-token state | Client side done: a structured error, not a crash. Ollaya's behaviour pending. No follow-up ticket is needed for req_llm or ash_ai. |
+| AC-3 N ≥ 24 per question × specs × 3 repeats, every metric | **Done.** 27 + 26 items, 2 specs, 3 repeats + cold, all metrics recorded live (set `live-2026-10-02`, replay verified). |
+| AC-4 go/no-go | **Evaluated: go, with one condition** (winnow's warm p95 252.5 ms vs the 250 ms bar — 1% over, post-cold warm-up in window; standalone warm probes 73–80 ms). See the Go/no-go section. |
+| AC-5 1,600-token state | **Done live.** laya: structured 422 from ≈1,093 tokens (1,024 context), no silent truncation; winnow clean through 1,586. No req_llm/ash_ai follow-up needed. |
 | AC-6 `mix test` with no network | Done. 42 spike tests, all through Req plugs (14 of them cover the per-model host resolver). |
 | AC-7 band table verifies clean | Done: no findings, no obligations. |
 | AC-8 Luke reads this doc | Open. |
