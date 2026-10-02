@@ -33,7 +33,9 @@ defmodule ClinicDemo.SystemOneSpike.Models do
 
   | Variable | Meaning | Default |
   |---|---|---|
-  | `OLLAYA_BASE_URL` | Ollaya's base URL, **without** `/v1` (ReqLLM appends `/v1/systemone`) | none; required for `:live` and `:record` |
+  | `OLLAYA_BASE_URL` | CPU host's base URL, **without** `/v1` (ReqLLM appends `/v1/systemone`) | none; required for `:live` and `:record` |
+  | `S1_OLLAYA_GPU_BASE_URL` | GPU host's base URL, same shape as `OLLAYA_BASE_URL` | required when a run model routes to `GPU` |
+  | `S1_OLLAYA_ROUTES` | Per-model host map, comma-separated `model=CPU\\|GPU`, e.g. `nli:latest=CPU,winnow:e4b=GPU` | unset: every model uses `OLLAYA_BASE_URL` |
   | `OLLAYA_API_KEY` | Ollaya's key, if the server wants one | `"local"` |
   | `S1_SPIKE_RECEIVE_TIMEOUT_MS` | Per-request timeout. A cold load can exceed 10 s | `60000` |
 
@@ -86,26 +88,93 @@ defmodule ClinicDemo.SystemOneSpike.Models do
     {:typesafe, model_id, opts}
   end
 
-  @doc "Whether the environment names a live Ollaya."
-  def live_configured?, do: present?(System.get_env("OLLAYA_BASE_URL"))
+  @doc "Whether every spec resolves to a base URL for live calls."
+  def live_configured? do
+    @specs
+    |> Map.values()
+    |> Enum.all?(&match?({:ok, _}, resolve_base_url(&1)))
+  end
 
-  @doc "Ollaya's base URL, or an error naming the missing variable."
-  def ollaya_base_url do
-    case System.get_env("OLLAYA_BASE_URL") do
-      url when is_binary(url) and url != "" -> {:ok, url |> String.trim_trailing("/")}
-      _ -> {:error, "OLLAYA_BASE_URL is not set; source ~/.config/system-one/endpoints.env"}
+  @doc """
+  Ollaya's base URL for a model id, with any trailing `/` trimmed.
+
+  When `S1_OLLAYA_ROUTES` is set (comma-separated `model=CPU|GPU` entries), the
+  model's entry picks the host: `GPU` reads `S1_OLLAYA_GPU_BASE_URL`, `CPU`
+  reads `OLLAYA_BASE_URL`. When the variable is unset, every model uses
+  `OLLAYA_BASE_URL` — the single-host behaviour replay, stub and CI rely on.
+
+  Raises, naming the model and the variable, when the routes are set but name
+  no host for the model, or when the host it routes to is not set: a result
+  file must never lie about which host answered.
+  """
+  def ollaya_base_url(model_id) do
+    case resolve_base_url(model_id) do
+      {:ok, url} -> url
+      {:error, message} -> raise ArgumentError, message
     end
   end
 
-  defp put_transport(opts, :live, _model_id, _tag), do: put_live_base_url(opts)
+  defp resolve_base_url(model_id) do
+    case System.get_env("S1_OLLAYA_ROUTES") do
+      routes when is_binary(routes) and routes != "" ->
+        case route_target(routes, model_id) do
+          {:ok, "CPU"} ->
+            host_url("OLLAYA_BASE_URL")
+
+          {:ok, "GPU"} ->
+            host_url("S1_OLLAYA_GPU_BASE_URL")
+
+          {:ok, other} ->
+            {:error,
+             "S1_OLLAYA_ROUTES routes #{model_id} to #{inspect(other)}; expected CPU or GPU"}
+
+          :missing ->
+            {:error,
+             "S1_OLLAYA_ROUTES is set but has no entry for #{model_id}; " <>
+               "add #{model_id}=CPU or #{model_id}=GPU"}
+        end
+
+      _ ->
+        host_url("OLLAYA_BASE_URL")
+    end
+  end
+
+  # `nli:latest=CPU,winnow:e4b=GPU` for a model id becomes `{:ok, "CPU"}` or
+  # `:missing`. Entries for other models are ignored.
+  defp route_target(routes, model_id) do
+    routes
+    |> String.split(",", trim: true)
+    |> Enum.find_value(:missing, &entry_target(&1, model_id))
+  end
+
+  # `nli:latest=CPU` matches a model id, or it does not. Malformed entries
+  # yield nil, which the find_value default turns into `:missing`.
+  defp entry_target(entry, model_id) do
+    case String.split(String.trim(entry), "=", parts: 2) do
+      [model, target] when model != "" and target != "" ->
+        if String.trim(model) == model_id, do: {:ok, String.upcase(String.trim(target))}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp host_url(var) do
+    case System.get_env(var) do
+      url when is_binary(url) and url != "" -> {:ok, String.trim_trailing(url, "/")}
+      _ -> {:error, "#{var} is not set; source ~/.config/system-one/endpoints.env"}
+    end
+  end
+
+  defp put_transport(opts, :live, model_id, _tag), do: put_live_base_url(opts, model_id)
 
   defp put_transport(opts, {:record, set}, model_id, tag) do
-    {:ok, upstream} = ollaya_base_url()
-
     opts
     |> Keyword.put(:base_url, Transport.placeholder_base_url())
     |> Keyword.put(:req_http_options,
-      plug: {Transport, mode: :record, set: set, upstream: upstream, model: model_id, tag: tag}
+      plug:
+        {Transport,
+         mode: :record, set: set, upstream: ollaya_base_url(model_id), model: model_id, tag: tag}
     )
   end
 
@@ -140,11 +209,8 @@ defmodule ClinicDemo.SystemOneSpike.Models do
     |> Keyword.put(:req_http_options, plug: plug)
   end
 
-  defp put_live_base_url(opts) do
-    case ollaya_base_url() do
-      {:ok, url} -> Keyword.put(opts, :base_url, url)
-      {:error, message} -> raise ArgumentError, message
-    end
+  defp put_live_base_url(opts, model_id) do
+    Keyword.put(opts, :base_url, ollaya_base_url(model_id))
   end
 
   defp receive_timeout do
@@ -153,8 +219,6 @@ defmodule ClinicDemo.SystemOneSpike.Models do
       _ -> 60_000
     end
   end
-
-  defp present?(value), do: is_binary(value) and String.trim(value) != ""
 
   defp env(name, default) do
     case System.get_env(name) do

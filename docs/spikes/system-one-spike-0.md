@@ -47,7 +47,7 @@ The ticket was re-scoped twice on 2026-09-28. This spike follows the latest:
 | Labelled items (53) and their generator | `priv/fixtures/system_one/spike0/items.jsonl`, `build_items.exs` |
 | Committed stub replay set | `priv/fixtures/system_one/spike0/replay/stub.jsonl` |
 | Live-run script | `scripts/spike0-live.sh` |
-| Tests (28, no network) | `test/clinic_demo/system_one_spike/` |
+| Tests (42, no network) | `test/clinic_demo/system_one_spike/` |
 
 The three actions:
 
@@ -185,6 +185,27 @@ winnow). The numbers are in `results/stub/summary.md`. **They are not model
 results.** Latency is zero by construction, and the stub's naive keyword rules
 fail every hard choice item.
 
+## Host routing (2026-10-02)
+
+The dev zone now has two Ollaya hosts, and the spike routes per model:
+`S1_OLLAYA_ROUTES` in the endpoints file maps each model id to `CPU` or `GPU`;
+`CPU` reads `OLLAYA_BASE_URL`, `GPU` reads `S1_OLLAYA_GPU_BASE_URL`. With the
+routes variable unset, every model still uses `OLLAYA_BASE_URL`, so replay,
+stub and CI behave exactly as before. `Models.ollaya_base_url/1` fails loud
+when the routes are set but name no host for a model, or the named host is not
+set — a result file must never lie about which host answered — and the live
+script's smoke test, HTTP provenance capture and unload command all resolve
+the same routes.
+
+Standing rules for any future image work (recorded here, not implemented):
+
+- Images go to `decider:2b-vision` (`S1_OLLAYA_VISION_MODEL`) on the GPU host,
+  as **region crops of ≤ 0.5 MP** (`S1_OLLAYA_VISION_MAX_PIXELS`). A crop is
+  more decisive than a shrunken page, and ≥ 0.8 MP OOMs the 2080 Ti.
+- Image embeddings only via llama.cpp `multimodal_data`, with the server's
+  `media_marker` from `GET /props` (`S1_EMBED_IMAGE_MODE`). The legacy
+  `image_data` form silently ignores the image.
+
 ## Live run
 
 When `~/.config/system-one/endpoints.env` exists:
@@ -198,20 +219,26 @@ OLLAYA_SSH=luke@<laptop> scripts/spike0-live.sh
 
 The endpoints file needs `OLLAYA_BASE_URL` (for example
 `http://<laptop>:11435`, with or without `/v1`) and, if the server wants one,
-`OLLAYA_API_KEY`. The script also accepts `OLLAYA_URL`. It never prints either
-value.
+`OLLAYA_API_KEY`. When the run's models live on two hosts, it also needs
+`S1_OLLAYA_GPU_BASE_URL` and the `S1_OLLAYA_ROUTES` map. The script also
+accepts `OLLAYA_URL`. It never prints any of these values.
 
 What the script does:
 
-1. Captures `ollaya --version` and `ollaya show <model>` (digests) over ssh into
-   `results/live-<date>/environment.txt`. Without `OLLAYA_SSH`, it records that
-   they were not captured.
-2. **GPU smoke test.** It sends one load request per model, then five warm
-   one-question requests. If the warm median is over `S1_GPU_MAX_MS` (default
-   400 ms), it suspects a silent CPU fallback and stops before recording. It
-   saves `ollaya ps` for the record. `FORCE=1` records anyway.
+1. Captures each host's Ollaya version over HTTP (`/api/version`, degrading to
+   "not reported") and every run model's digest and `size_vram` from
+   `/api/tags` and `/api/ps`, into `results/live-<date>/environment.txt`.
+   With `OLLAYA_SSH` set it also records `ollaya show` output over ssh. URLs
+   and keys are never written.
+2. **GPU smoke test.** It sends one load request per model — to the host its
+   route names — then five warm one-question requests. If the warm median is
+   over `S1_GPU_MAX_MS` (default 400 ms), it suspects a silent CPU fallback
+   and stops before recording. It saves `ollaya ps` for the record when
+   `OLLAYA_SSH` is set. `FORCE=1` records anyway.
 3. Records every item, 3 repeats, with one cold request per model first. The
-   unload command is `ssh $OLLAYA_SSH ollaya stop {model}`.
+   unload command is `ssh $OLLAYA_SSH ollaya stop {model}`, or, without ssh,
+   a curl `keep_alive: 0` POST to `/api/generate` on the model's own host.
+   A failed unload is a warning, never fatal.
 4. Replays the recording with no network, into `results/live-<date>-replay/`.
    The two summaries must match.
 
@@ -279,7 +306,7 @@ automatically, but only when every result's provenance is `live` or
 | AC-3 N ≥ 24 per question × specs × 3 repeats, every metric | Harness done: 27 + 26 items, 2 specs, 3 repeats, all metrics computed. Model numbers pending the live run. |
 | AC-4 go/no-go | Rule encoded. Not evaluable without a live run. |
 | AC-5 1,600-token state | Client side done: a structured error, not a crash. Ollaya's behaviour pending. No follow-up ticket is needed for req_llm or ash_ai. |
-| AC-6 `mix test` with no network | Done. 28 spike tests, all through Req plugs. |
+| AC-6 `mix test` with no network | Done. 42 spike tests, all through Req plugs (14 of them cover the per-model host resolver). |
 | AC-7 band table verifies clean | Done: no findings, no obligations. |
 | AC-8 Luke reads this doc | Open. |
 
@@ -292,7 +319,7 @@ On `spike/system-one-0`:
   files.
 - `mix dialyzer` passes after adding `:mix` to the PLT (`plt_add_apps: [:mix]`,
   the same one-line change CLIN-34 made).
-- The spike tests (28) pass.
+- The spike tests (42) pass.
 - The full suite has the 13 compliance failures, and `mix ash.codegen --check`
   reports the 20 pending ash_compliance and engine snapshot files. Both are
   pre-existing on `main`. None touch spike code, and the spike resource has no
