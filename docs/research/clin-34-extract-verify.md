@@ -94,8 +94,14 @@ record time — model NAME and sha256 DIGEST per involved Ollaya host (the CPU h
 serving winnow) and Splash — from `/api/tags`, `/api/ps` and `/api/version`, with no URLs or keys. The committed
 results JSON is the offline replay regeneration (`"mode": "replay"`, identical metrics; replay carries the
 recorded latencies and token counts in the fixtures). The record-mode copy of the summary, which held the digest
-record, was overwritten by that replay; the digests were not reproduced here and should be re-pinned at the next
-live run.
+record, was overwritten by that replay; the digests are restored below from the same-day, same-host capture in
+the spike-0 run (S1-21, `results/live-2026-10-02/environment.txt` on `spike/system-one-0`):
+
+- Ollaya `0.7.5` on both hosts.
+- `laya:typed-decisions` (CPU host): sha256 `6d17e5fbcbb8215a74f2efd0dcc0ffdbd472e9b25ccb07867f9f146a791673ba`.
+- `winnow:e4b` (GPU host): sha256 `dd4bf88aa50bebb02e7a26fbebed14682befd037e3e89789ee22b9793f82d226`.
+- Splash served `incoai/Qwen3.8-27B-Splash` (the model label is part of the fixture key; replay requires
+  `S1_GEN_MODEL=incoai/Qwen3.8-27B-Splash`).
 
 ### Does the constraint tax exist?
 
