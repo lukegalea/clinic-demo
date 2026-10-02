@@ -206,6 +206,20 @@ Standing rules for any future image work (recorded here, not implemented):
   `media_marker` from `GET /props` (`S1_EMBED_IMAGE_MODE`). The legacy
   `image_data` form silently ignores the image.
 
+**GPU-host llama.cpp first-load flakiness (2026-10-02).** On the GPU host,
+`winnow:e4b` (and `jevk5:latest`) can fail their FIRST load after idle with a
+ggml-cuda crash at load (HTTP 500 `MODEL_LOAD_FAILED`) instead of falling back
+to CPU. Once any llama.cpp model has initialized on that host, subsequent
+loads of `winnow:e4b` succeed and run warm at ≈1.0 s. Measured: first-load
+failure twice from idle; then success after a derived CPU manifest
+(`winnow-cpu:e4b`, created via `POST /api/create`
+`{"model":"winnow-cpu:e4b","from":"winnow:e4b"}`, reusing the same weights
+layer sha256 `840e3f50…` pinned in the licence audit) initialized the
+backend; `winnow:e4b` itself then loaded normally. `jevk5:latest` remained
+load-broken on this host. Practical guidance: warm winnow once before
+trusting a smoke gate; a failed cold row (`cold_ok=false`) may be this
+flakiness, not the spike.
+
 ## Live run
 
 When `~/.config/system-one/endpoints.env` exists:
@@ -237,7 +251,7 @@ What the script does:
    `OLLAYA_SSH` is set. `FORCE=1` records anyway.
 3. Records every item, 3 repeats, with one cold request per model first. The
    unload command is `ssh $OLLAYA_SSH ollaya stop {model}`, or, without ssh,
-   a curl `keep_alive: 0` POST to `/api/generate` on the model's own host.
+   a curl `keep_alive: 0` POST to `/api/decide` on the model's own host.
    A failed unload is a warning, never fatal.
 4. Replays the recording with no network, into `results/live-<date>-replay/`.
    The two summaries must match.

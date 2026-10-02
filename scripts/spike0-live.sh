@@ -184,7 +184,7 @@ else
   unload_cmd+=' -H "authorization: Bearer ${OLLAYA_API_KEY:-local}"'
   unload_cmd+=' -H "content-type: application/json"'
   unload_cmd+=' -d '\''{"model":"{model}","keep_alive":0}'\'''
-  unload_cmd+=' "$b/api/generate" >/dev/null'
+  unload_cmd+=' "$b/api/decide" >/dev/null'
   export S1_OLLAYA_UNLOAD_CMD="$unload_cmd"
 fi
 
