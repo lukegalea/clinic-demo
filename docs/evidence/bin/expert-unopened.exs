@@ -3,8 +3,8 @@
 # The rc.6 release Serena would download crashes with a FunctionClauseError in
 # Expert.EngineApi.document_symbols/2 when asked for the symbols of a document
 # it cannot resolve -- which is every file Serena indexes without opening
-# first; its own test suite carries an xfail for it. The fork this repository
-# installs (commit 537338b) answers honestly instead. This script is the
+# first; its own test suite carries an xfail for it. The upstream v0.1.10
+# release this repository installs answers honestly instead. This script is the
 # proof, in the order that makes it honest:
 #
 #   1. initialize, initialized, then `didOpen` one file and poll

@@ -390,9 +390,9 @@ there is an `update :complete do` block, which is data in a DSL that the
 compiler turns into introspectable state. A language server reads Elixir; it
 does not read Ash.
 
-Serena's Elixir backend *is* Expert, so this repository drives it with a build
-of the fork carrying the `documentSymbol` crash fix rather than the release
-Serena would download. Two things that look like hangs and are not: Serena
+Serena's Elixir backend *is* Expert, so this repository drives it with the
+upstream v0.1.10 release, which no longer has the `documentSymbol` crash,
+rather than the rc.6 Serena would download. Two things that look like hangs and are not: Serena
 answers from `_build`, so the project must be compiled first, and cross-file
 answers need about ten seconds of indexing after that.
 
@@ -1008,7 +1008,7 @@ docs/agents.md                     the two-server agent wiring, and its waits
 docs/evidence/                     captured transcripts for every claim above
 bin/ash-agent                      ash_agent_tools as one command
 mix ash_agent.serve                ash_agent_tools as an MCP daemon, port 4100
-bin/serena-mcp                     Serena, pointed at our Expert build
+bin/serena-mcp                     Serena, pointed at upstream Expert v0.1.10
 bin/expert-smoke.exs               a hand-written LSP conversation, to prove it
 .mcp.json .serena/project.yml      the wiring itself, for Claude Code and Serena
 opencode.json

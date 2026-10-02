@@ -66,8 +66,8 @@ and if they do, the BPMN namespace changes too, which invalidates nothing
 
 ### 2d. Reviewed and fine as-is
 
-- `~/ast-forks/expert`, `~/.local/bin`, `~/.local/libexec` in
-  `bin/serena-mcp` and `docs/agents.md` — build instructions, no username.
+- `~/.local/bin`, `~/.local/libexec` in `bin/serena-mcp` and
+  `docs/agents.md` — install instructions, no username.
 - `.claude/settings.json`, `.serena/project.yml`, `.mcp.json`,
   `opencode.json` — no absolute personal paths (the `.mcp.json` uses
   `${CLAUDE_PROJECT_DIR:-.}`).

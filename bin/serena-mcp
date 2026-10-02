@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Serena's MCP server, pointed at our Expert build.
+# Serena's MCP server, pointed at the upstream Expert v0.1.10 release.
 #
 # Serena (oraios/serena) is GPL-3.0+. Nothing in this repository links to it,
 # imports it or vendors it: this script starts the published tool as a separate
@@ -18,12 +18,12 @@
 # through a directory containing nothing but `expert` so that no other command
 # is shadowed.
 #
-# Why our build and not the pinned release: v0.1.0-rc.6 crashes with a
+# Why v0.1.10 and not the pinned release: v0.1.0-rc.6 crashes with a
 # FunctionClauseError in Expert.EngineApi.document_symbols/2 when the
 # documentSymbol handler cannot resolve the document -- which is every file
 # Serena indexes without opening first. Serena's own test suite carries an
-# xfail for it. The fix is commit 537338b of our fork, which returns an empty
-# symbol list instead of crashing.
+# xfail for it. The upstream v0.1.10 release binary answers those requests
+# with null and stays up, so no fork build is needed (docs/agents.md).
 #
 # Environment:
 #   EXPERT_BIN        the Expert executable (default: ~/.local/bin/expert)
@@ -47,13 +47,17 @@ if [ ! -x "$EXPERT_BIN" ]; then
   cat >&2 <<MSG
 serena-mcp: no Expert binary at $EXPERT_BIN
 
-Build it from the fork that carries the documentSymbol fix:
+Install the upstream Expert v0.1.10 release binary (Linux x86-64 shown;
+use darwin_arm64, darwin_amd64 or linux_arm64 elsewhere):
 
-  cd ~/ast-forks/expert
-  MIX_ENV=prod mix release plain --overwrite   # in apps/expert, after deps.get
-  mkdir -p ~/.local/bin ~/.local/libexec
-  cp -a apps/expert/_build/prod/rel/plain ~/.local/libexec/expert
-  ln -sf ../libexec/expert/bin/start_expert ~/.local/bin/expert
+  cd "\$(mktemp -d)"
+  gh release download v0.1.10 -R expert-lsp/expert \\
+    -p expert_linux_amd64 -p expert_checksums.txt
+  grep linux_amd64 expert_checksums.txt | sha256sum -c -
+  mkdir -p ~/.local/bin ~/.local/libexec/expert/bin
+  install -m 0755 expert_linux_amd64 ~/.local/libexec/expert/bin/expert
+  ln -sfn ../libexec/expert/bin/expert ~/.local/bin/expert
+  expert --version    # 0.1.10
 
 or set EXPERT_BIN to one you already have. See docs/agents.md.
 MSG
