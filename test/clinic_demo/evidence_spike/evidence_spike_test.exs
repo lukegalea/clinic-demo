@@ -166,6 +166,22 @@ defmodule ClinicDemo.EvidenceSpikeTest do
       end
     end
 
+    defp completion_reply do
+      %{
+        "id" => "x",
+        "object" => "chat.completion",
+        "created" => 0,
+        "model" => "qwen3.8-27b",
+        "choices" => [
+          %{
+            "index" => 0,
+            "finish_reason" => "stop",
+            "message" => %{"role" => "assistant", "content" => ~s({"result":{}})}
+          }
+        ]
+      }
+    end
+
     test "the per-call enum reaches an OpenAI-compatible server as a json_schema response format" do
       mode(:live, "wire-test")
 
@@ -214,6 +230,40 @@ defmodule ClinicDemo.EvidenceSpikeTest do
       assert_received {:request, "http://ollaya.invalid:11435/v1/systemone", _body}
     end
 
+    test "S1_GEN_REASONING_EFFORT reaches the wire as reasoning_effort" do
+      mode(:live, "wire-test")
+      System.put_env("S1_GEN_REASONING_EFFORT", "none")
+
+      on_exit(fn -> System.delete_env("S1_GEN_REASONING_EFFORT") end)
+
+      _ =
+        Wire.generate_object(
+          Models.extractor(),
+          Extractor.messages([%{id: "a01", text: "x"}]),
+          Extractor.enum_schema(["a01", "a02"]),
+          req_http_options: [adapter: capture(completion_reply())]
+        )
+
+      assert_received {:request, "http://gen.invalid:8080/v1/chat/completions", body}
+      assert JSON.decode!(body)["reasoning_effort"] == "none"
+    end
+
+    test "an unset S1_GEN_REASONING_EFFORT sends no reasoning_effort" do
+      mode(:live, "wire-test")
+      System.delete_env("S1_GEN_REASONING_EFFORT")
+
+      _ =
+        Wire.generate_object(
+          Models.extractor(),
+          Extractor.messages([%{id: "a01", text: "x"}]),
+          Extractor.enum_schema(["a01", "a02"]),
+          req_http_options: [adapter: capture(completion_reply())]
+        )
+
+      assert_received {:request, "http://gen.invalid:8080/v1/chat/completions", body}
+      refute Map.has_key?(JSON.decode!(body), "reasoning_effort")
+    end
+
     test "replay reports a miss instead of answering" do
       mode(:replay, "no-such-set")
 
@@ -229,6 +279,101 @@ defmodule ClinicDemo.EvidenceSpikeTest do
       refute body =~ "base_url"
       refute body =~ "api_key"
       refute body =~ "test-key-not-real"
+    end
+  end
+
+  describe "the extractor's reasoning effort" do
+    test "a value outside the allow-list fails loud" do
+      System.put_env("S1_GEN_REASONING_EFFORT", "sometimes")
+
+      on_exit(fn -> System.delete_env("S1_GEN_REASONING_EFFORT") end)
+
+      assert_raise ArgumentError, ~r/S1_GEN_REASONING_EFFORT/, fn -> Models.extractor() end
+    end
+  end
+
+  describe "per-model host routing (S1_OLLAYA_ROUTES)" do
+    setup do
+      System.put_env("OLLAYA_BASE_URL", "http://ollaya.invalid:11435")
+
+      on_exit(fn ->
+        Enum.each(
+          ~w(OLLAYA_BASE_URL S1_OLLAYA_ROUTES S1_OLLAYA_GPU_BASE_URL),
+          &System.delete_env/1
+        )
+      end)
+
+      :ok
+    end
+
+    test "with the routes variable unset, every verifier stays on OLLAYA_BASE_URL" do
+      System.delete_env("S1_OLLAYA_ROUTES")
+
+      assert {:typesafe, "winnow:e4b", opts} = Models.verifier("winnow:e4b")
+      assert opts[:base_url] == "http://ollaya.invalid:11435"
+    end
+
+    test "with no host URLs at all (stub and CI), a verifier still builds, unrouted" do
+      System.delete_env("S1_OLLAYA_ROUTES")
+      System.delete_env("OLLAYA_BASE_URL")
+
+      assert {:typesafe, "laya:typed-decisions", opts} = Models.verifier("laya:typed-decisions")
+      refute Keyword.has_key?(opts, :base_url)
+    end
+
+    test "a GPU-routed verifier goes to S1_OLLAYA_GPU_BASE_URL, a CPU-routed one to OLLAYA_BASE_URL" do
+      System.put_env("S1_OLLAYA_ROUTES", "laya:typed-decisions=CPU, winnow:e4b=GPU")
+      System.put_env("S1_OLLAYA_GPU_BASE_URL", "http://gpu.invalid:11435")
+
+      assert {:typesafe, "winnow:e4b", opts} = Models.verifier("winnow:e4b")
+      assert opts[:base_url] == "http://gpu.invalid:11435"
+
+      assert {:typesafe, "laya:typed-decisions", laya} = Models.verifier("laya:typed-decisions")
+      assert laya[:base_url] == "http://ollaya.invalid:11435"
+    end
+
+    test "routing never changes the fixture label" do
+      System.put_env("S1_OLLAYA_ROUTES", "winnow:e4b=GPU")
+      System.put_env("S1_OLLAYA_GPU_BASE_URL", "http://gpu.invalid:11435")
+
+      assert Wire.model_label(Models.verifier("winnow:e4b")) == "typesafe:winnow:e4b"
+    end
+
+    test "the routes variable set without an entry for the model fails loud" do
+      System.put_env("S1_OLLAYA_ROUTES", "winnow:e4b=GPU")
+      System.put_env("S1_OLLAYA_GPU_BASE_URL", "http://gpu.invalid:11435")
+
+      assert_raise ArgumentError,
+                   ~r/S1_OLLAYA_ROUTES is set but has no entry for laya:typed-decisions/,
+                   fn ->
+                     Models.verifier("laya:typed-decisions")
+                   end
+    end
+
+    test "a GPU route without S1_OLLAYA_GPU_BASE_URL fails loud" do
+      System.put_env("S1_OLLAYA_ROUTES", "winnow:e4b=GPU")
+      System.delete_env("S1_OLLAYA_GPU_BASE_URL")
+
+      assert_raise ArgumentError, ~r/S1_OLLAYA_GPU_BASE_URL/, fn ->
+        Models.verifier("winnow:e4b")
+      end
+    end
+
+    test "a malformed route entry fails loud" do
+      System.put_env("S1_OLLAYA_ROUTES", "winnow:e4b@GPU")
+
+      assert_raise ArgumentError, ~r/not model=CPU or model=GPU/, fn ->
+        Models.verifier("winnow:e4b")
+      end
+    end
+
+    test "a route host other than CPU or GPU fails loud" do
+      System.put_env("S1_OLLAYA_ROUTES", "winnow:e4b=TPU")
+      System.put_env("S1_OLLAYA_GPU_BASE_URL", "http://gpu.invalid:11435")
+
+      assert_raise ArgumentError, ~r/must be CPU or GPU/, fn ->
+        Models.verifier("winnow:e4b")
+      end
     end
   end
 end

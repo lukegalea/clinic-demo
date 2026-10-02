@@ -61,9 +61,9 @@ defmodule ClinicDemo.EvidenceSpike.Wire do
 
   # Options ReqLLM reads only from the call, not from a tuple spec's defaults:
   # for generate_object it warns and drops `:api_key`, and it reads
-  # `:openai_structured_output_mode` only as a top-level call option. Moving
-  # them into the call options works for both operations.
-  @call_opts [:api_key, :openai_structured_output_mode]
+  # `:openai_structured_output_mode` and `:reasoning_effort` only as top-level
+  # call options. Moving them into the call options works for both operations.
+  @call_opts [:api_key, :openai_structured_output_mode, :reasoning_effort]
 
   defp lift_call_opts({provider, id, tuple_opts}, opts) do
     {lifted, rest} = Keyword.split(tuple_opts, @call_opts)

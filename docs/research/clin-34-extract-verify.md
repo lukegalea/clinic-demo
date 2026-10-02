@@ -120,6 +120,38 @@ The smoke gate is a throughput gate, not a device probe:
 
 A silent CPU fallback fails the gate. The gate cannot tell which GPU ran the model, so also confirm on the boxes.
 
+## Host routing (2026-10-02)
+
+The single-host assumption above is out of date. Following the endpoints probe of 2026-09-29, the dev zone routes
+per model (`S1_OLLAYA_ROUTES`, comma-separated `model=CPU|GPU` in `endpoints.env`):
+
+- **CPU host (`OLLAYA_BASE_URL`):** the small ONNX encoders — nli, gliclass, laya, von, kev, decision, qwen3guard.
+  `laya:typed-decisions` (the first verifier) stays here.
+- **GPU host (`S1_OLLAYA_GPU_BASE_URL`):** the vision decider, alone on the GPU; `winnow:e4b` and `jevk5` run on
+  **its CPU**, because only that host has llama.cpp (warm: 1.4–2.2 s and about 2 s). Its CUDA path fails for this
+  card's architecture.
+
+`Models.verifier/1` resolves the route per model; with `S1_OLLAYA_ROUTES` unset everything stays on
+`OLLAYA_BASE_URL`, so replay, stub and CI are unaffected. The `MAX_WINNOW_MS=2500` smoke gate still holds: it
+passes the GPU host's CPU placement (1.4–2.2 s) and fails a true CPU fallback.
+
+**Splash must not reason for this spike.** It reasons by default and reasoning tokens count against `max_tokens`,
+which starves the structured output. Set `S1_GEN_REASONING_EFFORT=none` in `endpoints.env`; `Models.extractor/0`
+sends it as ReqLLM's native `reasoning_effort` call option and the server reports 0 reasoning tokens. The other
+disable spellings (`chat_template_kwargs.enable_thinking=false`, `think:false`, `reasoning.enabled=false`,
+`/no_think`, `thinking.type=disabled`) are all ignored by Splash.
+
+**Standing rules for future image work** (from the same probe; recorded here so they are not re-derived — not yet
+implemented in this spike):
+
+- Images go to `decider:2b-vision` as **region crops of at most 0.5 MP**. Larger images (0.8 MP or more) fail with
+  an ONNX Runtime out-of-memory error, and a crop is more decisive than a shrunken page (0.034 against 0.219 on the
+  limits question). The decider must be the sole model on the GPU, or it silently falls back to CPU (201 s cold).
+- Image embeddings go only through llama.cpp `multimodal_data` with the server's `media_marker` read from
+  `GET /props` (the marker is randomised per server; the generic `<__media__>` fails to tokenize). **Never** the
+  legacy `image_data` form: it returns a vector but silently ignores the image — every image gets the identical
+  vector, equal to the embedding of the literal marker text.
+
 ## Still open
 
 - **The numbers.** Exact match, cast failures, fabricated citations with and without the enum, verifier agreement and
