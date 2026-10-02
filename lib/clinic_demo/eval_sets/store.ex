@@ -44,6 +44,40 @@ defmodule ClinicDemo.EvalSets.Store do
   def default_second_labeller, do: @default_second_labeller
 
   @doc """
+  Set identity per design §1: `eval_set_hash` — SHA-256 over the canonical
+  JSON of the set's rows. Canonical form (the design says "canonical JSON",
+  no more): rows sorted by `id`, each row's keys sorted, no whitespace,
+  joined by newlines — so row order and map key order never move the hash,
+  and any label change (a filled `second_label`, an adjudication) does. The
+  hex digest is what calibration runs record as the set they consumed.
+  """
+  def eval_set_hash(items) when is_list(items) do
+    items
+    |> Enum.sort_by(& &1["id"])
+    |> Enum.map_join("\n", &canonical_json/1)
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
+  end
+
+  @doc "The directory holding set `name`'s files (items, splits companion)."
+  def set_dir(name), do: Path.join([File.cwd!(), @set_root, name])
+
+  # Minimal canonical JSON: sorted object keys, no whitespace. Rows carry
+  # string keys, integers, booleans, nulls and strings only; the canonical
+  # form leans on JSON.encode! for leaf encoding.
+  defp canonical_json(%{} = value) do
+    value
+    |> Enum.sort_by(fn {k, _} -> to_string(k) end)
+    |> Enum.map_join(",", fn {k, v} -> JSON.encode!(to_string(k)) <> ":" <> canonical_json(v) end)
+    |> then(&("{" <> &1 <> "}"))
+  end
+
+  defp canonical_json(values) when is_list(values),
+    do: "[" <> Enum.map_join(values, ",", &canonical_json/1) <> "]"
+
+  defp canonical_json(value), do: JSON.encode!(value)
+
+  @doc """
   Loads set `name` from `priv/fixtures/system_one/<name>/items.jsonl`, or an
   explicit path to a `.jsonl`. Returns the items plus provenance.
   """

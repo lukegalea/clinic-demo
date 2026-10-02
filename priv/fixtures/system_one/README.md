@@ -55,4 +55,30 @@ items.jsonl carries the filled second labels applied after the blind round.
 Do not regenerate a labelled set's items.jsonl from its generator — treat the
 generator as provenance, not as the store.
 
+## Splits (design §6)
+
+Four splits — `optimise`, `calibration`, `test`, `audit` — assigned at
+ingestion, before any model or optimiser sees a row. The assignment is a pure
+function of `(salt, eval_set_hash, ids)`: within each family, rows are
+ordered by `SHA-256(salt : eval_set_hash : id)` and cut at the proportion
+boundaries (default `optimise 0.2 / calibration 0.6 / test 0.2`; the design
+requires proportions be reported, not fixes them — the default is recorded
+with every assignment). A label change is a new `eval_set_hash` and a fresh
+assignment; every older version's assignment stays reproducible from its
+recorded salt and hash. Moving a row between splits is prohibited.
+
+The assignment lives beside the items, never inside them:
+`splits.json` per set, recording `eval_set_hash`, `salt`, `proportions` and
+the per-row assignment. Rows may carry an explicit `"split"` field (how §5's
+production-audit rows arrive) and the draw honours it verbatim — `audit` has
+no ingestion share.
+
+    mix clinic_demo.eval_sets.splits spike0            # report hash + counts
+    mix clinic_demo.eval_sets.splits --write spike0    # pin the companion
+    mix clinic_demo.eval_sets.splits --check spike0    # verify (exit 1 on drift)
+
+`eval_set_hash` = SHA-256 over the canonical JSON of the rows (rows sorted by
+id, keys sorted, no whitespace, newline-joined); calibration runs record it
+as the set version they consumed.
+
 Everything under this tree is synthetic and CC0-1.0 (see `REUSE.toml`).
