@@ -182,11 +182,10 @@ defmodule ClinicDemo.SystemOneSpike.Report do
     "error #{o["status"]}#{if code, do: " #{code}"} (#{o["kind"]})"
   end
 
-  defp error_code(%{"error" => %{"code" => code}}), do: "#{code}"
-  defp error_code(%{"error" => %{"code" => code}}) when is_binary(code), do: code
-  defp error_code(_), do: nil
-
   defp probe_outcome(nil), do: "–"
+
+  defp error_code(%{"error" => %{"code" => code}}), do: "#{code}"
+  defp error_code(_), do: nil
 
   defp sel(nil), do: "–"
   defp sel(%{coverage: c, accuracy: a}), do: "#{f(c)} / #{f(a)}"
