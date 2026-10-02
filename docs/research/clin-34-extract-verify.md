@@ -1,8 +1,9 @@
 # CLIN-34: extract-then-verify on synthetic certificates
 
-**Status (2026-09-28): the harness is built and verified. It has not yet been run against a model.** The live
-endpoints were not configured when this was written, so every number below comes from the **stub**. Stub numbers
-test the harness, not a model. The live command is ready; see "Running it live".
+**Status (2026-10-02): run live, end to end.** The harness was built and stub-verified on 2026-09-28, then recorded
+against Splash, laya and winnow on 2026-10-02 (N = 20, both paths, both verifiers). The recorded set replays
+offline; every number in the results sections below is from that live run. The stub run remains in
+`docs/research/clin-34-results-stub.json` and the committed `stub` fixture set as harness verification only.
 
 This is the public, synthetic twin of the evidence pipeline (ash_enterprise ADR 0044 and ADR 0046). It runs the
 pipeline from the System One typed-output research: a generative model proposes values under a schema derived from
@@ -34,7 +35,7 @@ or `ReqLLM.generate_object/4`.
 
 | AC | How it is checked | State |
 |---|---|---|
-| AC-1 (eval): the fabricated-citation rate is reported for both paths, N ≥ 20 | `mix clin34.spike` computes it from the ledger for `static` and `enum`. The test replays the committed stub set with N = 20 and asserts that `enum` reports 0 and that `static` reports a rate. | **Mechanism verified; the model result is still open.** In the stub, `enum` = 0 by construction. Whether llama-server's grammar actually enforces the enum is the question the live run answers. |
+| AC-1 (eval): the fabricated-citation rate is reported for both paths, N ≥ 20 | `mix clin34.spike` computes it from the ledger for `static` and `enum`. The test replays the committed stub set with N = 20 and asserts that `enum` reports 0 and that `static` reports a rate. | **Answered live (2026-10-02): 0 on both paths.** The per-call enum fabricated no citation, as hoped; the static path also fabricated none. Details in "Live results". |
 | AC-2 (unit): a regex- or length-violating reply is rejected and recorded, not repaired | Two tests. (1) The stub plants the malformed policy number `CLV-12AB` on certificate 9. The prompt action's cast rejects it, the `extraction` row records `passed: false` along with the error and the raw reply, and no proposal rows are written. (2) A 121-character insured name is rejected by the same two-step cast. | Passing |
 | AC-3 (static): no confidence field, and every enum carries an abstention value | Tests walk the exact schema sent: no `confidence` key anywhere; `status` includes `not_found`/`ambiguous`; `coverage_type` includes `not_stated`; `source_ids` may be empty. A further test proves that `static_schema/0` is the schema the prompt action really sends: the committed stub fixtures were keyed from the prompt action's own payload, and the key computed from `static_schema/0` is found among them. | Passing |
 
@@ -43,22 +44,82 @@ reaching an OpenAI-compatible server as `response_format: json_schema`, with
 `source_ids.items.enum == ["a01", "a02"]` and no `tools`. They show the verifier going to
 `OLLAYA_BASE_URL/v1/systemone`. And they show that no fixture carries a URL or a key.
 
-## Stub results (harness only, N = 20)
+## Live results (2026-10-02)
 
-These are the stub's **planted** faults, recovered by the metrics. They show that the measurement works. They say
-nothing about Qwen, laya or winnow.
+Splash (`openai:incoai/Qwen3.8-27B-Splash`, `reasoning_effort: none`) extracted; laya (`laya:typed-decisions`) and
+winnow (`winnow:e4b`) verified, each asked one Noul per found proposal. N = 20 certificates × 8 fields × 2 paths,
+both verifiers. The set `recorded-2026-10-02` replays offline: `mix clin34.spike --set recorded-2026-10-02`
+(replay needs `S1_GEN_MODEL` set to the recorded id, since the model label is part of the fixture key).
+Full summary: `docs/research/clin-34-results-recorded-2026-10-02.json`.
 
 | | static | enum |
 |---|---|---|
-| cast failures | 2 / 20 (the planted `CLV-12AB`, certificates 9 and 18) | 2 / 20 |
-| exact match, of cast proposals | 0.986 | 0.986 |
-| exact match, of all fields | 0.888 | 0.888 |
-| extractions with a fabricated citation | 2 / 18 (certificates 6 and 12 cite `a99`) | **0 / 18** (the stub, like a grammar, can only say ids in the enum) |
-| checks failed | `citations_in_packet` × 2 | none |
-| verifier questions asked / answerable | 136 / 134 (2 cite only `a99`, so there is nothing to ask) | 136 / 136 |
-| wrong proposals flagged at p < 0.5 | 2 / 2 (the broker-licence misreads on certificates 7 and 14, on both verifiers) | 2 / 2 |
+| cast failures | 0 / 20 | 0 / 20 |
+| exact match, of all fields | 0.8375 | 0.8812 |
+| by field | dates 0.80/0.80, aggregate 1.0, coverage 0.9, policy 1.0, name 1.0, per-claim 1.0, **insurer 0.2** | dates 1.0/1.0, aggregate 0.9, coverage 1.0, policy 1.0, name 0.95, per-claim 1.0, **insurer 0.2** |
+| extractions with a fabricated citation | **0** | **0** (AC-1) |
+| checks failed | `found_is_cited` × 1 | none |
+| verifier questions asked / answered | 143 / 142 (1 unanswerable) | 154 / 154 |
+| verifier–gold agreement at the 0.5 cut | 0.8873 | 0.8831 |
+| wrong proposals / flagged at p < 0.5 | 16 / 0 | 19 / 1 |
+| extract latency median | 5.1 s | 4.8 s |
+| extractor output tokens/s | 75.2 | 85.7 |
+| verifier latency median | laya 133 ms, winnow 2,052 ms | laya 135 ms, winnow 2,052 ms |
 
-Latency is 0 ms in the stub. Full summary: `docs/research/clin-34-results-stub.json`.
+Latency per stage: extraction dominates (about 5 s per certificate; both paths send the whole packet); each verifier
+question is 133–135 ms on laya and about 2 s on winnow — 296 winnow questions at 2.05 s each is about 10 minutes of
+model time. The smoke gate held: the extractor decoded at 75–86 output tokens/s (gate ≥ 8) and winnow answered at
+2.05 s median (gate ≤ 2.5 s).
+
+**Fabricated citations: 0 on both paths.** The enum path's `source_ids` enum did its job; the static path — with no
+per-call narrowing — also fabricated nothing. Every citation landed inside the packet.
+
+**The verifier story is separation, not agreement.** Both verifiers agree with gold about 88% of the time, but they
+almost never *flag*: at the fixed 0.5 cut, 1 of 19 wrong enum proposals and 0 of 16 wrong static proposals scored
+below 0.5. Mean p on wrong proposals is 0.62–0.94 depending on verifier and path — a "yes" lean. The fixed cut is a
+reporting device, not a calibrated detector; the band tables (W2/W3) have real work to do.
+
+**The insurer 0.2 is a gold-label artifact, not an extraction error.** Both paths land on 4 / 20 exact matches for
+one reason: the generator appends the synthetic-data marker `"(fictional)"` to every insurer name, and gold keeps
+it, while Splash drops the parenthetical in 16 of 20 extractions on each path. The extracted names are otherwise
+correct and correctly cited to the insurer atom: `"Insurer: Maple Tier Professional Underwriters (fictional)"`
+comes back as `"Maple Tier Professional Underwriters"`, `"Lakeshore Clinician Assurance (fictional)"` as
+`"Lakeshore Clinician Assurance"`, and so on. The marker is preserved stochastically (different certificates on
+each path), which is why the two paths agree on the rate but not on which certificates pass. The wrong side is the
+gold label: a provenance marker baked into the compared value. Future runs should strip `"(fictional)"` on both
+sides before the exact-match comparison (a metric/gold change, deliberately not made before this recorded run).
+
+Provenance: the run went through `scripts/clin34-live.sh` on 2026-10-02, which captured an environment record at
+record time — model NAME and sha256 DIGEST per involved Ollaya host (the CPU host serving laya, the GPU host's CPU
+serving winnow) and Splash — from `/api/tags`, `/api/ps` and `/api/version`, with no URLs or keys. The committed
+results JSON is the offline replay regeneration (`"mode": "replay"`, identical metrics; replay carries the
+recorded latencies and token counts in the fixtures). The record-mode copy of the summary, which held the digest
+record, was overwritten by that replay; the digests were not reproduced here and should be re-pinned at the next
+live run.
+
+### Does the constraint tax exist?
+
+The ticket's question: does schema-constrained output give *valid but wrong* values? At N = 20: yes, on both
+paths, in different shapes — and nothing invalid ever arrived (0 cast failures in 40 extractions; the grammar and
+the Ash re-cast held everywhere).
+
+- **The per-call enum path** answered two of the planted aggregate traps *wrongly but validly*: on certificate 8
+  (aggregate omitted) it reported CAD $5,000,000 citing the each-claim atom, and on certificate 20 (two
+  contradictory limits) it resolved the contradiction to CAD $8,000,000 citing only one of the two atoms. Both
+  replies satisfied the enum, the cast and every field constraint. The static path abstained correctly on both
+  traps.
+- **The static path** produced the run's one incoherent proposal: certificate 11's coverage type with
+  `status: "found"`, `value: "not_stated"`, and no citation — every part schema-legal, the whole contradictory.
+  It failed `found_is_cited` (the run's only check failure) and was the run's single unanswerable verification
+  (nothing cited, so there was nothing to ask). The static path also abstained `not_found` on both dates for
+  certificates 2, 9, 14 and 19, although the packet's date atom states them plainly — 8 valid false abstentions
+  where the enum path extracted all 40 date fields correctly.
+
+So the data shows: the constrained enum path eliminates fabrication and false abstentions but *invents under
+pressure* (2 / 2 traps resolved into confident wrong values); the unconstrained static path abstains more but
+sometimes abstains wrongly or contradicts itself. What it cannot show at N = 20 is which behaviour wins: 1–2
+events per path per failure mode is noise, and the insurer marker artifact excludes one field in eight from exact
+comparison entirely. Rank the paths at N = 60 with the gold-label fix before believing either direction.
 
 ## Findings from building it
 
@@ -133,7 +194,9 @@ per model (`S1_OLLAYA_ROUTES`, comma-separated `model=CPU|GPU` in `endpoints.env
 
 `Models.verifier/1` resolves the route per model; with `S1_OLLAYA_ROUTES` unset everything stays on
 `OLLAYA_BASE_URL`, so replay, stub and CI are unaffected. The `MAX_WINNOW_MS=2500` smoke gate still holds: it
-passes the GPU host's CPU placement (1.4–2.2 s) and fails a true CPU fallback.
+passes the GPU host's CPU placement (1.4–2.2 s) and fails a true CPU fallback. The live run used the route as
+configured: `winnow:e4b` answered from the GPU host at 2,052 ms median across its 297 questions, inside the probe's
+warm band; first-load variance on that host is the band-separation spike's (Spike 0, S1-21) to measure.
 
 **Splash must not reason for this spike.** It reasons by default and reasoning tokens count against `max_tokens`,
 which starves the structured output. Set `S1_GEN_REASONING_EFFORT=none` in `endpoints.env`; `Models.extractor/0`
@@ -154,10 +217,12 @@ implemented in this spike):
 
 ## Still open
 
-- **The numbers.** Exact match, cast failures, fabricated citations with and without the enum, verifier agreement and
-  latency, all from the live run.
-- **The constraint tax** (the ticket's open question): does Qwen under grammar produce valid but wrong values? If it
-  does, try reason-then-serialise.
-- **Band tables.** The verifier's probability is recorded but not banded. `agreement_at_0_5` is a fixed 0.5 cut for
-  reporting only. DMN band tables come with calibration (W2/W3).
-- **Scaling to 60 certificates.** `--n 60` works. The stub set is recorded at 20.
+- **The numbers** are in ("Live results (2026-10-02)"); what remains of them is ranking the paths at a larger N.
+- **The constraint tax** is answered at N = 20 (see the subsection): valid-but-wrong output exists on both paths,
+  in different shapes. Whether reason-then-serialise beats either path is untested.
+- **Band tables.** The live run sharpened the need: at a fixed 0.5 cut the verifiers flag almost nothing (1 of 35
+  wrong proposals), so calibration matters more, not less. DMN band tables come with calibration (W2/W3).
+- **The insurer gold label.** Strip `"(fictional)"` on both sides of the exact-match comparison (a metric change;
+  deliberately not made before the recorded run).
+- **Scaling to 60 certificates.** `--n 60` works. The recorded set here is at 20; re-record at 60 to rank the
+  paths.
