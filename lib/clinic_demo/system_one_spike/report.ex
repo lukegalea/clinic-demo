@@ -175,9 +175,16 @@ defmodule ClinicDemo.SystemOneSpike.Report do
   defp probe_outcome(%{"outcome" => %{"ok" => true, "p" => p}}), do: "p=#{f(p)}"
 
   defp probe_outcome(%{"outcome" => o}) do
-    code = get_in(o, ["response_body", "error", "code"])
+    # Ollaya errors arrive in more than one shape: the body can be a plain
+    # string ("winnow:e4b failed to load: ..."), or a map whose "error" is a
+    # string, or a map with an error map carrying "code". Render them all.
+    code = error_code(o["response_body"])
     "error #{o["status"]}#{if code, do: " #{code}"} (#{o["kind"]})"
   end
+
+  defp error_code(%{"error" => %{"code" => code}}), do: "#{code}"
+  defp error_code(%{"error" => %{"code" => code}}) when is_binary(code), do: code
+  defp error_code(_), do: nil
 
   defp probe_outcome(nil), do: "–"
 
