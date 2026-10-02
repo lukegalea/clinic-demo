@@ -56,7 +56,7 @@ defmodule Mix.Tasks.ClinicDemo.EvalSets.Agreement do
       |> Enum.uniq()
 
     for {first, second} <- labellers do
-      shell.info("labellers: first \"#{first}\" · second \"#{second}\"")
+      shell.info(~s(labellers: first "#{first}" · second "#{second}"))
     end
 
     shell.info("")
