@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Spike-0 only. Whether a model's presenting-urgency answer may be shown to the
+  receptionist as a suggestion, or must go to a person with no suggestion.
+
+  This table is NOT used by the clinic. It does not change appointment_triage.dmn
+  and nothing reads its output except the spike runner, which reports how many
+  answers would have been suggested and how often those were right.
+
+  The thresholds (0.8 top probability, 0.3 margin) are placeholders chosen
+  before any model ran. They are not calibrated. Setting them from calibration
+  data, and activating them through the approval lifecycle, is later work
+  (DEC-THRESHOLD).
+
+  An abstention (insufficient_information) always goes to a person, whatever
+  its probability: the model saying "I cannot tell" is a result, and the result
+  is "ask".
+
+  Hit policy is UNIQUE: exactly one rule matches every input, which the
+  ash_decisions publish-time verifier checks (overlap and completeness). The
+  numeric columns deliberately declare no inputValues: the verifier would then
+  treat "[0..1]" as a single enum value rather than a range, and could decide
+  nothing. Written as open comparisons, the rules cover every number, so the
+  table is complete without relying on probabilities staying inside [0, 1].
+-->
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/"
+             id="urgency_suggestion_band_definitions"
+             name="Urgency suggestion band (spike)"
+             namespace="https://clinic-demo.example/decisions/spike/urgency-suggestion-band"
+             expressionLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/"
+             typeLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/">
+
+  <inputData id="input_top_option" name="topOption">
+    <variable id="var_top_option" name="topOption" typeRef="string"/>
+  </inputData>
+  <inputData id="input_top_probability" name="topProbability">
+    <variable id="var_top_probability" name="topProbability" typeRef="number"/>
+  </inputData>
+  <inputData id="input_margin" name="margin">
+    <variable id="var_margin" name="margin" typeRef="number"/>
+  </inputData>
+
+  <decision id="decision_urgency_suggestion_band" name="UrgencySuggestionBand">
+    <variable id="var_suggestion" name="UrgencySuggestionBand" typeRef="string"/>
+    <informationRequirement id="req_top_option">
+      <requiredInput href="#input_top_option"/>
+    </informationRequirement>
+    <informationRequirement id="req_top_probability">
+      <requiredInput href="#input_top_probability"/>
+    </informationRequirement>
+    <informationRequirement id="req_margin">
+      <requiredInput href="#input_margin"/>
+    </informationRequirement>
+
+    <decisionTable id="table_urgency_suggestion_band" hitPolicy="UNIQUE" outputLabel="Suggestion">
+      <input id="clause_top_option" label="Top option">
+        <inputExpression id="expr_top_option" typeRef="string">
+          <text>topOption</text>
+        </inputExpression>
+        <inputValues id="values_top_option"><text>"emergency", "urgent", "soon", "routine", "insufficient_information"</text></inputValues>
+      </input>
+      <input id="clause_top_probability" label="Top-option probability">
+        <inputExpression id="expr_top_probability" typeRef="number">
+          <text>topProbability</text>
+        </inputExpression>
+      </input>
+      <input id="clause_margin" label="Margin over the runner-up">
+        <inputExpression id="expr_margin" typeRef="number">
+          <text>margin</text>
+        </inputExpression>
+      </input>
+
+      <output id="clause_suggestion" name="suggestion" label="Suggestion" typeRef="string">
+        <outputValues id="values_suggestion"><text>"suggest", "ask_human"</text></outputValues>
+      </output>
+
+      <!-- The model abstained. A person decides, with nothing pre-filled. -->
+      <rule id="rule_abstained">
+        <inputEntry id="rule_abstained_0"><text>"insufficient_information"</text></inputEntry>
+        <inputEntry id="rule_abstained_1"><text>-</text></inputEntry>
+        <inputEntry id="rule_abstained_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_abstained_3"><text>"ask_human"</text></outputEntry>
+      </rule>
+
+      <!-- Peaked and clear of the runner-up: show it as a suggestion. -->
+      <rule id="rule_confident">
+        <inputEntry id="rule_confident_0"><text>"emergency", "urgent", "soon", "routine"</text></inputEntry>
+        <inputEntry id="rule_confident_1"><text>&gt;= 0.8</text></inputEntry>
+        <inputEntry id="rule_confident_2"><text>&gt;= 0.3</text></inputEntry>
+        <outputEntry id="rule_confident_3"><text>"suggest"</text></outputEntry>
+      </rule>
+
+      <!-- Not peaked enough. -->
+      <rule id="rule_low_probability">
+        <inputEntry id="rule_low_probability_0"><text>"emergency", "urgent", "soon", "routine"</text></inputEntry>
+        <inputEntry id="rule_low_probability_1"><text>&lt; 0.8</text></inputEntry>
+        <inputEntry id="rule_low_probability_2"><text>-</text></inputEntry>
+        <outputEntry id="rule_low_probability_3"><text>"ask_human"</text></outputEntry>
+      </rule>
+
+      <!-- Peaked, but a close runner-up. -->
+      <rule id="rule_close_runner_up">
+        <inputEntry id="rule_close_runner_up_0"><text>"emergency", "urgent", "soon", "routine"</text></inputEntry>
+        <inputEntry id="rule_close_runner_up_1"><text>&gt;= 0.8</text></inputEntry>
+        <inputEntry id="rule_close_runner_up_2"><text>&lt; 0.3</text></inputEntry>
+        <outputEntry id="rule_close_runner_up_3"><text>"ask_human"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

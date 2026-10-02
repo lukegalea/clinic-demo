@@ -1,0 +1,13 @@
+date: 2026-10-02 (full two-model set re-recorded in one invocation after the M5 Pro came up)
+specs: laya,winnow  repeats: 3 + cold
+digests captured over HTTP (RFC S1-24 Q7); no URLs/keys beyond host labels
+--- host: CPU (ONNX encoders)
+version: {"version":"0.7.5"}model: laya:typed-decisions
+  digest: 6d17e5fbcbb8215a74f2efd0dcc0ffdbd472e9b25ccb07867f9f146a791673ba
+--- host: M5 Pro (llama.cpp/Metal; winnow's home since 2026-10-02 evening)
+version: {"version":"0.9.0"}model: winnow:e4b
+  digest: dd4bf88aa50bebb02e7a26fbebed14682befd037e3e89789ee22b9793f82d226
+--- ops history 2026-10-02
+2080 Ti host: llama.cpp loads crash (sm75 kernels missing, survives restart) - out of the loop
+M5 Pro: Ollaya fresh install; winnow:e4b pulled (same weights digest as the 2080 Ti copy)
+cold legs: routing-aware unload via POST /api/decide keep_alive:0 per host

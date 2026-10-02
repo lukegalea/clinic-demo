@@ -12,3 +12,11 @@ path = "**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Luke Galea"
 SPDX-License-Identifier = "MIT"
+
+# Spike-0's labelled items, replay fixtures and results are synthetic and
+# dedicated to the public domain, so anyone may reuse them as evaluation data.
+[[annotations]]
+path = "priv/fixtures/system_one/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Luke Galea"
+SPDX-License-Identifier = "CC0-1.0"
