@@ -6,9 +6,14 @@
 # made up; there are no owners, addresses or clinics that exist.
 #
 # Labels are the AUTHOR's intended labels (labeller "author"). The blind
-# second labelling the ticket asks for has not happened yet: `second_label` is
-# null on every item until it does, and items where the two disagree are then
-# dropped (see docs/spikes/system-one-spike-0.md, "Labelling protocol").
+# second labelling has since happened (2026-10-02, S1-21: 53/53 agreement,
+# kappa 1.000 — see docs/spikes/system-one-spike-0.md, "Second labelling
+# record", and blind-second-labels-notes.md beside this file). IMPORTANT:
+# this generator writes the pre-labelling state (`second_label` and
+# `second_labeller` null); the committed items.jsonl carries the FILLED
+# second labels applied afterwards. Do not regenerate items.jsonl from here
+# — it would blank them. The store conventions (second_labeller first-class)
+# are documented in priv/fixtures/system_one/README.md.
 #
 # Token counts are approximate: bytes of the JSON state / 4. laya's tokenizer
 # is not available here, so the length probes aim a little past each boundary.
@@ -128,6 +133,7 @@ defmodule Spike0.Items do
       "gold" => gold,
       "labeller" => "author",
       "second_label" => nil,
+      "second_labeller" => nil,
       "stratum" => stratum,
       "approx_tokens" => tokens(state),
       "author_notes" => why
