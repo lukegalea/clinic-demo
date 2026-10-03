@@ -48,6 +48,14 @@ exits non-zero when the κ-gate fails. The statistics module is
 `ClinicDemo.EvalSets.Agreement` (pure, golden-pinned to the spike-0 record);
 the design's CRC and audit-alarm arithmetic is `ClinicDemo.EvalSets.RiskControl`.
 
+    mix clinic.calibrate spike0 [--transport record --set <name> --unload]
+
+runs the spike questions over the **calibration split** (drift-checked) and
+records the calibrate-compatible §8.1 run maps to
+`spike0/results/<out>/calibration.json` — field-for-field what
+`ash_judgments`' CalibrationRun store records. One invocation is one complete
+fixture set; `--unload` asks each model's host to unload afterwards.
+
 ## Regenerating
 
 `spike0/build_items.exs` writes the PRE-labelling state; the committed

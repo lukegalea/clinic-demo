@@ -380,6 +380,53 @@ encoded verdict — "no-go or go-with-conditions (see doc)" — is hereby read a
 plus the standing framing condition from the S1-23 ruling (prototype instruments, model-agnostic
 architecture, no public model branding).
 
+## First calibration over the calibration split (2026-10-03, S1-25)
+
+The eval-sets harness is wired to the spike (`mix clinic.calibrate`,
+`ClinicDemo.SystemOneSpike.Calibration`): it drift-checks the §6 split
+companion, runs the spike's own call path over the **calibration
+split** — 33 items, `noul` 17 / `choice` 16 — and records the results
+as a calibrate-compatible artefact: the §8.1 run map per
+`(spec, family)`, field-for-field what `ash_judgments`' CalibrationRun
+store records (clinic-demo does not depend on `ash_judgments`; this is
+the package-compatible producer, format pinned by tests).
+
+First run: 2026-10-03 00:20, transport `record:calibration-2026-10-02`
+(one complete replayable fixture set, provenance `recorded` on all 66
+exchanges), one answer per item, both specs, α = 0.016, min_n = 62,
+region `homelab`. Both models unloaded after the run (`POST /api/decide`,
+`keep_alive: 0`, both 200).
+
+| spec / family | n answered | ece | brier | accuracy | λ̂ at α | result |
+|---|---|---|---|---|---|---|
+| laya / notes_follow_up | 14 | 0.301 | 0.185 | — | none qualifies | `no_table` |
+| laya / presenting_urgency | 16 | — | — | 0.500 | none qualifies | `no_table` |
+| winnow / notes_follow_up | 17 | 0.134 | 0.045 | — | none qualifies | `no_table` |
+| winnow / presenting_urgency | 16 | — | — | 0.813 | none qualifies | `no_table` |
+
+Readings, stated plainly:
+
+- **Every run keeps its negative result.** At n ≈ 16 the conformal
+  bound does its job: even zero errors gives 1/(n+1) ≈ 0.06 > α = 0.016,
+  so no λ̂ qualifies and nothing is proposed. This is the design working,
+  not a failure — a band table needs the family's min_n (62 at e = 0)
+  before it can be earned.
+- **laya's 3 missing noul answers are the length probes**
+  (`n-len-1100-neg`, `n-len-1600-pos`, `n-len-1600-neg`): structured
+  422s ("part of state was dropped to fit the context"), consistent
+  with AC-5's record — laya tops out at ≈1,093 tokens. The split's §6
+  draw put those items in calibration; they count as errors here, not
+  silent drops. winnow answered everything.
+- **Early signal, n too small to trust:** winnow is well ahead on both
+  families (noul ECE 0.134 vs 0.301; choice accuracy 0.813 vs 0.500 —
+  laya's emergency/insufficient recalls are 0.0). The next calibration
+  re-runs the same command against the same companion; the accumulated
+  fixture sets make any re-scoring replayable.
+
+Artefact: `priv/fixtures/system_one/spike0/results/calibration-2026-10-02/`
+(`calibration.json` — the §8.1 run maps; `rows.jsonl` — the raw rows;
+`summary.md`). Fixture set: `replay/calibration-2026-10-02.jsonl`.
+
 ## Acceptance status
 
 | AC | Status |
