@@ -47,6 +47,7 @@ defmodule Mix.Tasks.Clinic.Calibrate do
   alias ClinicDemo.SystemOneSpike.Calibration
   alias ClinicDemo.SystemOneSpike.Models
   alias ClinicDemo.SystemOneSpike.Runner
+  alias ClinicDemo.SystemOneSpike.Transport
 
   @switches [
     transport: :string,
@@ -170,7 +171,7 @@ defmodule Mix.Tasks.Clinic.Calibrate do
 
     :telemetry.attach(
       handler_id,
-      ClinicDemo.SystemOneSpike.Transport.event(),
+      Transport.event(),
       &Runner.handle_exchange/4,
       nil
     )
@@ -184,10 +185,10 @@ defmodule Mix.Tasks.Clinic.Calibrate do
 
   # One invocation is one complete fixture set: recording starts afresh.
   defp reset_set(set) do
-    path = ClinicDemo.SystemOneSpike.Transport.fixture_path(set)
+    path = Transport.fixture_path(set)
 
     if File.exists?(path), do: File.rm!(path)
-    ClinicDemo.SystemOneSpike.Transport.forget(set)
+    Transport.forget(set)
   end
 
   # The spike's own call path, one row per calibration item; then the

@@ -213,13 +213,13 @@ defmodule ClinicDemo.SystemOneSpike.CalibrationTest do
   # ── the n-threshold discipline ────────────────────────────────────────────
 
   test "below min_n the run keeps its negative result and names the finding" do
+    rows =
+      for i <- 1..10 do
+        noul_row(noul_item("n-#{i}", rem(i, 2) == 0), 0.9)
+      end
+
     {:ok, run} =
-      Calibration.run_map(
-        :laya,
-        :notes_follow_up,
-        for i <- 1..10 do
-          noul_row(noul_item("n-#{i}", rem(i, 2) == 0), 0.9)
-        end, eval_set_hash: @eval_set_hash)
+      Calibration.run_map(:laya, :notes_follow_up, rows, eval_set_hash: @eval_set_hash)
 
     assert run.n == 10
     assert run.result == "no_table"

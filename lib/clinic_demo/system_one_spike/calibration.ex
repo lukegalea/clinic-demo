@@ -42,6 +42,7 @@ defmodule ClinicDemo.SystemOneSpike.Calibration do
     person's act.
   """
 
+  alias Ash.Resource.Info
   alias ClinicDemo.EvalSets.RiskControl
   alias ClinicDemo.SystemOneSpike
   alias ClinicDemo.SystemOneSpike.Metrics
@@ -321,7 +322,7 @@ defmodule ClinicDemo.SystemOneSpike.Calibration do
 
   @doc "The §8.1 question hash: SHA-256 over the action's question text."
   def question_hash(family) do
-    digest(Ash.Resource.Info.action(SystemOneSpike, family).description)
+    digest(Info.action(SystemOneSpike, family).description)
   end
 
   defp digest(content) do
