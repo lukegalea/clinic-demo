@@ -150,6 +150,10 @@ defmodule ClinicDemo.MixProject do
       # honestly (surface buttons only) when no provider key is set.
       {:ash_ai, "~> 1.0"},
       {:req_llm, "~> 1.7"},
+      # Declared explicitly: the calibration task's best-effort unload
+      # POST goes through Req directly (it rides req_llm's resolution
+      # already; declared because the task calls it).
+      {:req, "~> 0.5"},
 
       # The operator section's introspection UI. Mounted unconditionally (an
       # operator tool, not a dev extra) so every env compiles the same
