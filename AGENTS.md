@@ -105,6 +105,27 @@ custom classes must fully style the input
 - Ensure **clean typography, spacing, and layout balance** for a refined, premium look
 - Focus on **delightful details** like hover effects, loading states, and smooth page transitions
 
+### Development environment
+
+This repository has no devenv of its own. On the development host it borrows
+the shared `ash_enterprise` devenv (Postgres + toolchain), which runs
+**PostgreSQL 18** (Phase 0 baseline; the repo's `min_pg_version/0` is 18 and
+CI's service images are `postgres:18-alpine` in lockstep). The test config
+reads `DB_USER`, `DB_PASSWORD`, `DB_HOST`/`PGHOST` and `PGPORT`, defaulting to
+the README's `localhost:5432` `postgres`/`postgres`; the devenv's `enterShell`
+exports the real `PGPORT` (it shifts with machine state — 5436 at time of
+writing), so always run the suite through the devenv shell rather than
+assuming the default port:
+
+```bash
+cd /home/lukegalea/ash_enterprise && devenv shell -- \
+  bash -c 'cd /home/lukegalea/ast-forks/clinic-demo && mix test'
+```
+
+The `mix test` alias creates and migrates `clinic_demo_test` itself; there is
+no separate seed step for the suite. The calibration/eval corpus
+(golden-pinned splits, `credo --strict` aliases) is part of that suite and
+must pass unchanged — infrastructure lanes may not touch it.
 
 <!-- usage-rules-start -->
 <!-- usage-rules-header -->
