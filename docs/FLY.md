@@ -208,3 +208,19 @@ fly volumes destroy clinic_demo_pg_data -a clinic-demo-pg
 * **SSH**: `fly ssh console -a clinic-demo` for a shell,
   `-C "..."` for one-shots. The release's eval entrypoint is
   `/app/bin/clinic_demo eval "ClinicDemo.Release.migrate()"` etc.
+
+
+## Seeding (the proven procedure — validated 2026-10-07)
+
+One-off `fly machine run` machines CANNOT resolve `<app>-pg.internal` (no 6proxy DNS) — seeding
+from them silently fails with nxdomain. `fly ssh console` on the 512MB app machine OOMs (two BEAMs).
+The working method:
+
+```bash
+fly machine update <app-machine-id> -a clinic-demo-lg --memory 1024 --yes   # restarts; ~30s
+fly ssh console -a clinic-demo-lg -C "/app/bin/clinic_demo eval 'ClinicDemo.Release.seed()'"
+fly machine update <app-machine-id> -a clinic-demo-lg --memory 512 --yes    # back to the allowance-adjacent size
+```
+
+Verify data (not page chrome — nav labels lie): proxy + psql `SELECT count(*) FROM appointments`,
+or an eval that prints the aggregate. Reset = destroy the PG volume + re-run migrate + this seed.
