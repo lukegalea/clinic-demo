@@ -1,0 +1,36 @@
+# Everything the release build never needs. Keeps the build context small
+# and, more importantly, keeps local churn (build artifacts, scratch checkouts)
+# from invalidating the COPY layers' cache.
+
+# Version control and CI
+.git
+.github
+
+# Scratch worktrees and tooling config that ride the checkout but not the app
+.slim
+.claude
+.serena
+.vscode
+.mcp.json
+opencode.json
+.dev-access.template
+
+# Build artifacts — fetched and compiled fresh inside the builder
+deps
+_build
+priv/plts
+
+# Elixir/Hex caches and generated docs
+doc
+docs
+
+# Test suites and their fixtures never ship in the image
+test
+storybook
+
+# Node is installed inside the builder and runs `npm ci`, which owns
+# node_modules; copying a host one would only bloat the context
+assets/node_modules
+
+# Local OS/editor noise
+**/.DS_Store

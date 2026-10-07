@@ -1,0 +1,55 @@
+# fly.io configuration for the clinic-demo app machine.
+#
+# The database is NOT Fly's managed Postgres — it is a sidecar app defined
+# in fly.pg.toml (pgvector/pgvector:0.8.7-pg18 + a 3gb volume). See
+# docs/FLY.md for the full deploy sequence.
+#
+# Machine shape: one shared-cpu-1x with 512mb. The app auto-stops when idle
+# and auto-starts on the next request, so an undiscovered demo costs
+# nothing; only the Postgres sidecar runs continuously.
+
+app = "clinic-demo"
+primary_region = "yyz"
+
+# BEAM-friendly shutdown: SIGTERM lets the release drain LiveViews before
+# the hard kill.
+kill_signal = "SIGTERM"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "4000"
+
+# Migrations run once per deploy, in a temporary machine, before the new
+# release takes traffic. A failure here fails the deploy — the risky part
+# happens first, on purpose.
+[deploy]
+  release_command = "/app/bin/migrate"
+  release_command_timeout = "10m"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  # The app answers /health with a bare 200 (ClinicDemoWeb.HealthController,
+  # outside the browser pipeline and excluded from force_ssl). The header
+  # below satisfies force_ssl's rewrite check when the proxy probes over
+  # plain http on the private network.
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "15s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
+    [http_service.checks.headers]
+      X-Forwarded-Proto = "https"
+
+[vm]
+  size = "shared-cpu-1x"
+  memory = "512mb"

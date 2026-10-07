@@ -24,8 +24,21 @@ defmodule ClinicDemoWeb.Router do
 
   import Phoenix.LiveDashboard.Router
 
+  # The load balancer's health probe. No pipeline on purpose: no session,
+  # no CSRF, no CSP — it must answer before any of that runs. The endpoint
+  # gate exempts the path and prod's force_ssl excludes it from the
+  # http→https rewrite, so the check can never be bounced.
+  scope "/", ClinicDemoWeb do
+    get "/health", HealthController, :show
+  end
+
   scope "/", ClinicDemoWeb do
     pipe_through :browser
+
+    # The demo gate: renders before a session has passed it, admits on a
+    # correct POST (CSRF-protected like every browser POST).
+    get "/gate", GateController, :show
+    post "/gate", GateController, :create
 
     get "/home", PageController, :home
     get "/operator", PageController, :operator
@@ -45,7 +58,10 @@ defmodule ClinicDemoWeb.Router do
     # session; every write runs under the acting Clinician.
     # The board is the main UI: the process as lanes, one card column per
     # stage. Intake takes a new patient; the schedule books the visit.
-    live_session :a2ui, on_mount: AshA2ui.Actor do
+    # GateOnMount is the gate's LiveView half — the socket handshake runs
+    # upstream of the endpoint plug, so unauthenticated mounts are halted
+    # here instead. Actor resolution first, then the gate.
+    live_session :a2ui, on_mount: [AshA2ui.Actor, ClinicDemoWeb.GateOnMount] do
       live "/", A2ui.BoardLive
       # The Day view: host-rendered NB components (calendar + day list +
       # read-only detail sheet) over the same actor session, so presence

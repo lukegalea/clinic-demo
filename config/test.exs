@@ -35,6 +35,11 @@ config :ash, disable_async?: true
 # it in every env), so tests subscribe and assert broadcasts on it directly.
 config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
 
+# The demo gate is bypassed in the test env: the suite exercises routes,
+# not the gate. Its own behaviour is covered in gate_test.exs, which flips
+# this flag per-test and restores it on exit.
+config :clinic_demo, :gate, enabled?: false
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
