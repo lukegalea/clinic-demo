@@ -66,6 +66,14 @@ config :clinic_demo, dev_routes: true
 # server the endpoint and presence already ride.
 config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
 
+# The demo gate (ClinicDemoWeb.Gate): active in dev, so the local flow
+# matches what production does. Password comes from DEMO_GATE_PASSWORD when
+# set, with a known fallback so `mix phx.server` stays a one-liner. The
+# password it protects is a demo, in either environment.
+config :clinic_demo, :gate,
+  enabled?: true,
+  password: System.get_env("DEMO_GATE_PASSWORD") || "clinic"
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

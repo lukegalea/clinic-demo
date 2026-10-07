@@ -1,0 +1,50 @@
+# fly.io configuration for clinic-demo's Postgres sidecar.
+#
+# NOT managed Postgres — a raw machine running the pgvector image, with its
+# data on a dedicated volume. The image choice is the repo's own floor:
+# ClinicDemo.Repo.min_pg_version/0 is 18 (Phase 0 — migrations may use
+# PG18 features like native uuidv7()), and the seeds/roadmap want pgvector.
+# pgvector/pgvector:0.8.7-pg18 ships PostgreSQL 18 plus the vector
+# extension; citext and btree_gist (also in the repo's installed_extensions)
+# ship in the standard contrib packaged with it.
+#
+# Deploy with:  fly deploy -a clinic-demo-pg -c fly.pg.toml
+# Sequence and secrets: docs/FLY.md.
+#
+# No [http_service] section: the machine is reachable only over the org's
+# private network (clinic-demo-pg.internal:5432) and never auto-stops —
+# a database that sleeps on idle is a database the app cannot reach.
+
+app = "clinic-demo-pg"
+primary_region = "yyz"
+
+kill_signal = "SIGTERM"
+
+[build]
+  image = "pgvector/pgvector:0.8.7-pg18"
+
+# PGDATA is pinned INSIDE the mounted volume. On the image's default
+# (/var/lib/postgresql/data) a bind-mount over /data is invisible and
+# initdb re-runs on every boot — pinning here is what makes the data
+# survive machine replacement.
+[env]
+  PGDATA = "/data/pgdata"
+
+[mounts]
+  source = "clinic_demo_pg_data"
+  destination = "/data"
+  initial_size = "3gb"
+
+# POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB are secrets, set once
+# before first boot (initdb reads them):
+#
+#   fly secrets set -a clinic-demo-pg \
+#     POSTGRES_USER=clinic \
+#     POSTGRES_PASSWORD=<generated> \
+#     POSTGRES_DB=clinic_demo
+
+[vm]
+  size = "shared-cpu-1x"
+  # 512mb is too small for a Postgres 18 that also wants page cache;
+  # 1gb is the floor for a demo that must not fall over during a demo.
+  memory = "1gb"

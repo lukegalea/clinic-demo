@@ -68,6 +68,15 @@ defmodule ClinicDemoWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
 
+  # The demo gate, before the router: one shared password in front of the
+  # whole app (see ClinicDemoWeb.Gate). Must sit after Plug.Session — it
+  # reads and writes the session — and before every other endpoint plug
+  # whose work should not happen for unauthenticated requests. Exempts
+  # /health and /gate; static assets are already served by Plug.Static
+  # upstream. The LiveView half of the gate lives in GateOnMount, listed
+  # in the router's live_sessions.
+  plug ClinicDemoWeb.Gate
+
   # Before the router: the actor switcher intercepts /a2ui/actor?id=<uuid>
   # and redirects — it is not a route, so a pipeline plug would never see it
   # (pipelines run only after a route matches, and no route matches a path

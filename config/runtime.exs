@@ -84,6 +84,19 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
+  # The demo gate's password (config :clinic_demo, :gate — see
+  # ClinicDemoWeb.Gate). Required in prod: the app has no accounts, and a
+  # publicly advertised demo URL without a gate is a public clinic.
+  gate_password =
+    System.get_env("DEMO_GATE_PASSWORD") ||
+      raise """
+      environment variable DEMO_GATE_PASSWORD is missing.
+      The whole demo sits behind this one shared password.
+      Generate something reasonable: openssl rand -base64 12
+      """
+
+  config :clinic_demo, :gate, password: gate_password
+
   config :clinic_demo, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :clinic_demo, ClinicDemoWeb.Endpoint,

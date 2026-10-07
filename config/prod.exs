@@ -15,7 +15,11 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
   force_ssl: [
     rewrite_on: [:x_forwarded_proto],
     exclude: [
-      # paths: ["/health"],
+      # /health is the Fly load balancer's check target: it must answer
+      # 200 over plain http to the private network. (The fly.toml health
+      # check also sends X-Forwarded-Proto: https, so this exclusion is
+      # belt and braces — but a belt you can see is a belt you trust.)
+      paths: ["/health"],
       hosts: ["localhost", "127.0.0.1"]
     ]
   ]
