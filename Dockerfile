@@ -56,8 +56,11 @@ RUN if [ -f assets/package.json ]; then \
       && apt-get clean && rm -rf /var/lib/apt/lists/*; \
     fi
 
-RUN mix assets.deploy
 RUN mix compile
+# app.css imports/scans `_build/dev/phoenix-colocated/...` (LiveView 1.1 colocated assets);
+# the prod compile writes `_build/prod/...` — bridge the exact expected path.
+RUN mkdir -p _build/dev && ln -sf ../prod/phoenix-colocated _build/dev/phoenix-colocated
+RUN mix assets.deploy
 
 COPY config/runtime.exs config/
 COPY rel rel
