@@ -20,6 +20,7 @@ kill_signal = "SIGTERM"
 
 [env]
   PORT = "4000"
+  ECTO_IPV6 = "true"
 
 # Migrations run once per deploy, in a temporary machine, before the new
 # release takes traffic. A failure here fails the deploy — the risky part
