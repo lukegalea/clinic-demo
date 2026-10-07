@@ -53,5 +53,5 @@ kill_signal = "SIGTERM"
 
 [vm]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"
   swap_size_mb = 512
