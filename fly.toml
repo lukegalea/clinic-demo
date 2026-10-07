@@ -8,7 +8,7 @@
 # and auto-starts on the next request, so an undiscovered demo costs
 # nothing; only the Postgres sidecar runs continuously.
 
-app = "clinic-demo"
+app = "clinic-demo-lg"
 primary_region = "yyz"
 
 # BEAM-friendly shutdown: SIGTERM lets the release drain LiveViews before
