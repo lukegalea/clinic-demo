@@ -329,8 +329,8 @@ packages:
 ## Running it
 
 Requires Elixir 1.20 or newer (OTP 27) and a Postgres reachable at
-`localhost:5432` as `postgres`/`postgres`. Override with the usual
-`ClinicDemo.Repo` settings in `config/dev.exs` if yours differs.
+`localhost:5432` as `postgres`/`postgres`. If yours differs, set `DB_USER`,
+`DB_PASSWORD`, `DB_HOST` and `PGPORT`; the dev and test configs both read them.
 
 `xmllint` must also be on `PATH` (the `libxml2` package). The DMN engine
 validates every document against the normative XSD by shelling out to it;
