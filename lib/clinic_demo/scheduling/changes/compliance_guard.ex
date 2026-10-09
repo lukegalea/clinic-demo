@@ -29,6 +29,21 @@ defmodule ClinicDemo.Scheduling.Changes.ComplianceGuard do
 
   require Logger
 
+  # Temporal safety (declared). The appointment is a temporal resource, so a
+  # transition may take effect at a back-dated instant (the seeded history
+  # walks through these same actions with `as_of:`). What this guard does at
+  # such a write: evaluates the ACTIVE bundle against the visit's facts as
+  # they stand at seed time — the bundle and the patient weights are not
+  # themselves temporalized, so there is no earlier instant to read them at;
+  # the refusal or permission is the clinic's answer now, applied to a write
+  # that lands in the past. The facts come from `changeset.data` (the version
+  # valid at the write's instant) and from ordinary Ash loads (which thread
+  # the instant harmlessly into non-temporal resources). The audit row is
+  # stamped with the wall clock — it records when the evaluation RAN, not
+  # when the write took effect; the event log carries the effective instant.
+  @impl true
+  def temporal_safe?(_opts), do: true
+
   @impl true
   def change(changeset, opts, _context) do
     transition_to = Keyword.fetch!(opts, :transition_to)

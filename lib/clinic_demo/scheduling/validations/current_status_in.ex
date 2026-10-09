@@ -39,4 +39,12 @@ defmodule ClinicDemo.Scheduling.Validations.CurrentStatusIn do
        vars: [current: to_string(current)]}
     end
   end
+
+  # Temporal safety (declared): `changeset.data` on a temporal resource IS
+  # the version valid at the write's `as_of` — Ash loaded it as of that
+  # instant — so this guard is exact at whatever point in time the write
+  # takes effect at, not merely tolerable of it. No clock reads, no side
+  # effects.
+  @impl true
+  def temporal_safe?(_opts), do: true
 end

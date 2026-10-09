@@ -41,7 +41,26 @@ config :ash,
   default_string_length_count: :codepoints,
   include_embedded_source_by_default?: false,
   default_page_type: :keyset,
-  policies: [no_filter_static_forbidden_reads?: false]
+  policies: [no_filter_static_forbidden_reads?: false],
+  # Temporal resources: `Appointment` is one (board time travel reads it
+  # "as of" an instant), and the temporal safety gate refuses any change,
+  # validation or preparation on it whose module has not declared itself
+  # safe to run at a point in time that is not now. The clinic's own
+  # modules declare `temporal_safe?/1` in their own files, with the
+  # reasoning written next to the code; this list is the sanctioned escape
+  # hatch for hex-dep modules we cannot edit. `transition_state` just sets
+  # the `:status` attribute from the state machine's declaration — no
+  # clock reads, no side effects — which is exactly what the declaration
+  # asserts.
+  temporal_safe_modules: [
+    # ash_state_machine's transition setter: just writes `:status` from the
+    # machine's declaration — no clock reads, no side effects.
+    AshStateMachine.BuiltinChanges.TransitionState,
+    # ash_events' replay-machinery guard: the `where:` validation that keeps
+    # an introspection-only copy of a change from ever running. It executes
+    # nothing by construction, so it is safe at any instant.
+    AshEvents.Events.Validations.Never
+  ]
 
 # ash_a2ui: this app rides the framework defaults. Experience v2 is the
 # default since 5d4326b and stays. The component catalog is back at its

@@ -10,6 +10,16 @@ defmodule ClinicDemo.Scheduling.Appointment do
   action contract worth reading. The BPMN visit process orchestrates *when*
   these actions run; it is never a second authority on *whether* a status
   change is allowed.
+
+  The resource is also **temporal** (`strategy :context`, period attribute
+  `valid_at`): every lifecycle write is a period-splitting write, so each
+  stage the visit passed through keeps the stretch of time it was true for,
+  and any read — the board, the schedule, this file's callers — can be
+  pinned to an instant with `Ash.Query.as_of/2` (or the `as_of:` option,
+  accepted anywhere `tenant:` is). Leave `as_of` off and you are reading
+  now, exactly one version per appointment — which is what every existing
+  caller does, unchanged. The board's time travel is this containment read
+  through `?as_of=`; the ash_events log underneath stays the audit trail.
   """
 
   use Ash.Resource,
@@ -109,16 +119,23 @@ defmodule ClinicDemo.Scheduling.Appointment do
   end
 
   relationships do
+    # This side is temporal, the destinations are not: `{source, destination}`
+    # period attributes with nil for the non-temporal side. The pointer names
+    # WHO the visit is for and with whom — facts that do not vary across the
+    # visit's history — so no PERIOD foreign key; the join stays a plain id
+    # join.
     belongs_to :patient, ClinicDemo.Scheduling.Patient do
       description "The animal being seen."
       allow_nil? false
       public? true
+      temporal_keys {:valid_at, nil}
     end
 
     belongs_to :clinician, ClinicDemo.Scheduling.Clinician do
       description "Who is seeing them."
       allow_nil? false
       public? true
+      temporal_keys {:valid_at, nil}
     end
   end
 
@@ -188,6 +205,21 @@ defmodule ClinicDemo.Scheduling.Appointment do
   # tells, so nothing is excluded here.
   events do
     event_log(ClinicDemo.Events.Event)
+  end
+
+  # Temporal (application-time periods). The period attribute `valid_at` is
+  # declared here and added by the extension — an `Ash.Type.Range` over
+  # `:utc_datetime_usec` with `[inclusive, exclusive)` bounds — and it is
+  # never action input: a write's period starts at the write's `as_of` (now,
+  # unless the caller passes one), an update splits the version valid at
+  # that instant, a destroy truncates it. Every lifecycle action above is
+  # therefore a period-splitting write, which is what the board's as-of
+  # lane view reads through. Requires PostgreSQL 18 (`PRIMARY KEY (id,
+  # valid_at WITHOUT OVERLAPS)`) and `btree_gist`; both are repo-level
+  # declarations the resource's verifier checks.
+  temporal do
+    strategy :context
+    attribute :valid_at
   end
 
   state_machine do

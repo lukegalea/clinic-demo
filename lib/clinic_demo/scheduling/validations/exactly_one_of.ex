@@ -63,6 +63,11 @@ defmodule ClinicDemo.Scheduling.Validations.ExactlyOneOf do
     end
   end
 
+  # Temporal safety (declared): pure argument inspection — no clock reads,
+  # no reads, no side effects; the answer is identical at any instant.
+  @impl true
+  def temporal_safe?(_opts), do: true
+
   # A form submission carries shapes Ash would treat as "nothing here": an
   # empty map for a nested create, an empty list, an empty string, nil.
   defp blank?(nil), do: true
