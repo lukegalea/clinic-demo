@@ -64,5 +64,11 @@
     "file": "lib/clinic_demo_web/components/core_components.ex",
     "text": "|> assign_new(:value, fn -> field.value end)",
     "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
+  },
+  {
+    "law": "11",
+    "file": "lib/clinic_demo_web/live/a2ui_live.ex",
+    "text": "def handle_event(\"set-as-of\", %{\"time_travel\" => %{\"as_of\" => raw}}, socket)",
+    "reason": "The handler performs no Ash call: it parses the posted instant and push_patches it onto the URL (absent/unparseable leaves it). The authorization story lives in what the patch triggers \u2014 handle_params rebuilds the surface through AsOfSurface, whose reads go through the Appointment read action's policies, and whose row actions are stripped (a view of the past is not an operating surface), so there is no write path reachable from the historical board at all."
   }
 ]

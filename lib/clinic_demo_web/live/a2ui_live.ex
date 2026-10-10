@@ -32,11 +32,36 @@ defmodule ClinicDemoWeb.A2ui.Surface do
 end
 
 defmodule ClinicDemoWeb.A2ui.BoardLive do
+  # Host-layer helpers for the time-travel control: the core components
+  # (<.input>) and the verified-routes sigil. Imported directly rather than
+  # `use ClinicDemoWeb, :live_view`, which would declare the LiveView
+  # behaviour a second time next to the LiveRenderer's injected callbacks.
+  import ClinicDemoWeb.CoreComponents
+
+  use Phoenix.VerifiedRoutes,
+    endpoint: ClinicDemoWeb.Endpoint,
+    router: ClinicDemoWeb.Router,
+    statics: ClinicDemoWeb.static_paths()
+
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.BoardUI,
     actor_fn: & &1.assigns.a2ui_actor
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_board"
+
+  alias ClinicDemoWeb.A2ui.AsOfSurface
+
+  @moduledoc """
+  The clinic board, with time travel.
+
+  Without `?as_of=` this is the live board, byte-identical to every other
+  surface host. With `?as_of=<iso8601>` the surface renders from the
+  appointment history at that instant (`AsOfSurface` reads the temporal
+  resource contained at T and strips the row actions — a view of the past
+  is not an operating surface). The control below is the demo's handle on
+  that: pick an instant, land on it as a shareable `?as_of=` deep link;
+  "Now" is the plain board again.
+  """
 
   # Without an acting clinician, every card action is refused by the
   # actor_present policy — the error surfaces in the a2ui status banner
@@ -50,6 +75,38 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-base border-2 border-border bg-secondary-background px-4 py-3 shadow-shadow">
+        <.form
+          for={@time_travel_form}
+          id="time-travel-form"
+          phx-change="set-as-of"
+          class="flex flex-wrap items-center gap-x-2"
+        >
+          <label for="time-travel-as_of" class="text-sm font-heading">
+            View the board as of
+          </label>
+          <.input
+            type="datetime-local"
+            field={@time_travel_form[:as_of]}
+            id="time-travel-as_of"
+            value={as_of_input_value(@as_of)}
+            class="h-8 rounded-base border-2 border-border bg-main px-2 py-1 text-sm font-base text-main-foreground focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+          />
+        </.form>
+        <.link
+          patch={~p"/"}
+          class="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+        >
+          Now
+        </.link>
+        <span
+          :if={@as_of}
+          data-testid="as-of-indicator"
+          class="inline-flex items-center rounded-base border-2 border-border bg-main px-2.5 py-0.5 text-xs font-base text-main-foreground"
+        >
+          Viewing as of {Calendar.strftime(@as_of, "%Y-%m-%d %H:%M UTC")} — read-only
+        </span>
+      </div>
       <%= if is_nil(assigns[:a2ui_actor]) do %>
         <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
           <strong class="font-heading">No one is acting.</strong>
@@ -62,6 +119,101 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
     </div>
     """
   end
+
+  # The LiveRenderer's injected mount starts the surface build with the
+  # compile-time config; when the request carries `?as_of=`, the build must
+  # go through the as-of surface_fn instead, so mount swaps the config copy
+  # before handing the call through. (mount/3 is defoverridable at both
+  # layers; this override replaces the Surface macro's, preserving its
+  # presence wiring.)
+  @impl true
+  def mount(params, session, socket) do
+    as_of = as_of_from_params(params)
+    config = surface_config(as_of)
+
+    {:ok, socket} = AshA2ui.LiveRenderer.mount(config, params, session, socket)
+
+    {:ok,
+     socket
+     |> SurfaceChrome.mount_presence("clinic_board")
+     |> Phoenix.Component.assign(:as_of, as_of)
+     # The picker's form: param-only (no changeset behind it) — the change
+     # event is what matters, the input's value follows @as_of.
+     |> Phoenix.Component.assign(:time_travel_form, to_form(%{}, as: :time_travel))}
+  end
+
+  # Live navigation: picking an instant re-runs the surface build (same
+  # async task the mount used, so the injected handle_async delivers it the
+  # same way). An absent or unparseable `?as_of=` is the present — the
+  # DayLive `?date=` convention.
+  @impl true
+  def handle_params(params, _uri, socket) do
+    as_of = as_of_from_params(params)
+
+    if as_of == socket.assigns.as_of do
+      # The mount already built (or skipped) the surface for this instant.
+      {:noreply, socket}
+    else
+      config = surface_config(as_of)
+      actor = socket.assigns.ash_a2ui_actor
+      tenant = socket.assigns.ash_a2ui_tenant
+
+      {:noreply,
+       socket
+       |> Phoenix.Component.assign(:as_of, as_of)
+       |> start_async(:ash_a2ui_surface, fn ->
+         config.surface_fn.(config.ui, actor: actor, tenant: tenant)
+       end)}
+    end
+  end
+
+  @impl true
+  def handle_event("set-as-of", %{"time_travel" => %{"as_of" => raw}}, socket)
+      when is_binary(raw) do
+    case String.trim(raw) do
+      "" ->
+        # An emptied picker reads as "back to the present".
+        {:noreply, push_patch(socket, to: ~p"/")}
+
+      trimmed ->
+        case AsOfSurface.parse(trimmed) do
+          {:ok, as_of} ->
+            {:noreply, push_patch(socket, to: ~p"/?as_of=#{DateTime.to_iso8601(as_of)}")}
+
+          :error ->
+            # Unparseable input leaves the URL — and therefore the board —
+            # where it is.
+            {:noreply, socket}
+        end
+    end
+  end
+
+  # The compile-time config, or a copy whose surface_fn pins the reads to
+  # the instant (the closure is what carries `as_of` into the async build —
+  # `:surface_fn` receives only (ui, opts), so the instant cannot ride the
+  # opts list).
+  defp surface_config(nil), do: __ash_a2ui_config__()
+
+  defp surface_config(as_of) do
+    config = __ash_a2ui_config__()
+
+    %{
+      config
+      | surface_fn: fn ui, opts -> AsOfSurface.build(ui, Keyword.put(opts, :as_of, as_of)) end
+    }
+  end
+
+  defp as_of_from_params(%{"as_of" => raw}) when is_binary(raw) do
+    case AsOfSurface.parse(raw) do
+      {:ok, as_of} -> as_of
+      :error -> nil
+    end
+  end
+
+  defp as_of_from_params(_params), do: nil
+
+  defp as_of_input_value(nil), do: nil
+  defp as_of_input_value(%DateTime{} = as_of), do: Calendar.strftime(as_of, "%Y-%m-%dT%H:%M")
 end
 
 defmodule ClinicDemoWeb.A2ui.IntakeLive do

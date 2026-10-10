@@ -102,9 +102,12 @@ defmodule ClinicDemo.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
 
-      # Ash. The domain model this demo exists to introspect.
-      {:ash, "~> 3.0"},
-      {:ash_postgres, "~> 2.0"},
+      # Ash. The domain model this demo exists to introspect. 3.34 is the
+      # temporal-resources line: `Appointment` is a temporal resource (board
+      # time travel reads it "as of" an instant), which needs this Ash plus an
+      # ash_postgres that can split periods on PostgreSQL 18.
+      {:ash, "~> 3.34"},
+      {:ash_postgres, "~> 2.14"},
 
       # The Appointment lifecycle as a formal machine: transitions declared
       # on the resource, checked by Ash. One authority for what states a
@@ -128,8 +131,16 @@ defmodule ClinicDemo.MixProject do
       # via ash_compliance) because host resources extend it: the audit
       # resource is an AshEvents.EventLog, and the story resources carry
       # AshEvents.Events so their actions append to the log.
-      {:ash_events, "~> 0.7"},
-
+      #
+      # On the `temporal-as-of-support-0.7` branch (same 0.7 line) rather than
+      # hex: `Appointment` is a temporal resource now, and the wrappers there
+      # declare `temporal_safe?/1` and capture each write's `as_of` into the
+      # event metadata (ash_events#103), so the audit log records the instant
+      # a back-dated write took effect at instead of only the wall clock.
+      # `override: true` because ash_events_projections (via ash_compliance)
+      # resolves its own hex ash_events; one package cannot resolve from both.
+      {:ash_events,
+       github: "lukegalea/ash_events", branch: "temporal-as-of-support-0.7", override: true},
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
       {:oban, "~> 2.0"},

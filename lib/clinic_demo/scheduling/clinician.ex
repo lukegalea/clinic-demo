@@ -58,8 +58,13 @@ defmodule ClinicDemo.Scheduling.Clinician do
   end
 
   relationships do
+    # The destination is a temporal resource, so the keys must be declared:
+    # `{nil, :valid_at}` — this side has no period, each appointment version
+    # carries its own. The appointment reads stay as-of reads (contained at
+    # the query's instant, now by default).
     has_many :appointments, ClinicDemo.Scheduling.Appointment do
       public? true
+      temporal_keys {nil, :valid_at}
     end
   end
 

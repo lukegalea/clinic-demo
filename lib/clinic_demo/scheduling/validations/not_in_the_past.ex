@@ -34,10 +34,31 @@ defmodule ClinicDemo.Scheduling.Validations.NotInThePast do
 
     cond do
       is_nil(value) -> :ok
-      DateTime.compare(value, DateTime.utc_now()) == :lt -> error(opts)
+      DateTime.compare(value, reference_instant(changeset)) == :lt -> error(opts)
       true -> :ok
     end
   end
+
+  # The rule is "a slot may not be booked or moved into the past". On a
+  # temporal resource the write itself has an instant — `as_of`, now when the
+  # caller passes none — and "the past" is relative to THAT instant, not to
+  # the wall clock: back-dating a booking to yesterday may put its slot
+  # tomorrow, and that is exactly what the clinic meant. This is what makes
+  # the seeded history writable through the actions (a booking as of three
+  # hours ago for a slot two hours ago is legal; the slot was in the visit's
+  # future).
+  defp reference_instant(changeset) do
+    case changeset.as_of do
+      %DateTime{} = as_of -> as_of
+      _ -> DateTime.utc_now()
+    end
+  end
+
+  # Temporal safety (declared): the clock this validation reads is the
+  # write's own instant — `as_of`, resolved by the data layer for the same
+  # write — never a second, independent wall-clock read.
+  @impl true
+  def temporal_safe?(_opts), do: true
 
   @impl true
   def atomic(_changeset, opts, context) do

@@ -23,6 +23,16 @@ defmodule ClinicDemo.Scheduling.Changes.StartVisitProcess do
 
   alias Ash.Error.Changes.InvalidChanges
 
+  # Temporal safety (declared), with the one honest caveat spelled out: the
+  # process instance this starts is NOT a temporal resource, so its own
+  # timestamps are the wall clock even when the booking is back-dated with
+  # `as_of:` (the seeded history does exactly that). That is the intended
+  # shape — the engine's instances record when they were STARTED, the
+  # appointment's periods record when each stage took effect — and nothing
+  # here reads a clock to decide anything about the appointment.
+  @impl true
+  def temporal_safe?(_opts), do: true
+
   @impl true
   def change(changeset, _opts, context) do
     Ash.Changeset.after_action(changeset, fn _changeset, appointment ->
