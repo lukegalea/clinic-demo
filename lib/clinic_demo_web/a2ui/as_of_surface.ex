@@ -120,7 +120,14 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurface do
         |> Ash.Query.for_read(table.read_action)
         |> ContextRunner.apply_scope(scope)
         |> Ash.Query.load(table.loads)
-        |> Ash.read!(read_opts(view, opts) ++ [as_of: as_of])
+        # The instant rides the QUERY (Ash.Query.as_of/2 — shared context,
+        # so the loads thread it too). The read-OPTIONS form exists in the
+        # schema but is consumed only where the for_read pipeline runs it;
+        # handing it to Ash.read!/2 here would be silently dropped, and a
+        # time-travel surface that silently reads now is the one bug this
+        # module must never ship.
+        |> Ash.Query.as_of(as_of)
+        |> Ash.read!(read_opts(view, opts))
     end
   end
 

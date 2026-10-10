@@ -77,7 +77,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
     <div class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-base border-2 border-border bg-secondary-background px-4 py-3 shadow-shadow">
         <.form
-          for={to_form(%{}, as: :time_travel)}
+          for={@time_travel_form}
           id="time-travel-form"
           phx-change="set-as-of"
           class="flex flex-wrap items-center gap-x-2"
@@ -87,7 +87,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
           </label>
           <.input
             type="datetime-local"
-            field={@form[:as_of]}
+            field={@time_travel_form[:as_of]}
             id="time-travel-as_of"
             value={as_of_input_value(@as_of)}
             class="h-8 rounded-base border-2 border-border bg-main px-2 py-1 text-sm font-base text-main-foreground focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
@@ -136,7 +136,10 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
     {:ok,
      socket
      |> SurfaceChrome.mount_presence("clinic_board")
-     |> Phoenix.Component.assign(:as_of, as_of)}
+     |> Phoenix.Component.assign(:as_of, as_of)
+     # The picker's form: param-only (no changeset behind it) — the change
+     # event is what matters, the input's value follows @as_of.
+     |> Phoenix.Component.assign(:time_travel_form, to_form(%{}, as: :time_travel))}
   end
 
   # Live navigation: picking an instant re-runs the surface build (same

@@ -222,10 +222,17 @@ end
 
 # The triage the engine recorded at seed-run time, re-asserted at the
 # history's instant (see the header note): the board as of two hours ago
-# shows the visit in its triage lane, not still sitting in Booked.
+# shows the visit in its triage lane, not still sitting in Booked. The
+# write's subject is the version valid AT the triage instant — a temporal
+# write's validations read the loaded record, so the record must be the
+# as-of one — and the write runs BEFORE a walk's back-dated steps, so the
+# periods land in history order (a visit is triaged before it is checked
+# in, at every instant).
 record_triage_in_history = fn appointment, actor ->
   if appointment.triage_urgency && not triage_in_history?.(appointment, triaged_at) do
-    Scheduling.record_appointment_triage!(appointment, appointment.triage_urgency,
+    version = Scheduling.get_appointment!(appointment.id, as_of: triaged_at)
+
+    Scheduling.record_appointment_triage!(version, appointment.triage_urgency,
       actor: actor,
       as_of: triaged_at
     )
@@ -368,6 +375,8 @@ end
 pepper_visit = Scheduling.get_appointment!(pepper_visit.id)
 
 if pepper_visit.status == :scheduled do
+  record_triage_in_history.(pepper_visit, staff)
+
   pepper_visit = Scheduling.get_appointment!(pepper_visit.id)
 
   pepper_visit = Scheduling.get_appointment!(pepper_visit.id, as_of: checked_in_at)
@@ -423,6 +432,8 @@ end
 clover_visit = Scheduling.get_appointment!(clover_visit.id)
 
 if clover_visit.status == :scheduled do
+  record_triage_in_history.(clover_visit, staff)
+
   clover_visit = Scheduling.get_appointment!(clover_visit.id)
 
   clover_visit = Scheduling.get_appointment!(clover_visit.id, as_of: checked_in_at)
@@ -484,11 +495,13 @@ biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id)
 if biscuit_dental.status == :scheduled do
   {:ok, _} = Scheduling.record_weight(biscuit, Decimal.new("11.8"), actor: staff)
 
+  record_triage_in_history.(biscuit_dental, staff)
+
   biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id)
 
-  {:ok, _} =
-    biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id, as_of: checked_in_at)
-    Scheduling.check_in_appointment!(biscuit_dental, actor: staff, as_of: checked_in_at)
+  biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id, as_of: checked_in_at)
+
+  Scheduling.check_in_appointment!(biscuit_dental, actor: staff, as_of: checked_in_at)
 
   biscuit_dental = Scheduling.get_appointment!(biscuit_dental.id)
 
@@ -528,6 +541,8 @@ end
 biscuit_no_show_visit = Scheduling.get_appointment!(biscuit_no_show_visit.id)
 
 if biscuit_no_show_visit.status == :scheduled do
+  record_triage_in_history.(biscuit_no_show_visit, staff)
+
   biscuit_no_show_visit = Scheduling.get_appointment!(biscuit_no_show_visit.id)
 
   {:ok, _} =
@@ -545,6 +560,8 @@ end
 pepper_cancelled_visit = Scheduling.get_appointment!(pepper_cancelled_visit.id)
 
 if pepper_cancelled_visit.status == :scheduled do
+  record_triage_in_history.(pepper_cancelled_visit, staff)
+
   pepper_cancelled_visit = Scheduling.get_appointment!(pepper_cancelled_visit.id)
 
   {:ok, _} =
@@ -555,14 +572,14 @@ end
 
 # ── The history's triage lane ──────────────────────────────────────────────
 #
-# One pass over every visit still standing at :scheduled (the booked-but-
-# never-walked ones), re-asserting the triage the engine recorded at seed-run
-# time at the history's instant instead — two hours back, an hour after the
-# bookings. The board as of, say, ninety minutes ago then shows these cards
-# sitting in their triage lanes rather than all of them still in Booked.
-# The temporal-read guard makes the pass idempotent on reseed.
-for appointment <- Scheduling.list_appointments!(),
-    appointment.status == :scheduled do
+# One pass over every visit, re-asserting the triage the engine recorded at
+# seed-run time at the history's instant instead — two hours back, an hour
+# after the bookings. The board as of, say, ninety minutes ago then shows
+# the booked-and-never-walked cards sitting in their triage lanes rather
+# than all of them still in Booked. (The walked visits already had this done
+# inside their walks; the temporal-read guard makes the pass a no-op for
+# them and idempotent on reseed.)
+for appointment <- Scheduling.list_appointments!() do
   record_triage_in_history.(appointment, staff)
 end
 
