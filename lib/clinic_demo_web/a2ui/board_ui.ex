@@ -28,6 +28,7 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
       fields [
         :patient_label,
         :compliance_status,
+        :acuity_fact,
         :triage_urgency,
         :clinician_label,
         :scheduled_at,
@@ -42,8 +43,10 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
       read_action :board
 
       # The row badge is compliance: would the active bundle refuse this
-      # visit's check-in? Triage stays visible as the meta row's lead value —
-      # the lane colors live on the day view's dots either way.
+      # visit's check-in? The acuity FACT leads the meta row — what the
+      # judgment record admits about this patient, three-valued (the
+      # admitted urgency / "ruled out" / "no fact") — before the visit's
+      # own recorded triage answer.
       row_layout do
         title :patient_label
         badge :compliance_status
@@ -56,6 +59,7 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
         )
 
         meta [
+          :acuity_fact,
           :triage_urgency,
           :clinician_label,
           :scheduled_at,
@@ -131,6 +135,10 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
 
     field :triage_urgency do
       label "Triage"
+    end
+
+    field :acuity_fact do
+      label "Acuity (fact)"
     end
 
     field :compliance_status do

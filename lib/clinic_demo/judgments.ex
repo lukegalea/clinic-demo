@@ -18,7 +18,18 @@ defmodule ClinicDemo.Judgments do
   `Triage` is the minimal admission path over them: extract the state a
   triage judgment saw, record the observation, admit the patient-acuity
   fact through `AshJudgments.Facts.Materialiser` citing the observation —
-  the C1 evidence assertion active from day one.
+  the C1 evidence assertion active from day one. Since P4-S5 the admission
+  rides the scheduling domain's own `:record_triage` action
+  (`ClinicDemo.Scheduling.Changes.AdmitAcuityFact`), so every path that
+  records a triage answer — the visit process, the task list, the seeds —
+  accumulates the judgment record in the same transaction, and a cold
+  clone replays the ledger and the fact periods from the event log itself.
+
+  The read surfaces: `AshJudgments.Query.status/tri_state` for the
+  as-of-now standings (what `ClinicDemo.Scheduling.Calculations.AcuityFact`
+  puts on the board and schedule cards), and `Standings.status_at/
+  acuity_status_at/tri_state_at` for the as-of variant — the standing at
+  an instant T, straight off the period containment.
 
   The architectural line is the decisions domain's, extended one step: a
   decision decides, `Scheduling` acts, and this domain keeps the record —

@@ -639,6 +639,56 @@ evaluation_count =
 story_appointments =
   Enum.filter(appointments, &is_nil(&1.appointment_type_id))
 
+# ── The judgment record ─────────────────────────────────────────────────────
+#
+# Every triage write above went through the `record_triage` action, whose
+# admission hook keeps the judgment record in the same transaction (P4-S5):
+# one append-only observation per judgment on the ledger, and the
+# patient-acuity fact materialised off it citing that observation (C1's
+# assertion active). A re-triaged patient's history is IN the facts table —
+# period splits at each revision — not inferred from the appointments. The
+# block below just says so: what the seed's triage answers left on the
+# record, per story patient, oldest period first.
+
+story_patient_ids = story_appointments |> Enum.map(& &1.patient_id) |> Enum.uniq()
+
+judgment_observations =
+  ClinicDemo.Judgments.Observation
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(subject_id in ^story_patient_ids)
+  |> Ash.read!(authorize?: false)
+
+judgment_facts =
+  ClinicDemo.Judgments.Fact
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(subject_id in ^story_patient_ids)
+  |> Ash.read!(authorize?: false)
+
+now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+acuity_lines =
+  Enum.map_join(story_patient_ids, "\n", fn patient_id ->
+    subject = %{"type" => "ClinicDemo.Scheduling.Patient", "id" => patient_id}
+
+    periods =
+      judgment_facts
+      |> Enum.filter(&(&1.subject == subject))
+      |> Enum.sort_by(& &1.valid_at.lower, DateTime)
+
+    current = Enum.find(periods, fn f -> DateTime.compare(f.valid_at.lower, now) != :gt end)
+
+    "  #{patient_id |> Scheduling.get_patient!() |> Map.fetch!(:name)}: " <>
+      "#{length(periods)} fact period(s), observations #{Enum.count(judgment_observations, &(&1.subject_id == patient_id))}" <>
+      if(current, do: ", acuity now \"#{current.value}\"", else: ", no open period")
+  end)
+
+IO.puts("""
+
+Judgment record (the story's triage answers, kept as facts):
+  #{length(judgment_observations)} observations, #{length(judgment_facts)} acuity fact periods (story patients; the finance history keeps its own)
+#{acuity_lines}
+""")
+
 IO.puts("""
 Seeded:
   #{length(Scheduling.list_clinicians!())} clinicians

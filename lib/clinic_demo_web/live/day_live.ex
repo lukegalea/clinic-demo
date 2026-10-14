@@ -192,6 +192,9 @@ defmodule ClinicDemoWeb.DayLive do
           <span class={"rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base #{compliance_fill(@compliance[@detail.id])}"}>
             {compliance_label(@compliance[@detail.id])}
           </span>
+          <span class={"rounded-base border-2 border-border px-2.5 py-0.5 text-xs font-base #{acuity_fill(@detail.acuity_fact)}"}>
+            {acuity_label(@detail.acuity_fact)}
+          </span>
           <span class="rounded-base border-2 border-border bg-secondary-background px-2.5 py-0.5 text-xs font-base">
             {time_range(@detail)}
           </span>
@@ -254,7 +257,10 @@ defmodule ClinicDemoWeb.DayLive do
   # The compliance statuses ride the same mount: one pass over the rows
   # (one active-bundle read + decode, in-memory evaluation per row — the
   # batch contract in ClinicDemo.Compliance.appointment_status_page/2),
-  # keyed by id for the rows and the detail sheet's chip.
+  # keyed by id for the rows and the detail sheet's chip. The acuity FACT
+  # rides the resource's own batched calculation — the same
+  # `AshJudgments.Query.status/4` read the board and schedule cards use —
+  # loaded once with the rows for the detail sheet's chip.
   defp load_appointments(socket) do
     appointments =
       Appointment
@@ -263,6 +269,7 @@ defmodule ClinicDemoWeb.DayLive do
       |> Ash.Query.load(:patient_label)
       |> Ash.Query.load(:clinician_label)
       |> Ash.Query.load(:patient)
+      |> Ash.Query.load(:acuity_fact)
       |> Ash.Query.sort(scheduled_at: :asc)
       |> Ash.read!(authorize?: false)
 
@@ -377,6 +384,37 @@ defmodule ClinicDemoWeb.DayLive do
   defp compliance_label(:noncompliant), do: "Noncompliant"
   defp compliance_label(:no_rules), do: "No rules in force"
   defp compliance_label(_), do: "Compliance unknown"
+
+  # The acuity chip: the patient's admitted judgment FACT
+  # (`AshJudgments.Query.status/4` via the resource calculation), rendered
+  # three-valued and never folded together — an admitted urgency wears its
+  # triage color, a denial goes quiet-red-neutral, and "no fact" is the
+  # honest quiet: the judgment record has nothing to say. Static class
+  # strings so the Tailwind scan sees every color.
+  defp acuity_fill("emergency"), do: "bg-red"
+  defp acuity_fill("urgent"), do: "bg-orange"
+  defp acuity_fill("soon"), do: "bg-yellow"
+  defp acuity_fill("routine"), do: "bg-green"
+  defp acuity_fill(_), do: "bg-secondary-background"
+
+  defp acuity_label("emergency"), do: "Acuity: emergency (fact)"
+  defp acuity_label("urgent"), do: "Acuity: urgent (fact)"
+  defp acuity_label("soon"), do: "Acuity: soon (fact)"
+  defp acuity_label("routine"), do: "Acuity: routine (fact)"
+
+  # The sentinels come from the calculation module (single source); a
+  # remote call is not legal in a clause head, so the two quiet values
+  # match through a case with pins.
+  defp acuity_label(value) do
+    ruled_out = ClinicDemo.Scheduling.Calculations.AcuityFact.ruled_out()
+    no_fact = ClinicDemo.Scheduling.Calculations.AcuityFact.no_fact()
+
+    case value do
+      ^ruled_out -> "Acuity ruled out"
+      ^no_fact -> "No acuity fact"
+      _other -> "No acuity fact"
+    end
+  end
 
   defp time_range(%Appointment{} = appointment) do
     start_time = Calendar.strftime(appointment.scheduled_at, "%H:%M")

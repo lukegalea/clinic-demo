@@ -182,6 +182,23 @@ defmodule ClinicDemo.Scheduling.Appointment do
       description "Whether the active compliance bundle permits this visit's check-in."
     end
 
+    # The row's judgment badge: the patient's admitted acuity FACT, read
+    # through `AshJudgments.Query.status/4` — three-valued, and never folded
+    # into the scheduling attribute beside it. The calculation is
+    # module-based and batched: one facts read per distinct patient per page
+    # (see ClinicDemo.Scheduling.Calculations.AcuityFact). The same value
+    # feeds the day view's detail chip.
+    calculate :acuity_fact, :string, ClinicDemo.Scheduling.Calculations.AcuityFact do
+      public? true
+      description """
+      The patient's admitted acuity fact: the admitted urgency
+      ("urgent"), "ruled out" when an admitted fact says the acuity
+      predicate does not hold, or "no fact" when the judgment record has
+      nothing to say — never judged, omitted, expired, or below the
+      consumer's grade floor.
+      """
+    end
+
     # The board's lane key: the one dimension the kanban cards sort by. It
     # reads the same state the process engine moves (status + triage
     # urgency), so a lane move IS a state transition — never a parallel
@@ -434,6 +451,13 @@ defmodule ClinicDemo.Scheduling.Appointment do
       keeps the rule in one place: every caller that wants an urgency written
       comes through here, and the only thing that knows how to work one out is
       the DMN table in `priv/decisions/appointment_triage.dmn`.
+
+      Recording is also where the judgment becomes a FACT: the
+      `AdmitAcuityFact` hook admits the patient-acuity judgment in this same
+      transaction — observation on the ledger, fact on the facts table, the
+      C1 evidence citation active — so every path that records triage
+      (the visit process, the task list, the seeds) accumulates the
+      judgment record without reaching around this action.
       """
 
       require_atomic? false
@@ -452,6 +476,10 @@ defmodule ClinicDemo.Scheduling.Appointment do
       validate {CurrentStatusIn, from: [:scheduled, :checked_in]}
 
       change set_attribute(:triage_urgency, arg(:urgency))
+
+      # The judgment record: observation + admitted acuity fact, same
+      # transaction (P4-S5; replay steps aside — see the change's moduledoc).
+      change ClinicDemo.Scheduling.Changes.AdmitAcuityFact
     end
 
     update :mark_no_show do
