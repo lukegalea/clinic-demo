@@ -41,6 +41,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     references do
       reference :patient, on_delete: :delete
       reference :clinician, on_delete: :restrict
+      reference :appointment_type, on_delete: :restrict
     end
   end
 
@@ -134,6 +135,16 @@ defmodule ClinicDemo.Scheduling.Appointment do
     belongs_to :clinician, ClinicDemo.Scheduling.Clinician do
       description "Who is seeing them."
       allow_nil? false
+      public? true
+      temporal_keys {:valid_at, nil}
+    end
+
+    # Same plain-pointer shape as the two above: WHICH catalogue entry the
+    # visit is — a fact that does not vary across the visit's history, so no
+    # PERIOD join. Nilable because the catalogue arrived after the book did:
+    # a visit booked without a type simply recognizes no charge.
+    belongs_to :appointment_type, ClinicDemo.Scheduling.AppointmentType do
+      description "The price-list entry this visit is, if it has one."
       public? true
       temporal_keys {:valid_at, nil}
     end
@@ -261,6 +272,17 @@ defmodule ClinicDemo.Scheduling.Appointment do
       prepare build(sort: [scheduled_at: :asc])
     end
 
+    read :board do
+      description """
+      The board's world: the read instant's day and the next — the day in
+      flight and the day being booked, in their lanes. The process-now
+      surface — the seeded history and the forward backlog are the
+      schedule's business, not the board's.
+      """
+
+      prepare {ClinicDemo.Scheduling.Preparations.ScheduledFromReadInstant, []}
+    end
+
     create :book do
       description "Put a new appointment on the schedule."
 
@@ -288,6 +310,16 @@ defmodule ClinicDemo.Scheduling.Appointment do
         allow_nil? false
       end
 
+      argument :appointment_type_id, :uuid do
+        description """
+        The catalogue entry this visit is, when the caller names one. Nilable
+        — a visit without a type recognizes no charge. An id that is not in
+        the catalogue is refused here, not at write-up.
+        """
+
+        allow_nil? true
+      end
+
       # The two ways of naming the patient. Each manage only fires when its
       # argument was actually supplied (the `where` guards), and the
       # validation below makes the either/or a hard contract: exactly one.
@@ -304,6 +336,14 @@ defmodule ClinicDemo.Scheduling.Appointment do
       validate {ExactlyOneOf, arguments: [:patient_id, :patient]}
 
       change manage_relationship(:clinician_id, :clinician, type: :append)
+
+      # The catalogue entry, when the caller names one. Nilable — a visit
+      # without a type is a visit with no price, and the finance hook on
+      # :complete steps aside for exactly that case. The `where` guard is
+      # the same shape as the patient's: absent (or nil) means the manage
+      # never fires, rather than trying to append a null pointer.
+      change manage_relationship(:appointment_type_id, :appointment_type, type: :append),
+        where: [present(:appointment_type_id)]
 
       # Booking is what starts the visit process. Everything the appointment
       # goes through after this -- triage, check-in, the lab wait, discharge --
@@ -361,6 +401,12 @@ defmodule ClinicDemo.Scheduling.Appointment do
       change {ComplianceGuard, transition_to: :completed}
       change set_attribute(:notes, arg(:notes))
       change transition_state(:completed)
+
+      # Revenue rides the write-up: a completed visit with a catalogue type
+      # recognizes its charge in this same transaction, at the same instant
+      # the write takes effect at (`as_of`). See
+      # `ClinicDemo.Scheduling.Changes.RecognizeCharge`.
+      change ClinicDemo.Scheduling.Changes.RecognizeCharge
     end
 
     update :cancel do
