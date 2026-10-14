@@ -53,6 +53,9 @@ defmodule ClinicDemo.Scheduling.Changes.AdmitAcuityFact do
 
   use Ash.Resource.Change
 
+  alias ClinicDemo.Judgments.Observation
+  alias ClinicDemo.Judgments.Triage
+
   # Temporal safety (declared): the hook reads no clock of its own — the
   # fact's instant is the write's `as_of`, already resolved onto the
   # changeset, and the extract's reads are of the same records the caller's
@@ -82,9 +85,7 @@ defmodule ClinicDemo.Scheduling.Changes.AdmitAcuityFact do
         {:ok, appointment}
 
       true ->
-        ClinicDemo.Judgments.Triage.admit(appointment, urgency,
-          effective_at: effective_at(changeset)
-        )
+        Triage.admit(appointment, urgency, effective_at: effective_at(changeset))
         |> case do
           {:ok, _verdict} -> {:ok, appointment}
           {:error, reason} -> {:error, reason}
@@ -97,11 +98,11 @@ defmodule ClinicDemo.Scheduling.Changes.AdmitAcuityFact do
   # it judged, so the match is visit-scoped: another visit of the same
   # patient reaching the same answer is a new judgment, and records.
   defp already_recorded?(appointment, urgency) do
-    ClinicDemo.Judgments.Observation
+    Observation
     |> Ash.Query.for_read(:read)
     |> Ash.Query.filter(
       subject_id == ^appointment.patient_id and
-        question_id == ^ClinicDemo.Judgments.Triage.question_id() and
+        question_id == ^Triage.question_id() and
         value == ^to_string(urgency)
     )
     |> Ash.read!(authorize?: false)

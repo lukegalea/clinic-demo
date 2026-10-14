@@ -30,6 +30,7 @@ defmodule ClinicDemo.Judgments.Standings do
   """
 
   alias ClinicDemo.Judgments.Fact
+  alias ClinicDemo.Judgments.Triage
 
   @type verdict :: {:in, map()} | {:out, map()} | {:unknown, atom()}
 
@@ -40,7 +41,7 @@ defmodule ClinicDemo.Judgments.Standings do
   """
   @spec acuity_status_at(term(), DateTime.t(), keyword()) :: verdict()
   def acuity_status_at(subject, as_of, opts \\ []) do
-    status_at(subject, ClinicDemo.Judgments.Triage.question_id(), as_of, opts)
+    status_at(subject, Triage.question_id(), as_of, opts)
   end
 
   @doc """

@@ -190,6 +190,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     # feeds the day view's detail chip.
     calculate :acuity_fact, :string, ClinicDemo.Scheduling.Calculations.AcuityFact do
       public? true
+
       description """
       The patient's admitted acuity fact: the admitted urgency
       ("urgent"), "ruled out" when an admitted fact says the acuity

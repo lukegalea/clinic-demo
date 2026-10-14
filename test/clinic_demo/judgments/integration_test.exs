@@ -35,6 +35,7 @@ defmodule ClinicDemo.Judgments.IntegrationTest do
   alias ClinicDemo.Judgments.Standings
   alias ClinicDemo.Judgments.Triage
   alias ClinicDemo.Scheduling
+  alias ClinicDemo.Scheduling.Calculations.AcuityFact
 
   @staff %{id: "00000000-0000-0000-0000-0000000000dd", role: :veterinarian}
 
@@ -162,7 +163,7 @@ defmodule ClinicDemo.Judgments.IntegrationTest do
     {appointment, patient} = booked_clear()
 
     # Unknown: the judgment record has nothing to say.
-    assert acuity_of(appointment) == ClinicDemo.Scheduling.Calculations.AcuityFact.no_fact()
+    assert acuity_of(appointment) == AcuityFact.no_fact()
 
     # In: the admitted urgency, the fact's own value.
     assert {:ok, :materialised} = Triage.admit(appointment, :urgent)
@@ -188,7 +189,7 @@ defmodule ClinicDemo.Judgments.IntegrationTest do
                resource: Fact
              )
 
-    assert acuity_of(appointment) == ClinicDemo.Scheduling.Calculations.AcuityFact.ruled_out()
+    assert acuity_of(appointment) == AcuityFact.ruled_out()
 
     # And the package's own tri-state partition agrees, three-valued:
     # this subject is out, a never-judged one is unknown — never folded.

@@ -35,6 +35,7 @@ defmodule ClinicDemoWeb.DayLive do
 
   alias ClinicDemo.Compliance
   alias ClinicDemo.Scheduling.Appointment
+  alias ClinicDemo.Scheduling.Calculations.AcuityFact
   alias ClinicDemoWeb.A2ui.SurfaceChrome
 
   @surface_id "clinic_day"
@@ -406,8 +407,8 @@ defmodule ClinicDemoWeb.DayLive do
   # remote call is not legal in a clause head, so the two quiet values
   # match through a case with pins.
   defp acuity_label(value) do
-    ruled_out = ClinicDemo.Scheduling.Calculations.AcuityFact.ruled_out()
-    no_fact = ClinicDemo.Scheduling.Calculations.AcuityFact.no_fact()
+    ruled_out = AcuityFact.ruled_out()
+    no_fact = AcuityFact.no_fact()
 
     case value do
       ^ruled_out -> "Acuity ruled out"
