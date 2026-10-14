@@ -59,14 +59,24 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   appointment history at that instant (`AsOfSurface` reads the temporal
   resource contained at T and strips the row actions — a view of the past
   is not an operating surface). The control below is the demo's handle on
-  that: pick an instant, land on it as a shareable `?as_of=` deep link;
-  "Now" is the plain board again.
+  that: pick an instant, land on it as a shareable `?as_of=` deep link
+  (the preset chips are quick jumps — the param still carries the exact
+  instant); "Now" is the plain board again. An instant before any
+  appointment existed gets a quiet line saying so, not a silent board.
   """
 
-  # Without an acting clinician, every card action is refused by the
-  # actor_present policy — the error surfaces in the a2ui status banner
-  # inside the shadow DOM, which reads as "the button didn't work". This
-  # banner says why, before the click.
+  # The control is composed as ONE bar with the actor notice so the host
+  # chrome above the board reads as a single unit: the time-travel row on
+  # top, and — only when nobody is acting — the actor notice as a black
+  # strip docked into the same card. Without an acting clinician, every
+  # card action is refused by the actor_present policy — the error surfaces
+  # in the a2ui status banner inside the shadow DOM, which reads as "the
+  # button didn't work". That strip says why, before the click.
+  #
+  # Time travel is a MODE, and the bar wears it: resting is the white card
+  # with a green "Live now" chip; traveling turns the card violet with the
+  # black "Viewing as of … · read-only" chip. The fill flip transitions, so
+  # the "Now" reset reads as snapping back to live.
   #
   # Reaching /acting-as is live navigation — the picker now shares this
   # live_session. The actor SWITCH itself is still a full redirect by
@@ -75,46 +85,91 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-base border-2 border-border bg-secondary-background px-4 py-3 shadow-shadow">
-        <.form
-          for={@time_travel_form}
-          id="time-travel-form"
-          phx-change="set-as-of"
-          class="flex flex-wrap items-center gap-x-2"
-        >
-          <label for="time-travel-as_of" class="text-sm font-heading">
-            View the board as of
-          </label>
-          <.input
-            type="datetime-local"
-            field={@time_travel_form[:as_of]}
-            id="time-travel-as_of"
-            value={as_of_input_value(@as_of)}
-            class="h-8 rounded-base border-2 border-border bg-main px-2 py-1 text-sm font-base text-main-foreground focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
-          />
-        </.form>
-        <.link
-          patch={~p"/"}
-          class="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-base border-2 border-border bg-main px-3 text-sm font-base text-main-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
-        >
-          Now
-        </.link>
-        <span
-          :if={@as_of}
-          data-testid="as-of-indicator"
-          class="inline-flex items-center rounded-base border-2 border-border bg-main px-2.5 py-0.5 text-xs font-base text-main-foreground"
-        >
-          Viewing as of {Calendar.strftime(@as_of, "%Y-%m-%d %H:%M UTC")} — read-only
-        </span>
-      </div>
-      <%= if is_nil(assigns[:a2ui_actor]) do %>
-        <div class="relative w-full rounded-base border-2 border-border bg-black px-4 py-3 text-sm text-white shadow-shadow">
-          <strong class="font-heading">No one is acting.</strong>
-          Every move on the board needs a clinician —
-          <.link navigate="/acting-as" class="underline underline-offset-2">pick one</.link>
-          to enable check-ins, triage, and discharges.
+      <section
+        aria-label="Board time travel"
+        class={[
+          "rounded-base border-2 border-border shadow-shadow transition-colors duration-300",
+          if(@as_of, do: "bg-violet", else: "bg-secondary-background")
+        ]}
+      >
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+          <.form
+            for={@time_travel_form}
+            id="time-travel-form"
+            phx-change="set-as-of"
+            class="flex flex-wrap items-center gap-x-2 gap-y-1 [&>div]:mb-0"
+          >
+            <label for="time-travel-as_of" class="text-sm font-heading">
+              View the board as of
+            </label>
+            <.input
+              type="datetime-local"
+              field={@time_travel_form[:as_of]}
+              id="time-travel-as_of"
+              value={as_of_input_value(@as_of)}
+              class="h-9 w-56 rounded-base border-2 border-border bg-secondary-background px-2.5 text-sm font-base shadow-shadow transition-all hover:shadow-lift focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black"
+            />
+          </.form>
+          <nav aria-label="Preset instants" class="flex flex-wrap items-center gap-1.5">
+            <.link
+              :for={{label, instant, id} <- time_travel_presets()}
+              patch={time_travel_patch(instant)}
+              data-testid={"tt-preset-#{id}"}
+              title={preset_title(instant)}
+              aria-current={if(preset_current?(instant, @as_of), do: "true", else: nil)}
+              class={[
+                "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-base border-2 border-border px-2.5 text-xs font-heading shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press",
+                if(preset_current?(instant, @as_of),
+                  do: "bg-main text-main-foreground",
+                  else: "bg-secondary-background text-foreground"
+                )
+              ]}
+            >
+              <.icon :if={is_nil(instant)} name="hero-arrow-uturn-left" class="size-3.5" />
+              {label}
+            </.link>
+          </nav>
+          <span
+            :if={is_nil(@as_of)}
+            data-testid="as-of-live-indicator"
+            role="status"
+            class="tt-status-chip ml-auto inline-flex items-center gap-1.5 rounded-base border-2 border-border bg-green px-2.5 py-1 text-xs font-heading text-foreground"
+          >
+            <span class="size-2 rounded-full bg-foreground"></span>
+            Live now
+          </span>
+          <span
+            :if={@as_of}
+            data-testid="as-of-indicator"
+            role="status"
+            class="tt-status-chip ml-auto inline-flex items-center gap-1.5 rounded-base border-2 border-border bg-black px-2.5 py-1 text-xs font-base text-white"
+          >
+            <.icon name="hero-clock" class="size-3.5 shrink-0" />
+            Viewing as of
+            <span class="font-heading tabular-nums">{as_of_label(@as_of)}</span>
+            · read-only
+          </span>
         </div>
-      <% end %>
+        <%= if is_nil(assigns[:a2ui_actor]) do %>
+          <div class="mt-3 rounded-b-base bg-black px-4 py-2.5 text-sm text-white">
+            <strong class="font-heading">No one is acting.</strong>
+            Every move on the board needs a clinician —
+            <.link navigate="/acting-as" class="underline underline-offset-2">pick one</.link>
+            to enable check-ins, triage, and discharges.
+          </div>
+        <% end %>
+      </section>
+      <div
+        :if={@as_of && @as_of_empty}
+        data-testid="as-of-empty-state"
+        class="flex items-center gap-2.5 rounded-base border-2 border-dashed border-border bg-secondary-background px-4 py-2.5 text-sm text-foreground/70"
+      >
+        <.icon name="hero-clock" class="size-4 shrink-0 text-foreground/50" />
+        <p>
+          <span class="font-heading text-foreground">No appointments yet at this instant.</span>
+          The clinic's history starts later.
+        </p>
+      </div>
       <AshA2ui.LiveRenderer.surface_container />
     </div>
     """
@@ -137,6 +192,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
      socket
      |> SurfaceChrome.mount_presence("clinic_board")
      |> Phoenix.Component.assign(:as_of, as_of)
+     |> assign_as_of_emptiness(as_of)
      # The picker's form: param-only (no changeset behind it) — the change
      # event is what matters, the input's value follows @as_of.
      |> Phoenix.Component.assign(:time_travel_form, to_form(%{}, as: :time_travel))}
@@ -161,9 +217,10 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
       {:noreply,
        socket
        |> Phoenix.Component.assign(:as_of, as_of)
+       |> assign_as_of_emptiness(as_of)
        |> start_async(:ash_a2ui_surface, fn ->
-         config.surface_fn.(config.ui, actor: actor, tenant: tenant)
-       end)}
+          config.surface_fn.(config.ui, actor: actor, tenant: tenant)
+        end)}
     end
   end
 
@@ -187,6 +244,69 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
         end
     end
   end
+
+  # The empty-state read: one containment read pinned to the instant — the
+  # same query shape AsOfSurface's lane reads run (for_read → as_of → read)
+  # — so the host chrome can say "nothing existed yet" instead of rendering
+  # a silent board over an empty history. Only runs while traveling: the
+  # live board tells its own story (or not) inside the surface.
+  defp assign_as_of_emptiness(socket, nil) do
+    Phoenix.Component.assign(socket, :as_of_empty, false)
+  end
+
+  defp assign_as_of_emptiness(socket, %DateTime{} = as_of) do
+    empty? =
+      ClinicDemo.Scheduling.Appointment
+      |> Ash.Query.for_read(:read)
+      |> Ash.Query.as_of(as_of)
+      |> Ash.read!(authorize?: false)
+      |> Enum.empty?()
+
+    Phoenix.Component.assign(socket, :as_of_empty, empty?)
+  end
+
+  # The quick jumps. Each chip carries its exact instant in the `?as_of=`
+  # param (the URL stays the source of truth — chips are shortcuts, not a
+  # second mechanism), computed at render time so "1h ago" stays honest
+  # however long the page sits open. "Now" is the reset: no param at all.
+  defp time_travel_presets(now \\ DateTime.utc_now()) do
+    today = DateTime.to_date(now)
+
+    [
+      {"Now", nil, "now"},
+      {"1h ago", minutes_ago(now, 60), "1h-ago"},
+      {"Today 08:00", at_time(today, ~T"08:00:00"), "today-0800"},
+      {"Yesterday", at_time(Date.add(today, -1), ~T"08:00:00"), "yesterday"}
+    ]
+  end
+
+  defp minutes_ago(now, minutes) do
+    now |> DateTime.add(-minutes * 60, :second) |> DateTime.truncate(:second)
+  end
+
+  defp at_time(date, %Time{} = time) do
+    DateTime.new!(date, time, "Etc/UTC")
+  end
+
+  defp time_travel_patch(nil), do: ~p"/"
+
+  defp time_travel_patch(%DateTime{} = instant) do
+    ~p"/?as_of=#{DateTime.to_iso8601(instant)}"
+  end
+
+  # A chip is "current" when the board is already at its instant — the
+  # blue "you are here" fill, the same read as active tabs and nav pills.
+  # Instants are second-truncated on both sides (presets by construction,
+  # params by the ISO round-trip), so equality is exact.
+  defp preset_current?(instant, as_of), do: instant == as_of
+
+  defp preset_title(nil), do: "Back to the live board"
+
+  defp preset_title(%DateTime{} = instant), do: as_of_label(instant)
+
+  # The indicator's copy: the app's all-times-UTC convention, stated once,
+  # quietly, inside the timestamp itself.
+  defp as_of_label(%DateTime{} = as_of), do: Calendar.strftime(as_of, "%Y-%m-%d %H:%M UTC")
 
   # The compile-time config, or a copy whose surface_fn pins the reads to
   # the instant (the closure is what carries `as_of` into the async build —
