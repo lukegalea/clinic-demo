@@ -141,6 +141,13 @@ defmodule ClinicDemo.MixProject do
       # resolves its own hex ash_events; one package cannot resolve from both.
       {:ash_events,
        github: "lukegalea/ash_events", branch: "temporal-as-of-support-0.7", override: true},
+
+      # The judgment pipeline's substrate (P4-S4): the observation ledger
+      # and the temporal materialised-facts fragments the clinic's first
+      # facts host is built from. main because C1 (the materialiser's
+      # evidence assertion, aeebd86) is the API this wiring exists to ride
+      # — the hex ladder has not caught up yet.
+      {:ash_judgments, github: "lukegalea/ash_judgments", branch: "main"},
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
       {:oban, "~> 2.0"},
