@@ -613,6 +613,23 @@ Triage decided:
   #{evaluation_count} DMN triage evaluations on file
 """)
 
+# ── Finance: the revenue demo's world ──────────────────────────────────────
+#
+# ~6 months of appointment history plus a live forward window, written
+# through the attributed actions with as_of backdating — the same mechanic
+# the walks above use, at volume. Every completion recognizes its charge at
+# the completion's instant, so /revenue has months of real revenue to chart
+# and the forecast has outcomes to learn rates from. Deterministic (fixed
+# :rand seed) and idempotent (lookup-or-create, stage guards re-read the
+# history): re-running backfills only the days that appeared since.
+#
+# This runs BEFORE the compliance bundle is activated, like every walk
+# above: the first seeding's back-dated completions predate the bundle, and
+# the finance walk's own discipline (weights recorded at patient creation,
+# triage re-asserted in history) keeps any later top-up run lawful under
+# the active bundle too.
+ClinicDemo.FinanceSeeds.run()
+
 # ── Compliance: put the appointment rule bundle in force ───────────────────
 #
 # Last, deliberately: everything above walked transitions the guard now

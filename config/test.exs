@@ -12,7 +12,16 @@ config :clinic_demo, ClinicDemo.Repo,
   port: String.to_integer(System.get_env("PGPORT", "5432")),
   database: "clinic_demo_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: System.schedulers_online() * 2
+  pool_size: System.schedulers_online() * 2,
+  # In auto mode the sandbox pins one pooled connection to a process from
+  # its first query until it exits, and DBConnection's default
+  # `:ownership_timeout` (120s) kills the holder at the mark. That guard
+  # exists for wedged tests; it also fires on the one legitimate long-lived
+  # process in this env: `mix seed` (the visual suite's boot step runs it
+  # under MIX_ENV=test), whose finance history is minutes of writes in one
+  # process. Generous, and it changes nothing about test isolation —
+  # tests run in manual mode with per-test owners.
+  ownership_timeout: 1_800_000
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
