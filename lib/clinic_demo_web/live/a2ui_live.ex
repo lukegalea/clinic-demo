@@ -135,8 +135,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
             role="status"
             class="tt-status-chip ml-auto inline-flex items-center gap-1.5 rounded-base border-2 border-border bg-green px-2.5 py-1 text-xs font-heading text-foreground"
           >
-            <span class="size-2 rounded-full bg-foreground"></span>
-            Live now
+            <span class="size-2 rounded-full bg-foreground"></span> Live now
           </span>
           <span
             :if={@as_of}
@@ -144,8 +143,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
             role="status"
             class="tt-status-chip ml-auto inline-flex items-center gap-1.5 rounded-base border-2 border-border bg-black px-2.5 py-1 text-xs font-base text-white"
           >
-            <.icon name="hero-clock" class="size-3.5 shrink-0" />
-            Viewing as of
+            <.icon name="hero-clock" class="size-3.5 shrink-0" /> Viewing as of
             <span class="font-heading tabular-nums">{as_of_label(@as_of)}</span>
             · read-only
           </span>
@@ -219,8 +217,8 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
        |> Phoenix.Component.assign(:as_of, as_of)
        |> assign_as_of_emptiness(as_of)
        |> start_async(:ash_a2ui_surface, fn ->
-          config.surface_fn.(config.ui, actor: actor, tenant: tenant)
-        end)}
+         config.surface_fn.(config.ui, actor: actor, tenant: tenant)
+       end)}
     end
   end
 
