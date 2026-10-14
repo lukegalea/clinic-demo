@@ -26,8 +26,6 @@ defmodule ClinicDemoWeb.RevenueLive do
 
   use ClinicDemoWeb, :live_view
 
-  require Ash.Query
-
   alias ClinicDemo.Finance
   alias ClinicDemo.Finance.Forecast
   alias ClinicDemoWeb.A2ui.SurfaceChrome
@@ -146,14 +144,14 @@ defmodule ClinicDemoWeb.RevenueLive do
   end
 
   attr :months, :list, required: true
-  attr :max, :decimal, required: true
+  attr :ceiling, :any, required: true
 
   # The bars. Static class-free SVG — fills are plain attributes, so the
   # CSP has nothing to say and Tailwind nothing to scan. Heights scale
   # against a clean ceiling (the max month, rounded up), never against the
   # data's own wiggle.
   defp month_bars(assigns) do
-    %{months: months, ceiling: ceiling} = assigns
+    %{months: months} = assigns
     n = max(length(months), 1)
     slot_w = (@width - @padding_left * 2) / n
     bar_w = slot_w * 0.6
@@ -189,7 +187,7 @@ defmodule ClinicDemoWeb.RevenueLive do
   end
 
   attr :weeks, :list, required: true
-  attr :ceiling, :decimal, required: true
+  attr :ceiling, :any, required: true
 
   # The forecast line: one point per week, Monday-anchored. Points sit on
   # the scaled expected value; labels carry the week and the number.
