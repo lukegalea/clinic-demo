@@ -70,6 +70,11 @@ defmodule ClinicDemoWeb.Router do
       # The flight view: every live visit on the process diagram, real-time
       # (CLIN-1). Host LiveView over AshBpmn.FlightView, like the Day view.
       live "/flight", FlightLive
+      # The revenue view: recognized money and the schedule's forecast,
+      # host-rendered SVG like the Day view. Reachable by URL — the nav's
+      # entries stop at Evidence (the /events precedent), so the page
+      # claims no pill and no committed baseline outside its own moves.
+      live "/revenue", RevenueLive
       live "/intake", A2ui.IntakeLive
       live "/emergencies", A2ui.EmergencyBoardLive
       live "/schedule", A2ui.ScheduleLive

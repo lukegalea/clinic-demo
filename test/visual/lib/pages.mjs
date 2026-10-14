@@ -34,6 +34,16 @@ export const PAGES = [
       }, null, { timeout: 20_000 }),
   },
   { route: "/worklist", name: "worklist", marker: { kind: "a2ui" }, navCurrent: "/worklist" },
+  {
+    // The revenue view: a host LiveView with hand-rolled SVG charts, no
+    // nav pill (the nav's entries stop at Evidence, the /events
+    // precedent — so no other page's baseline moves for it). It renders
+    // fully on mount — no hooks, no client draw — so it needs no settle.
+    route: "/revenue",
+    name: "revenue",
+    marker: { kind: "h1", text: "Revenue" },
+    extraMarker: { kind: "text", text: "Recognized revenue by month" },
+  },
   { route: "/visits", name: "visits", marker: { kind: "a2ui" }, navCurrent: "/visits" },
   { route: "/patients", name: "patients", marker: { kind: "a2ui" }, navCurrent: "/patients" },
   { route: "/clinicians", name: "clinicians", marker: { kind: "a2ui" }, navCurrent: "/clinicians" },
