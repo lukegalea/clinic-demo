@@ -26,8 +26,9 @@
 //      have no View control; row-action success is visible; anonymous
 //      writes are refused visibly; /events renders the seeded event stream
 //      (bookings through discharge, DMN evaluations); a stale roster pick
-//      redirects with a flash (no raw 422); and the process designer's
-//      catalogue datalist is present.
+//      redirects with a flash (no raw 422); the process designer's
+//      catalogue datalist is present; and the board's time-travel control
+//      carries its mode chrome, empty state, and Now-reset contract.
 //
 // Conventions:
 //   * Screenshot baselines: test/visual/__screenshots__/<page>.png, committed.
@@ -581,6 +582,61 @@ async function pinDeckArrowKeys(reporter, baseUrl, page) {
   }
 }
 
+// The time-travel control's host contract. The ?as_of= mechanism is URL
+// state all the way down; what these pins hold is the chrome around it:
+// a pre-history instant shows the read-only mode chip AND the quiet
+// empty state; an instant inside the seeded history shows the mode
+// without the empty state; and the "Now" chip patches back to the live
+// board (the param leaves the URL, the live chip returns).
+async function pinBoardTimeTravel(reporter, baseUrl, page) {
+  // (a) An instant before any appointment existed.
+  try {
+    await goToPage(page, baseUrl, "/?as_of=2026-01-01T00:00:00Z");
+    const indicator = page.locator('[data-testid="as-of-indicator"]');
+    await indicator.waitFor({ state: "visible", timeout: 10_000 });
+    const text = ((await indicator.textContent()) || "").replace(/\s+/g, " ").trim();
+    const copyOk = /Viewing as of/.test(text) && /read-only/.test(text);
+    await page.locator('[data-testid="as-of-empty-state"]').waitFor({ state: "visible", timeout: 10_000 });
+    if (copyOk) {
+      reporter.pass("behavior:board-time-travel-prehistory", `mode chip + empty state render: ${JSON.stringify(text.slice(0, 60))}`);
+    } else {
+      reporter.fail("behavior:board-time-travel-prehistory", `mode chip reads ${JSON.stringify(text)}`);
+    }
+  } catch (error) {
+    reporter.fail("behavior:board-time-travel-prehistory", describeError(error));
+  }
+
+  // (b) An instant the seeded history covers: the mode, but no empty state.
+  try {
+    const t2h = new Date(Date.now() - 2 * 3_600_000).toISOString().replace(/\.\d+Z$/, "Z");
+    await goToPage(page, baseUrl, `/?as_of=${t2h}`);
+    await page.locator('[data-testid="as-of-indicator"]').waitFor({ state: "visible", timeout: 10_000 });
+    const emptyStates = await page.locator('[data-testid="as-of-empty-state"]').count();
+    if (emptyStates === 0) {
+      reporter.pass("behavior:board-time-travel-history", "an instant inside the seeded history renders the mode without the empty state");
+    } else {
+      reporter.fail("behavior:board-time-travel-history", "empty state rendered at an instant the seed history covers");
+    }
+  } catch (error) {
+    reporter.fail("behavior:board-time-travel-history", describeError(error));
+  }
+
+  // (c) The Now chip snaps back to live: param gone, live chip back.
+  try {
+    const nowChip = page.locator('[data-testid="tt-preset-now"]');
+    await nowChip.waitFor({ state: "visible", timeout: 10_000 });
+    await nowChip.click();
+    await page.locator('[data-testid="as-of-live-indicator"]').waitFor({ state: "visible", timeout: 10_000 });
+    if (new URL(page.url()).searchParams.has("as_of")) {
+      reporter.fail("behavior:board-time-travel-now", `URL still carries as_of after the Now chip: ${page.url()}`);
+    } else {
+      reporter.pass("behavior:board-time-travel-now", "Now chip patches back: ?as_of= gone, live chip returned");
+    }
+  } catch (error) {
+    reporter.fail("behavior:board-time-travel-now", describeError(error));
+  }
+}
+
 // The collapsed operations index (CLIN-5): the grid must be inside a native
 // <details> that starts CLOSED and opens on the summary — the Day view's
 // Earlier-today fold, applied to the hub.
@@ -746,6 +802,9 @@ async function main() {
     }
     if (reporter.shouldRun("behavior:operator-index-collapsed")) {
       await pinOperatorIndexCollapsed(reporter, options.baseUrl, main.page);
+    }
+    if (reporter.shouldRun("behavior:board-time-travel")) {
+      await pinBoardTimeTravel(reporter, options.baseUrl, main.page);
     }
 
     // Cleanup of the long-lived contexts.
