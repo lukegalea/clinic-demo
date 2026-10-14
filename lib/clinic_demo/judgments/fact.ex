@@ -35,7 +35,7 @@ defmodule ClinicDemo.Judgments.Fact do
   end
 
   events do
-    event_log ClinicDemo.Events.Event
+    event_log(ClinicDemo.Events.Event)
     create_timestamp :recorded_at
   end
 end
