@@ -201,7 +201,7 @@ defmodule ClinicDemo.FinanceTest do
     months = Finance.revenue_by_month(2)
     expected_month = charge.recognized_at |> DateTime.to_date() |> Date.beginning_of_month()
 
-    row = Enum.find(months, &Date.equal?(&1.month, expected_month))
+    row = Enum.find(months, &(Date.compare(&1.month, expected_month) == :eq))
     assert row
     assert Decimal.eq?(row.total, type.base_price)
     assert row.count == 1
@@ -214,7 +214,7 @@ defmodule ClinicDemo.FinanceTest do
     %{appointment: appointment} = back_dated_visit(patient, vet, type)
     charge = Finance.charge_for(appointment.id)
 
-    {:ok, written_off} = Finance.write_off_charge(charge)
+    {:ok, written_off} = Finance.write_off_charge(charge, authorize?: false)
     assert written_off.status == :written_off
 
     months = Finance.revenue_by_month(2)

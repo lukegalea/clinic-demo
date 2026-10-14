@@ -47,8 +47,10 @@ defmodule ClinicDemo.Finance do
           %{month: Date.t(), total: Decimal.t(), count: non_neg_integer()}
         ]
   def revenue_by_month(months) when is_integer(months) and months > 0 do
+    # Descending explicitly — a bare `(months - 1)..0` reads as a warning
+    # under Elixir 1.20's range rules.
     month_starts =
-      for offset <- (months - 1)..0 do
+      for offset <- Range.new(months - 1, 0, -1) do
         Date.utc_today() |> Date.beginning_of_month() |> shift_month(-offset)
       end
 
@@ -63,7 +65,14 @@ defmodule ClinicDemo.Finance do
       from = DateTime.new!(month, ~T[00:00:00], "Etc/UTC")
       to = DateTime.new!(shift_month(month, 1), ~T[00:00:00], "Etc/UTC")
 
-      in_month = Enum.filter(charges, &(&1.recognized_at >= from and &1.recognized_at < to))
+      # Datetimes order only through `DateTime.compare/2` — the `</>=`
+      # operators compare the struct maps by alphabetical key order, where
+      # `:day` outranks `:month` and October 14th sorts past November 1st.
+      in_month =
+        Enum.filter(charges, fn charge ->
+          DateTime.compare(charge.recognized_at, from) != :lt and
+            DateTime.compare(charge.recognized_at, to) == :lt
+        end)
 
       total =
         Enum.reduce(in_month, Decimal.new(0), &Decimal.add(&2, &1.amount))

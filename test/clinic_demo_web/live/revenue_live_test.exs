@@ -11,8 +11,6 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
   import Phoenix.LiveViewTest
 
-  require Ash.Query
-
   alias ClinicDemo.Finance.Charge
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.AppointmentType
@@ -27,7 +25,7 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
         %{
           full_name: "Dr. Revenue Test",
           role: :veterinarian,
-          license_number: "ON-#{System.unique_integer([:positive])}"
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
         },
         actor: @staff
       )

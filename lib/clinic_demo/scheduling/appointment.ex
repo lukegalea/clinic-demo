@@ -328,8 +328,11 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       # The catalogue entry, when the caller names one. Nilable — a visit
       # without a type is a visit with no price, and the finance hook on
-      # :complete steps aside for exactly that case.
-      change manage_relationship(:appointment_type_id, :appointment_type, type: :append)
+      # :complete steps aside for exactly that case. The `where` guard is
+      # the same shape as the patient's: absent (or nil) means the manage
+      # never fires, rather than trying to append a null pointer.
+      change manage_relationship(:appointment_type_id, :appointment_type, type: :append),
+        where: [present(:appointment_type_id)]
 
       # Booking is what starts the visit process. Everything the appointment
       # goes through after this -- triage, check-in, the lab wait, discharge --

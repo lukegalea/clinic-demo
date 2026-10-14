@@ -106,16 +106,18 @@ defmodule ClinicDemo.Finance.ForecastTest do
   test "the clinic-wide cell is the floor the chain cannot fall below" do
     rates = Forecast.build_rates([row(Ecto.UUID.generate(), Ecto.UUID.generate(), 4, :no_show)])
 
-    {rate, tier, observations} =
-      Forecast.completion_rate(rates, Ecto.UUID.generate(), Ecto.UUID.generate(), 5)
-
-    assert tier == :global
-    assert observations == 1
-    assert Decimal.eq?(rate, Decimal.new(0))
+    # One observation does not clear the gate even at the floor tier: the
+    # chain answers with the hard zero-rate floor, zero observations.
+    assert Forecast.completion_rate(rates, Ecto.UUID.generate(), Ecto.UUID.generate(), 5) ==
+             {Decimal.new(0), :global, 0}
 
     # And an empty book floors at zero on zero observations.
-    {rate, tier, observations} = Forecast.completion_rate(Forecast.build_rates([]), Ecto.UUID.generate(), Ecto.UUID.generate(), 1)
-    assert {rate, tier, observations} == {Decimal.new(0), :global, 0}
+    assert Forecast.completion_rate(
+             Forecast.build_rates([]),
+             Ecto.UUID.generate(),
+             Ecto.UUID.generate(),
+             1
+           ) == {Decimal.new(0), :global, 0}
   end
 
   test "weekly buckets Monday-anchored, weights by rate, and ignores the horizon's outside" do
@@ -173,11 +175,12 @@ defmodule ClinicDemo.Finance.ForecastTest do
 
     table = Forecast.rate_table(rates, %{a => "Wellness exam", b => "Nail trim"})
 
-    assert [%{name: "Nail trim"}, %{name: "Wellness exam"}, %{name: "All visits (clinic-wide)"}] = table
+    assert [%{name: "Nail trim"}, %{name: "Wellness exam"}, %{name: "All visits (clinic-wide)"}] =
+             table
 
     wellness = Enum.find(table, &(&1.name == "Wellness exam"))
     assert wellness.completed == 5
-    assert wellness.total == 7
-    assert Decimal.eq?(wellness.rate, Decimal.new(5) |> Decimal.div(Decimal.new(7)))
+    assert wellness.total == 6
+    assert Decimal.eq?(wellness.rate, Decimal.new(5) |> Decimal.div(Decimal.new(6)))
   end
 end

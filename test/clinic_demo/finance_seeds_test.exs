@@ -33,7 +33,7 @@ defmodule ClinicDemo.FinanceSeedsTest do
         %{
           full_name: "Dr. Seed Vet",
           role: :veterinarian,
-          license_number: "ON-#{System.unique_integer([:positive])}"
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
         },
         actor: @staff
       )
@@ -43,7 +43,7 @@ defmodule ClinicDemo.FinanceSeedsTest do
         %{
           full_name: "Seed Front Desk",
           role: :nurse,
-          license_number: "VN-#{System.unique_integer([:positive])}"
+          license_number: "VN-#{:rand.uniform(899_999) + 100_000}"
         },
         actor: @staff
       )

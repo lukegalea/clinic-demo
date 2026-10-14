@@ -133,7 +133,9 @@ defmodule ClinicDemo.Finance.Forecast do
 
   # completed / (completed + cancelled + no_show), as a decimal. The
   # min-observations gate lives here: a thinner cell reads as absent, and
-  # the chain falls through.
+  # the chain falls through. An absent cell (nil) is absent too.
+  defp completed_share(nil), do: nil
+
   defp completed_share(counts) do
     observations = counts.completed + counts.cancelled + counts.no_show
 
@@ -200,7 +202,12 @@ defmodule ClinicDemo.Finance.Forecast do
           add_visit(rates, buckets, week_start, bucket, visit)
       end
     end)
-    |> Enum.sort_by(& &1.week_start)
+    # The reduce folds into the buckets MAP; the weeks are its values.
+    # Dates order only through `Date.compare/2` — the default sorter's
+    # term ordering compares the struct maps, where `:day` outranks
+    # `:month` and the weeks would sort November ahead of October.
+    |> Map.values()
+    |> Enum.sort_by(& &1.week_start, &(Date.compare(&1, &2) != :gt))
     |> Enum.map(fn bucket ->
       # Round once, at the bucket's edge: pennies are a presentation
       # decision, not an accumulation one.

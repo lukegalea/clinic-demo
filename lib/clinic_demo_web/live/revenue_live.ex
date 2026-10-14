@@ -44,6 +44,14 @@ defmodule ClinicDemoWeb.RevenueLive do
     socket =
       socket
       |> assign(:today, Date.utc_today())
+      # The chart geometry, mirrored into assigns: inside a ~H block `@x`
+      # reads the assigns map, not the module attribute.
+      |> assign(
+        width: @width,
+        bar_height: @bar_height,
+        line_height: @line_height,
+        padding_left: @padding_left
+      )
       |> load_revenue()
 
     {:ok, SurfaceChrome.mount_presence(socket, @surface_id)}
@@ -178,6 +186,10 @@ defmodule ClinicDemoWeb.RevenueLive do
       |> assign(:slot_w, slot_w)
       |> assign(:bar_w, bar_w)
       |> assign(:baseline, @bar_height)
+      # The template half reads these from the component's own assigns —
+      # `@x` in ~H is never the module attribute.
+      |> assign(:width, @width)
+      |> assign(:padding_left, @padding_left)
 
     ~H"""
     <line
@@ -189,7 +201,7 @@ defmodule ClinicDemoWeb.RevenueLive do
       stroke-width="2"
     />
     <%= for {row, i} <- Enum.with_index(@months) do %>
-      <% h = scaled_height(row.total, @ceiling, @bar_height - 20) %>
+      <% h = scaled_height(row.total, @ceiling, @baseline - 20) %>
       <% x = @padding_left + i * @slot_w + (@slot_w - @bar_w) / 2 %>
       <rect
         x={x}
@@ -244,6 +256,8 @@ defmodule ClinicDemoWeb.RevenueLive do
       |> assign(:points, points)
       |> assign(:slot_w, slot_w)
       |> assign(:baseline, @line_height)
+      |> assign(:width, @width)
+      |> assign(:padding_left, @padding_left)
 
     ~H"""
     <line
@@ -321,9 +335,12 @@ defmodule ClinicDemoWeb.RevenueLive do
     top =
       values
       |> Enum.map(&Decimal.to_float/1)
-      |> Enum.max(fn -> 0 end)
+      |> Enum.max()
 
-    steps = max(1, Float.ceil(top / step))
+    # Float on purpose: `max(1, ceil(...))` would return the integer 1
+    # whenever the ceiling rounds down to it, and `Decimal.from_float/1`
+    # refuses integers.
+    steps = max(1.0, Float.ceil(top / step))
     Decimal.from_float(steps * step)
   end
 
