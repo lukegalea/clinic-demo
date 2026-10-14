@@ -106,9 +106,17 @@ export async function compareAgainstBaseline(name, currentPng, { updateBaselines
   try {
     baseline = await readFile(baselineTarget);
   } catch {
+    // A missing baseline is still a failure — but write the capture next
+    // to where the baseline belongs. Bootstrapping a NEW page's golden
+    // (the only sanctioned path: capture from the real app, never draw
+    // one) then means promoting this .actual file, exactly like a diff.
+    const actualPath = artifactPath(name, ".actual");
+    await writeFile(actualPath, currentPng);
     return {
       status: "missing-baseline",
-      detail: `no committed baseline at test/visual/__screenshots__/${name}.png — run with --update-baselines`,
+      detail:
+        `no committed baseline at test/visual/__screenshots__/${name}.png — ` +
+        `run with --update-baselines (this capture was saved to ${path.basename(actualPath)})`,
     };
   }
 

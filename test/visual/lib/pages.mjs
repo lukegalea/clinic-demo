@@ -14,6 +14,20 @@
 
 export const PAGES = [
   { route: "/", name: "board", marker: { kind: "a2ui" }, navCurrent: "/" },
+  {
+    // The board in time-travel mode. The instant is two hours back,
+    // computed at suite start — minutes after the seed wrote its spaced
+    // history (booked T-3h → triaged T-2h → …), so the containment read
+    // pins exactly which versions show: the same story every run, because
+    // only the wall clock moved, not the history. The indicator's
+    // timestamp is digit-scrubbed like every other seeded time. No
+    // navCurrent: the URL carries a query the nav pill's aria-current
+    // matching does not need to be pinned on.
+    route: `/?as_of=${new Date(Date.now() - 2 * 3_600_000).toISOString().replace(/\.\d+Z$/, "Z")}`,
+    name: "board-as-of",
+    marker: { kind: "a2ui" },
+    extraMarker: { kind: "host", selector: '[data-testid="as-of-indicator"]' },
+  },
   { route: "/intake", name: "intake", marker: { kind: "a2ui" }, navCurrent: "/intake" },
   { route: "/schedule", name: "schedule", marker: { kind: "a2ui" }, navCurrent: "/schedule" },
   {

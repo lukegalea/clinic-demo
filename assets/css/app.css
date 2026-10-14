@@ -67,3 +67,31 @@
 
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* ---- BoardLive's time-travel status chip --------------------------------
+ * The mode chip (green "Live now" / black "Viewing as of … · read-only")
+ * is re-inserted on every mode change; a quick settle-in makes the flip —
+ * and especially the snap back to live — read as an event, not a repaint.
+ * Static utilities carry the look; this keyframe is motion only, and
+ * reduced-motion strips it like every other animation in the app. */
+.tt-status-chip {
+  animation: tt-chip-in 240ms ease-out;
+}
+
+@keyframes tt-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-status-chip {
+    animation: none !important;
+  }
+}
