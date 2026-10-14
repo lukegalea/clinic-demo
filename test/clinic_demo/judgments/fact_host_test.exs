@@ -39,6 +39,14 @@ defmodule ClinicDemo.Judgments.FactHostTest do
 
   # A short window over the schedule: everything books tomorrow, so no
   # NotInThePast refusal, and every test's writes stay inside the sandbox.
+  #
+  # Since P4-S5 the booking's own engine triage ADMITS an acuity fact (the
+  # `AdmitAcuityFact` hook — the wiring working, not a fixture artifact).
+  # These demonstrations walk the facts table's lifecycle from a clean
+  # slate, so the helper closes that auto-fact at its own first instant —
+  # the period truncate removes the whole open version, exactly the
+  # correction a host would make to retract an admission — leaving the
+  # ledger row (append-only history) and an empty facts table to walk.
   defp booked(opts \\ []) do
     {:ok, vet} =
       Scheduling.hire_clinician(
@@ -66,18 +74,34 @@ defmodule ClinicDemo.Judgments.FactHostTest do
 
     if weight = opts[:weight_kg], do: Scheduling.record_weight!(patient, weight, actor: @staff)
 
-    Scheduling.get_appointment!(
-      Scheduling.book_appointment!(
-        %{
-          patient_id: patient.id,
-          clinician_id: vet.id,
-          scheduled_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          reason: Keyword.get(opts, :reason, "Judgment check"),
-          severity: Keyword.get(opts, :severity, 2)
-        },
-        actor: @staff
-      ).id
-    )
+    appointment =
+      Scheduling.get_appointment!(
+        Scheduling.book_appointment!(
+          %{
+            patient_id: patient.id,
+            clinician_id: vet.id,
+            scheduled_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            reason: Keyword.get(opts, :reason, "Judgment check"),
+            severity: Keyword.get(opts, :severity, 2)
+          },
+          actor: @staff
+        ).id
+      )
+
+    clear_booking_fact(patient.id)
+
+    appointment
+  end
+
+  # Retract the booking's auto-admitted fact: the truncate at the period's
+  # own lower bound empties the whole open version. A no-op when no fact is
+  # open (an omitted admission, say).
+  defp clear_booking_fact(patient_id) do
+    if fact = current(patient_id) do
+      fact
+      |> Ash.Changeset.for_destroy(:truncate, %{}, as_of: fact.valid_at.lower, authorize?: false)
+      |> Ash.destroy!(authorize?: false)
+    end
   end
 
   # --- the temporal lifecycle -----------------------------------------------------

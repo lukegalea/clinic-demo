@@ -43,6 +43,7 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         :status,
         :discharged_at,
         :triage_urgency,
+        :acuity_fact,
         :compliance_status
       ]
 
@@ -50,7 +51,9 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
       query :default
 
       # Same badge as the board: would the active bundle refuse this visit's
-      # check-in? Triage stays visible as the meta row's lead value.
+      # check-in? The acuity FACT leads the meta row — what the judgment
+      # record admits about this patient, three-valued — before the visit's
+      # own recorded triage answer.
       row_layout do
         title :patient_label
         badge :compliance_status
@@ -63,6 +66,7 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
         )
 
         meta [
+          :acuity_fact,
           :triage_urgency,
           :clinician_label,
           :scheduled_at,
@@ -137,6 +141,10 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
     field :triage_urgency do
       label "Triage"
+    end
+
+    field :acuity_fact do
+      label "Acuity (fact)"
     end
 
     field :compliance_status do

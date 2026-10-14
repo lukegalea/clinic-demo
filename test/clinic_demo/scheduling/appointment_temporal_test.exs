@@ -66,7 +66,13 @@ defmodule ClinicDemo.Scheduling.AppointmentTemporalTest do
           patient_id: patient.id,
           clinician_id: vet.id,
           scheduled_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          reason: "Temporal walk"
+          reason: "Temporal walk",
+          # Severity 1 on an adult dog is the routine rule — the engine's
+          # booking-time triage answers exactly what the walk below
+          # re-asserts, so the history walk stays a re-assertion of one
+          # judgment (the admission hook records a judgment once per visit
+          # and answer) instead of a second, back-dated one.
+          severity: 1
         },
         actor: @staff,
         as_of: booked_at

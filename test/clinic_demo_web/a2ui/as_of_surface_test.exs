@@ -143,7 +143,12 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
           patient_id: patient.id,
           clinician_id: vet.id,
           scheduled_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          reason: "Lane history"
+          reason: "Lane history",
+          # Severity 1 on an adult dog is the routine rule: the engine's
+          # booking-time triage answers what the walk re-asserts, so the
+          # back-dated write stays a re-assertion (one judgment recorded
+          # once — see ClinicDemo.Scheduling.Changes.AdmitAcuityFact).
+          severity: 1
         },
         actor: @staff,
         as_of: booked_at

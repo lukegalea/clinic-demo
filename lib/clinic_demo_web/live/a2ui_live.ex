@@ -623,6 +623,24 @@ defmodule ClinicDemoWeb.A2ui.EventsLive do
         to it. Actions taken on the surfaces will land here, newest first.
       </div>
       <AshA2ui.LiveRenderer.surface_container />
+      <div
+        class="relative w-full rounded-base border-2 border-border bg-secondary-background px-4 py-6 text-sm text-foreground shadow-shadow"
+        data-testid="replay-note"
+      >
+        <strong class="font-heading">This log is the story of the audited half.</strong>
+        A cold clone — an empty database against this file of events —
+        rebuilds every resource that rides the log by replaying it through
+        the same attributed actions, chronologically, writing nothing new:
+        appointment history with its period splits, patients and
+        clinicians, revenue charges, DMN evaluations — and the judgment
+        record: observation ledger rows (their inputs complete, so no model
+        is ever consulted) and the admitted acuity fact periods, rebuilt
+        identically to how they were materialised live. The process engine
+        deliberately keeps its own trail instead of doubling it here, and
+        what the log does not carry does not come back — which is why every
+        audited write rides an event, and nothing mends state behind the
+        log's back.
+      </div>
       <div class="flex flex-wrap gap-2">
         <%!-- Live navigation: /evaluations is inside live_session :a2ui. --%>
         <.link
