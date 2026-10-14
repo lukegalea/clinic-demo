@@ -61,13 +61,24 @@ defmodule ClinicDemoWeb.RevenueLive do
       </header>
 
       <section aria-label="Headline numbers" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <.kpi label="Recognized this month" value={money(@month_to_date)} sub={"#{@month_count} charges"} />
+        <.kpi
+          label="Recognized this month"
+          value={money(@month_to_date)}
+          sub={"#{@month_count} charges"}
+        />
         <.kpi label="Trailing six months" value={money(@trailing_total)} sub="paid charges" />
-        <.kpi label="Scheduled, next four weeks" value={"#{@scheduled_count}"} sub="visits on the books" />
+        <.kpi
+          label="Scheduled, next four weeks"
+          value={"#{@scheduled_count}"}
+          sub="visits on the books"
+        />
         <.kpi label="Four-week forecast" value={money(@forecast_total)} sub="expected revenue" />
       </section>
 
-      <section aria-label="Revenue by month" class="rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow">
+      <section
+        aria-label="Revenue by month"
+        class="rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow"
+      >
         <h2 class="mb-1 text-lg font-heading">Recognized revenue by month</h2>
         <p class="mb-3 text-sm text-foreground/60">
           Paid charges, by the month each visit was written up. As-of reads over the temporal charges — the board's time travel, pointed at money.
@@ -83,7 +94,10 @@ defmodule ClinicDemoWeb.RevenueLive do
       </section>
 
       <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <section aria-label="Forecast" class="rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow lg:w-1/2">
+        <section
+          aria-label="Forecast"
+          class="rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow lg:w-1/2"
+        >
           <h2 class="mb-1 text-lg font-heading">Forecast — next four weeks</h2>
           <p class="mb-3 text-sm text-foreground/60">
             Scheduled visits priced at their catalogue entry, weighted by the completion rate history teaches. Expected revenue per week.
@@ -98,7 +112,10 @@ defmodule ClinicDemoWeb.RevenueLive do
           </svg>
         </section>
 
-        <section aria-label="Completion rates" class="rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow lg:w-1/2">
+        <section
+          aria-label="Completion rates"
+          class="rounded-base border-2 border-border bg-secondary-background p-4 shadow-shadow lg:w-1/2"
+        >
           <h2 class="mb-1 text-lg font-heading">What history says</h2>
           <p class="mb-3 text-sm text-foreground/60">
             Visits that reached an outcome, and the share that completed. The forecast's confidence inputs — a cell the history barely observed falls through to the clinic-wide rate.
@@ -163,7 +180,14 @@ defmodule ClinicDemoWeb.RevenueLive do
       |> assign(:baseline, @bar_height)
 
     ~H"""
-    <line x1={@padding_left} y1={@baseline} x2={@width - @padding_left} y2={@baseline} stroke="currentColor" stroke-width="2" />
+    <line
+      x1={@padding_left}
+      y1={@baseline}
+      x2={@width - @padding_left}
+      y2={@baseline}
+      stroke="currentColor"
+      stroke-width="2"
+    />
     <%= for {row, i} <- Enum.with_index(@months) do %>
       <% h = scaled_height(row.total, @ceiling, @bar_height - 20) %>
       <% x = @padding_left + i * @slot_w + (@slot_w - @bar_w) / 2 %>
@@ -176,10 +200,20 @@ defmodule ClinicDemoWeb.RevenueLive do
         stroke="currentColor"
         stroke-width="2"
       />
-      <text x={x + @bar_w / 2} y={@baseline - h - 5} text-anchor="middle" class="fill-current text-[11px] font-base">
+      <text
+        x={x + @bar_w / 2}
+        y={@baseline - h - 5}
+        text-anchor="middle"
+        class="fill-current text-[11px] font-base"
+      >
         {money(row.total)}
       </text>
-      <text x={x + @bar_w / 2} y={@baseline + 16} text-anchor="middle" class="fill-current text-[11px] font-base">
+      <text
+        x={x + @bar_w / 2}
+        y={@baseline + 16}
+        text-anchor="middle"
+        class="fill-current text-[11px] font-base"
+      >
         {Calendar.strftime(row.month, "%b %Y")}
       </text>
     <% end %>
@@ -212,7 +246,14 @@ defmodule ClinicDemoWeb.RevenueLive do
       |> assign(:baseline, @line_height)
 
     ~H"""
-    <line x1={@padding_left} y1={@baseline} x2={@width - @padding_left} y2={@baseline} stroke="currentColor" stroke-width="2" />
+    <line
+      x1={@padding_left}
+      y1={@baseline}
+      x2={@width - @padding_left}
+      y2={@baseline}
+      stroke="currentColor"
+      stroke-width="2"
+    />
     <polyline
       points={Enum.map_join(@points, " ", fn {x, y, _} -> "#{x},#{y}" end)}
       fill="none"

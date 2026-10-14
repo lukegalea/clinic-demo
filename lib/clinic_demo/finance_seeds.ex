@@ -88,18 +88,90 @@ defmodule ClinicDemo.FinanceSeeds do
   # table's `"neonate", "senior"` cell. Real records have birthdates; so do
   # these.
   @patients [
-    %{name: "Biscuit Jr.", species: :dog, breed: "Beagle", dob: ~D[2019-04-11], owner: "fin.biscuit@example.com"},
-    %{name: "Mochi", species: :cat, breed: "Domestic Shorthair", dob: ~D[2024-02-20], owner: "fin.mochi@example.com"},
-    %{name: "Rufus", species: :dog, breed: "Labrador", dob: ~D[2014-08-02], owner: "fin.rufus@example.com"},
-    %{name: "Clementine", species: :cat, breed: "Ragdoll", dob: ~D[2021-11-15], owner: "fin.clementine@example.com"},
-    %{name: "Ziggy", species: :rabbit, breed: nil, dob: ~D[2026-06-01], owner: "fin.ziggy@example.com"},
-    %{name: "Bruno", species: :dog, breed: "Boxer", dob: ~D[2016-03-30], owner: "fin.bruno@example.com"},
-    %{name: "Waffle", species: :dog, breed: "Corgi", dob: ~D[2025-12-05], owner: "fin.waffle@example.com"},
-    %{name: "Nori", species: :cat, breed: "Bengal", dob: ~D[2023-07-19], owner: "fin.nori@example.com"},
-    %{name: "Pickle", species: :rabbit, breed: nil, dob: ~D[2020-01-08], owner: "fin.pickle@example.com"},
-    %{name: "Ada", species: :dog, breed: "Poodle", dob: ~D[2012-05-22], owner: "fin.ada@example.com"},
-    %{name: "Truffle", species: :cat, breed: "British Shorthair", dob: ~D[2018-09-14], owner: "fin.truffle@example.com"},
-    %{name: "Gus", species: :dog, breed: "Greyhound", dob: ~D[2015-10-31], owner: "fin.gus@example.com"}
+    %{
+      name: "Biscuit Jr.",
+      species: :dog,
+      breed: "Beagle",
+      dob: ~D[2019-04-11],
+      owner: "fin.biscuit@example.com"
+    },
+    %{
+      name: "Mochi",
+      species: :cat,
+      breed: "Domestic Shorthair",
+      dob: ~D[2024-02-20],
+      owner: "fin.mochi@example.com"
+    },
+    %{
+      name: "Rufus",
+      species: :dog,
+      breed: "Labrador",
+      dob: ~D[2014-08-02],
+      owner: "fin.rufus@example.com"
+    },
+    %{
+      name: "Clementine",
+      species: :cat,
+      breed: "Ragdoll",
+      dob: ~D[2021-11-15],
+      owner: "fin.clementine@example.com"
+    },
+    %{
+      name: "Ziggy",
+      species: :rabbit,
+      breed: nil,
+      dob: ~D[2026-06-01],
+      owner: "fin.ziggy@example.com"
+    },
+    %{
+      name: "Bruno",
+      species: :dog,
+      breed: "Boxer",
+      dob: ~D[2016-03-30],
+      owner: "fin.bruno@example.com"
+    },
+    %{
+      name: "Waffle",
+      species: :dog,
+      breed: "Corgi",
+      dob: ~D[2025-12-05],
+      owner: "fin.waffle@example.com"
+    },
+    %{
+      name: "Nori",
+      species: :cat,
+      breed: "Bengal",
+      dob: ~D[2023-07-19],
+      owner: "fin.nori@example.com"
+    },
+    %{
+      name: "Pickle",
+      species: :rabbit,
+      breed: nil,
+      dob: ~D[2020-01-08],
+      owner: "fin.pickle@example.com"
+    },
+    %{
+      name: "Ada",
+      species: :dog,
+      breed: "Poodle",
+      dob: ~D[2012-05-22],
+      owner: "fin.ada@example.com"
+    },
+    %{
+      name: "Truffle",
+      species: :cat,
+      breed: "British Shorthair",
+      dob: ~D[2018-09-14],
+      owner: "fin.truffle@example.com"
+    },
+    %{
+      name: "Gus",
+      species: :dog,
+      breed: "Greyhound",
+      dob: ~D[2015-10-31],
+      owner: "fin.gus@example.com"
+    }
   ]
 
   @reasons [
@@ -163,8 +235,11 @@ defmodule ClinicDemo.FinanceSeeds do
       base: Keyword.take(opts, [:weekday_per_day, :weekend_per_day])
     }
 
-    history_days = for offset <- (opts[:weeks_back] * 7)..1//-1, do: Date.add(Date.utc_today(), -offset)
-    future_days = for offset <- 1..(opts[:weeks_ahead] * 7), do: Date.add(Date.utc_today(), offset)
+    history_days =
+      for offset <- (opts[:weeks_back] * 7)..1//-1, do: Date.add(Date.utc_today(), -offset)
+
+    future_days =
+      for offset <- 1..(opts[:weeks_ahead] * 7), do: Date.add(Date.utc_today(), offset)
 
     {_ctx, stats} =
       Enum.reduce(history_days, {ctx, blank_stats()}, fn day, {ctx, stats} ->
@@ -230,9 +305,9 @@ defmodule ClinicDemo.FinanceSeeds do
           # A recorded weight, so the walk's check-ins pass the compliance
           # weight guard on top-up runs that land after the bundle is in
           # force.
-          Scheduling.record_weight(patient, Decimal.div(Decimal.new(ranged(200, 600)), Decimal.new(10)),
-            actor: @staff
-          )
+          Scheduling.record_weight(
+            patient,
+            Decimal.div(Decimal.new(ranged(200, 600)), Decimal.new(10)), actor: @staff)
 
           patient
 
@@ -537,7 +612,8 @@ defmodule ClinicDemo.FinanceSeeds do
     |> Ash.Query.filter(node_id == ^node_id and status in [:open, :claimed])
     |> Ash.read!(authorize?: false)
     |> Enum.find(fn task ->
-      Ash.get!(ClinicDemo.Visits.Instance, task.instance_id, authorize?: false).subject_id == appointment_id
+      Ash.get!(ClinicDemo.Visits.Instance, task.instance_id, authorize?: false).subject_id ==
+        appointment_id
     end)
   end
 

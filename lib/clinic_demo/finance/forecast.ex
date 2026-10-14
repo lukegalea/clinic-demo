@@ -84,8 +84,14 @@ defmodule ClinicDemo.Finance.Forecast do
     end
 
     %{
-      cell: Enum.reduce(terminal, %{}, &add.(&2, {&1.appointment_type_id, &1.clinician_id, &1.weekday}, &1)),
-      type_weekday: Enum.reduce(terminal, %{}, &add.(&2, {&1.appointment_type_id, &1.weekday}, &1)),
+      cell:
+        Enum.reduce(
+          terminal,
+          %{},
+          &add.(&2, {&1.appointment_type_id, &1.clinician_id, &1.weekday}, &1)
+        ),
+      type_weekday:
+        Enum.reduce(terminal, %{}, &add.(&2, {&1.appointment_type_id, &1.weekday}, &1)),
       type: Enum.reduce(terminal, %{}, &add.(&2, &1.appointment_type_id, &1)),
       weekday: Enum.reduce(terminal, %{}, &add.(&2, &1.weekday, &1)),
       global:
@@ -191,17 +197,7 @@ defmodule ClinicDemo.Finance.Forecast do
           buckets
 
         {:ok, bucket} ->
-          {rate, tier, observations} =
-            completion_rate(rates, visit.appointment_type_id, visit.clinician_id, weekday(visit.scheduled_at))
-
-          contribution = Decimal.mult(rate, visit.amount)
-
-          bucket
-          |> Map.update!(:expected, &Decimal.add(&1, contribution))
-          |> Map.update!(:scheduled_count, &(&1 + 1))
-          |> Map.update!(:tiers, &Map.update(&1, tier, 1, fn n -> n + 1 end))
-          |> Map.update!(:observations, &(&1 + observations))
-          |> then(&Map.put(buckets, week_start, &1))
+          add_visit(rates, buckets, week_start, bucket, visit)
       end
     end)
     |> Enum.sort_by(& &1.week_start)
@@ -212,13 +208,38 @@ defmodule ClinicDemo.Finance.Forecast do
     end)
   end
 
+  # One scheduled visit's weighted contribution, folded into its week: the
+  # completion rate its dimensions read from the chain, times the amount it
+  # would recognize, plus the confidence inputs of the cell that answered.
+  defp add_visit(rates, buckets, week_start, bucket, visit) do
+    {rate, tier, observations} =
+      completion_rate(
+        rates,
+        visit.appointment_type_id,
+        visit.clinician_id,
+        weekday(visit.scheduled_at)
+      )
+
+    bucket
+    |> Map.update!(:expected, &Decimal.add(&1, Decimal.mult(rate, visit.amount)))
+    |> Map.update!(:scheduled_count, &(&1 + 1))
+    |> Map.update!(:tiers, &Map.update(&1, tier, 1, fn n -> n + 1 end))
+    |> Map.update!(:observations, &(&1 + observations))
+    |> then(&Map.put(buckets, week_start, &1))
+  end
+
   @doc """
   The display half of the confidence story: one row per catalogue type with
   its observed terminal visits and completion share, plus the clinic-wide
   row. The rates table under the forecast line renders exactly this.
   """
   @spec rate_table(rates(), %{optional(Ecto.UUID.t()) => String.t()}) :: [
-          %{name: String.t(), completed: non_neg_integer(), total: non_neg_integer(), rate: Decimal.t() | nil}
+          %{
+            name: String.t(),
+            completed: non_neg_integer(),
+            total: non_neg_integer(),
+            rate: Decimal.t() | nil
+          }
         ]
   def rate_table(rates, type_names) do
     type_rows =
@@ -245,7 +266,12 @@ defmodule ClinicDemo.Finance.Forecast do
           %{name: "All visits (clinic-wide)", completed: 0, total: 0, rate: nil}
 
         {share, observations} ->
-          %{name: "All visits (clinic-wide)", completed: rates.global.completed, total: observations, rate: share}
+          %{
+            name: "All visits (clinic-wide)",
+            completed: rates.global.completed,
+            total: observations,
+            rate: share
+          }
       end
 
     type_rows ++ [global]
