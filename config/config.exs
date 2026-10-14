@@ -16,6 +16,7 @@ config :clinic_demo,
     ClinicDemo.Visits,
     ClinicDemo.Events,
     ClinicDemo.Spikes,
+    ClinicDemo.Judgments,
     AshCompliance.Domain
   ],
   generators: [timestamp_type: :utc_datetime]
@@ -99,6 +100,14 @@ config :ash_bpmn,
 # and parks timers in ETS, which keeps `mix phx.server` a single process with
 # nothing to babysit. A real clinic runs real Oban and deletes this line.
 config :ash_bpmn, oban_testing: :inline
+
+# The judgment pipeline's host wiring (P4-S4): the materialiser's facts
+# resource, the observation ledger its C1 evidence assertion reads, and
+# the stack's region — law 10 says every ledger row carries it, host
+# config, never a caller input.
+config :ash_judgments, :facts, ClinicDemo.Judgments.Fact
+config :ash_judgments, :ledger, ClinicDemo.Judgments.Observation
+config :ash_judgments, region: :ca
 
 # Configure the endpoint
 config :clinic_demo, ClinicDemoWeb.Endpoint,
