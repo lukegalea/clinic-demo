@@ -460,9 +460,34 @@ async function pinEventsStreamRenders(browser, reporter, baseUrl) {
       /create\s+on\s+\S*ClinicDemo\.Decisions\.Evaluation/,
     ];
 
-    for (const pattern of story) {
-      const row = page.locator(`text=${pattern}`).first();
-      await row.waitFor({ state: "visible", timeout: 15_000 });
+    // The feed is paged (25 rows, newest first) and the finance seeds'
+    // backfilled history is deep, so a signature may sit a page or two
+    // down. Walk the pager until every signature has been seen — bounded,
+    // and only forward, like a reader would.
+    const nextButton = page.getByRole("button", { name: "Next" });
+    const pending = new Set(story);
+    const maxPages = 6;
+
+    for (let pageIndex = 0; pageIndex < maxPages && pending.size > 0; pageIndex++) {
+      for (const pattern of [...pending]) {
+        const row = page.locator(`text=${pattern}`).first();
+        const seen = await row.isVisible().catch(() => false);
+        if (seen) pending.delete(pattern);
+      }
+
+      if (pending.size > 0) {
+        const more = await nextButton.isVisible().catch(() => false);
+        if (!more) break;
+        await nextButton.click();
+        await page.waitForTimeout(1_500);
+      }
+    }
+
+    if (pending.size > 0) {
+      throw new Error(
+        `not found within ${maxPages} pages of the feed: ` +
+          [...pending].map((p) => String(p)).join("; ")
+      );
     }
 
     reporter.pass(pageId, "seeded event stream renders: bookings, check-ins, completions, the discharge and DMN evaluations");

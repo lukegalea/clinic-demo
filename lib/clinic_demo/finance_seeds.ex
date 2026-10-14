@@ -307,7 +307,9 @@ defmodule ClinicDemo.FinanceSeeds do
           # force.
           Scheduling.record_weight(
             patient,
-            Decimal.div(Decimal.new(ranged(200, 600)), Decimal.new(10)), actor: @staff)
+            Decimal.div(Decimal.new(ranged(200, 600)), Decimal.new(10)),
+            actor: @staff
+          )
 
           patient
 

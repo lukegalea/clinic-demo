@@ -36,7 +36,10 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
         :discharged_at
       ]
 
-      read_action :read
+      # The board is the process now: the `:board` read scopes to today's
+      # visits and onward (see the action's description). The plain :read
+      # would drag the finance seeds' six-month archive onto the lanes.
+      read_action :board
 
       # The row badge is compliance: would the active bundle refuse this
       # visit's check-in? Triage stays visible as the meta row's lead value —

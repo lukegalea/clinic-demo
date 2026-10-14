@@ -341,6 +341,29 @@ end
     severity: 2
   })
 
+# ── Finance: the revenue demo's world ──────────────────────────────────────
+#
+# ~6 months of appointment history plus a live forward window, written
+# through the attributed actions with as_of backdating — the same mechanic
+# the walks below use, at volume. Every completion recognizes its charge at
+# the completion's instant, so /revenue has months of real revenue to chart
+# and the forecast has outcomes to learn rates from. Deterministic (fixed
+# :rand seed) and idempotent (lookup-or-create, stage guards re-read the
+# history): re-running backfills only the days that appeared since.
+#
+# BEFORE the story walks, deliberately — two reasons. The walks' roster and
+# lanes are all this needs, and running first means the audit log's newest
+# events are the story's own: /events reads newest-first, and a feed whose
+# first page is the demo's narrative (instead of a wall of backfilled
+# bookings) is the feed worth screenshotting.
+#
+# This runs before the compliance bundle is activated, like every walk:
+# the first seeding's back-dated completions predate the bundle, and the
+# finance walk's own discipline (weights recorded at patient creation,
+# triage re-asserted in history) keeps any later top-up run lawful under
+# the active bundle too.
+ClinicDemo.FinanceSeeds.run()
+
 # ── Walking visits through the process ─────────────────────────────────────
 #
 # Every appointment above already has an instance: booking started one (and
@@ -579,7 +602,16 @@ end
 # than all of them still in Booked. (The walked visits already had this done
 # inside their walks; the temporal-read guard makes the pass a no-op for
 # them and idempotent on reseed.)
-for appointment <- Scheduling.list_appointments!() do
+#
+# The story's visits only: the finance seeds run first now, and their visits
+# carry a catalogue type (and manage their own triage at their own
+# instants) — a future slot has no version at `triaged_at` to read, and a
+# history slot needs no second opinion written at the story's hour.
+story_appointments =
+  Scheduling.list_appointments!()
+  |> Enum.filter(&is_nil(&1.appointment_type_id))
+
+for appointment <- story_appointments do
   record_triage_in_history.(appointment, staff)
 end
 
@@ -601,6 +633,12 @@ evaluation_count =
   |> Ash.read!(authorize?: false)
   |> length()
 
+# The triage table lists the story's own visits — the no-type bookings the
+# walks made — rather than every row the finance history backfilled around
+# them (those all carry a catalogue type).
+story_appointments =
+  Enum.filter(appointments, &is_nil(&1.appointment_type_id))
+
 IO.puts("""
 Seeded:
   #{length(Scheduling.list_clinicians!())} clinicians
@@ -609,26 +647,9 @@ Seeded:
   #{length(waiting)} work items waiting: #{waiting |> Enum.map(& &1.node_id) |> Enum.sort() |> Enum.join(", ")}
 
 Triage decided:
-#{appointments |> Enum.map_join("\n", fn a -> "  #{a.reason} -> #{a.triage_urgency}" end)}
+#{story_appointments |> Enum.map_join("\n", fn a -> "  #{a.reason} -> #{a.triage_urgency}" end)}
   #{evaluation_count} DMN triage evaluations on file
 """)
-
-# ── Finance: the revenue demo's world ──────────────────────────────────────
-#
-# ~6 months of appointment history plus a live forward window, written
-# through the attributed actions with as_of backdating — the same mechanic
-# the walks above use, at volume. Every completion recognizes its charge at
-# the completion's instant, so /revenue has months of real revenue to chart
-# and the forecast has outcomes to learn rates from. Deterministic (fixed
-# :rand seed) and idempotent (lookup-or-create, stage guards re-read the
-# history): re-running backfills only the days that appeared since.
-#
-# This runs BEFORE the compliance bundle is activated, like every walk
-# above: the first seeding's back-dated completions predate the bundle, and
-# the finance walk's own discipline (weights recorded at patient creation,
-# triage re-asserted in history) keeps any later top-up run lawful under
-# the active bundle too.
-ClinicDemo.FinanceSeeds.run()
 
 # ── Compliance: put the appointment rule bundle in force ───────────────────
 #

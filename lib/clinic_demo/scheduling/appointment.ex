@@ -272,6 +272,17 @@ defmodule ClinicDemo.Scheduling.Appointment do
       prepare build(sort: [scheduled_at: :asc])
     end
 
+    read :board do
+      description """
+      The board's world: the read instant's day and the next — the day in
+      flight and the day being booked, in their lanes. The process-now
+      surface — the seeded history and the forward backlog are the
+      schedule's business, not the board's.
+      """
+
+      prepare {ClinicDemo.Scheduling.Preparations.ScheduledFromReadInstant, []}
+    end
+
     create :book do
       description "Put a new appointment on the schedule."
 

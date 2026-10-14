@@ -100,8 +100,8 @@ defmodule ClinicDemo.Repo.Migrations.AddRevenueAndForecast do
     end
 
     drop_if_exists unique_index(:scheduling_appointment_types, [:name],
-                    name: "scheduling_appointment_types_unique_name_index"
-                  )
+                     name: "scheduling_appointment_types_unique_name_index"
+                   )
 
     drop table(:scheduling_appointment_types)
   end
