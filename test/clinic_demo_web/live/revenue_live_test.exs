@@ -160,7 +160,11 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
     Scheduling.check_in_appointment!(version, actor: @staff, as_of: checked_in_at)
 
     version = Scheduling.get_appointment!(appointment.id, as_of: completed_at)
-    Scheduling.complete_appointment!(version, "Scrubbed write-up.", actor: @staff, as_of: completed_at)
+
+    Scheduling.complete_appointment!(version, "Scrubbed write-up.",
+      actor: @staff,
+      as_of: completed_at
+    )
 
     appointment
   end
