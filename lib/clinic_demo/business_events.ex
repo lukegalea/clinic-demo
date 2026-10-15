@@ -4,7 +4,9 @@ defmodule ClinicDemo.BusinessEvents do
   events the visit lifecycle produces, the mappings that shape them, and
   the artifacts those mappings are published as.
 
-  Three resources, all BIZEV resource macros on this app's own base:
+  Five resources on this app's own base: the ledger, its simulation twin,
+  the mapping artifacts, and the two value projections the folds feed
+  (real and simulated):
 
     * `Ledger` — the append-only, chained, delivery-idempotent event
       log (plus the `Ledger.SimulationEvent` twin its declaration
@@ -42,6 +44,7 @@ defmodule ClinicDemo.BusinessEvents do
   alias ClinicDemo.BusinessEvents.Declarations
   alias ClinicDemo.BusinessEvents.Ledger
   alias ClinicDemo.BusinessEvents.MappingVersion
+  alias ClinicDemo.BusinessEvents.SimValueProjection
   alias ClinicDemo.BusinessEvents.ValueProjection
 
   resources do
@@ -49,6 +52,7 @@ defmodule ClinicDemo.BusinessEvents do
     resource Ledger.SimulationEvent
     resource MappingVersion
     resource ValueProjection
+    resource SimValueProjection
   end
 
   @mapping_names [
