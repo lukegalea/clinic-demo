@@ -368,6 +368,11 @@ defmodule ClinicDemo.Scheduling.Appointment do
       # is a token walking `priv/processes/appointment_visit.bpmn`.
       change StartVisitProcess
 
+      # The value event (BPSim BD-2): the visit's expected price enters the
+      # ledger in this same transaction, after the process exists. See
+      # `ClinicDemo.Scheduling.Changes.PublishVisitBooked`.
+      change ClinicDemo.Scheduling.Changes.PublishVisitBooked
+
       validate {NotInThePast, attribute: :scheduled_at}
     end
 
@@ -425,6 +430,10 @@ defmodule ClinicDemo.Scheduling.Appointment do
       # the write takes effect at (`as_of`). See
       # `ClinicDemo.Scheduling.Changes.RecognizeCharge`.
       change ClinicDemo.Scheduling.Changes.RecognizeCharge
+
+      # And the value event reads the charge it just recognized (BPSim
+      # BD-2). See `ClinicDemo.Scheduling.Changes.PublishVisitCompleted`.
+      change ClinicDemo.Scheduling.Changes.PublishVisitCompleted
     end
 
     update :cancel do
@@ -442,6 +451,10 @@ defmodule ClinicDemo.Scheduling.Appointment do
       change {ComplianceGuard, transition_to: :cancelled}
       change set_attribute(:cancellation_reason, arg(:reason))
       change transition_state(:cancelled)
+
+      # The story's loss, on the ledger (BPSim BD-2). See
+      # `ClinicDemo.Scheduling.Changes.PublishVisitOutcome`.
+      change {ClinicDemo.Scheduling.Changes.PublishVisitOutcome, moment: :cancelled}
     end
 
     update :record_triage do
@@ -481,6 +494,10 @@ defmodule ClinicDemo.Scheduling.Appointment do
       # The judgment record: observation + admitted acuity fact, same
       # transaction (P4-S5; replay steps aside — see the change's moduledoc).
       change ClinicDemo.Scheduling.Changes.AdmitAcuityFact
+
+      # The decision's weight, on the value ledger (BPSim BD-2). See
+      # `ClinicDemo.Scheduling.Changes.PublishVisitTriaged`.
+      change ClinicDemo.Scheduling.Changes.PublishVisitTriaged
     end
 
     update :mark_no_show do
@@ -492,6 +509,10 @@ defmodule ClinicDemo.Scheduling.Appointment do
 
       change {ComplianceGuard, transition_to: :no_show}
       change transition_state(:no_show)
+
+      # The fact of the loss, on the ledger (BPSim BD-2). See
+      # `ClinicDemo.Scheduling.Changes.PublishVisitOutcome`.
+      change {ClinicDemo.Scheduling.Changes.PublishVisitOutcome, moment: :no_show}
     end
 
     update :discharge do

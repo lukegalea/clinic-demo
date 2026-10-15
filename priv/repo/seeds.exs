@@ -47,13 +47,18 @@ staff = %{id: "00000000-0000-0000-0000-0000000000aa", role: :veterinarian}
 # The rules first, and in this order: the visit process will not compile until
 # the decision it references is published. Booking an appointment below starts
 # an instance of that process, so nothing after this line would work without
-# it.
+# it. The value ledger's mapping rules deploy with them (BPSim BD-2): the
+# lifecycle hooks below record a value event for every moment the walk
+# performs, and those events carry provenance pointing at an active mapping
+# version — so the mappings must be active before the first booking.
 %{decision: decision, process: process} = ClinicDemo.Rules.install!()
+mapping_versions = ClinicDemo.BusinessEvents.install!()
 
 IO.puts("""
 Published:
   #{decision.key} v#{decision.version} (#{decision.status})
   #{process.key} v#{process.version} (#{process.status})
+  #{length(mapping_versions)} value-event mappings active
 """)
 
 # The board's lanes, before any bookings: the process stages cards move
