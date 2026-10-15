@@ -135,6 +135,11 @@ defmodule ClinicDemo.Finance.Charge do
       accept []
 
       change set_attribute(:status, :written_off)
+
+      # The revision, on the ledger: a new event, never a rewrite of the
+      # completion (BPSim BD-2). See
+      # `ClinicDemo.Finance.Changes.PublishChargeWrittenOff`.
+      change ClinicDemo.Finance.Changes.PublishChargeWrittenOff
     end
   end
 
