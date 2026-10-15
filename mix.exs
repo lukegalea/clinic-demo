@@ -16,15 +16,36 @@ defmodule ClinicDemo.MixProject do
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       consolidate_protocols: Mix.env() != :dev,
       listeners: [Phoenix.CodeReloader] ++ clarity_listener(),
-
-      # Agent instructions for the a2ui surfaces, linked rather than inlined
-      # (same trade as ash_enterprise: a pointer instead of ~130k chars of
-      # always-loaded content). Regenerate with `mix usage_rules.sync`.
-      usage_rules: [file: "AGENTS.md", usage_rules: [{:ash_a2ui, link: :markdown}]],
+      usage_rules: usage_rules(),
 
       # The one known finding — injected by `use AshBpmn.Web.DesignerLive` —
       # is documented in the ignore file rather than suppressed inline.
       dialyzer: [ignore_warnings: ".dialyzer_ignore.exs", plt_add_apps: [:mix]]
+    ]
+  end
+
+  # The generated half of AGENTS.md (everything between the usage-rules
+  # markers). This config is the source of truth: `mix usage_rules.sync --yes`
+  # rewrites that block from it and drops any package it does not list, and
+  # scripts/usage-rules-check.sh (CI and precommit) fails when the committed
+  # file and a fresh sync disagree. The sync only sees top-level deps, so
+  # transitive ones (ash_rules, ash_events_projections, ash_open_lineage)
+  # cannot be listed here without declaring them.
+  #
+  # Phoenix's rules are inlined: short, and relevant to every web change. The
+  # Ash family is linked rather than inlined (same trade as ash_enterprise: a
+  # pointer instead of ~130k chars of always-loaded content). The regex takes
+  # every top-level ash_* dep that ships rules, so a new one cannot miss
+  # AGENTS.md the way ash_a2ui did; deps without rules are skipped.
+  defp usage_rules do
+    [
+      file: "AGENTS.md",
+      usage_rules: [
+        :phoenix,
+        {:ash, link: :markdown},
+        {~r/^ash_/, link: :markdown},
+        {:usage_rules, link: :markdown}
+      ]
     ]
   end
 
@@ -240,6 +261,9 @@ defmodule ClinicDemo.MixProject do
         "deps.unlock --unused",
         "format",
         "cmd scripts/iron-laws.sh",
+        # Fails when AGENTS.md's generated block disagrees with a fresh
+        # `mix usage_rules.sync` (also under MIX_ENV=dev).
+        "cmd scripts/usage-rules-check.sh",
         "test"
       ]
     ]
