@@ -23,10 +23,11 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjection do
       no real drain's cursor can alias one, and two runs never share.
 
   Same grain and field set as the design's §2c value projection — the
-  fold handlers are the shared `ClinicDemo.BusinessEvents.VisitProjectionOps`
-  module — so a scenario overlay reads this table the same way the real
-  page reads its own. All periods here are future-dated by construction:
-  the generator only fabricates visits still ahead of us.
+  fold handlers are the scenario fold's own,
+  `ClinicDemo.BusinessEvents.VisitProjectionOps` — so a scenario overlay
+  reads this table the same way the real page reads its own. All periods
+  here are future-dated by construction: the generator only fabricates
+  visits still ahead of us.
   """
 
   use Ash.Resource,

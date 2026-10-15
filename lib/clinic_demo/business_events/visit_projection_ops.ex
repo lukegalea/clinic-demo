@@ -1,26 +1,31 @@
 defmodule ClinicDemo.BusinessEvents.VisitProjectionOps do
   @moduledoc """
-  The value fold's handlers — the one module both projectors share
-  (design §2d): the real projector (BD-3's `ValueProjector`) and the
-  scenario projector (`SimValueProjector`) route the same six canonical
-  kinds into the same ops vocabulary over the same field set. One fold,
-  two targets — which is the whole isolation story: the handlers
-  describe *what a visit's events mean*; the projector's declaration
-  alone decides *which table the truth lands in*.
+  The scenario fold's handlers (BPSim BD-5): the ops vocabulary the sim
+  projector applies over the sim value projection's field set.
 
-  The handler sees the full §1.4 ledger row: `action` (the canonical
-  kind), `record_id` (the appointment id), `data` (the mapping's
-  canonical output — decimals ride their JSON string form), `occurred_at`
-  (truth time), `supersedes_event_id`. Ops are order-deterministic per
-  subject — `:set` from the event verbatim, the corrections counter
-  incremented only on supersession — so a replay re-derives identical
-  periods (the BIZEV-8 property, restated host-side).
+  The original plan was one shared handler module for both projectors;
+  BD-3's `ValueProjector` landed its own inline handlers instead, and the
+  two folds deliberately stay separate — adoption would have meant
+  rewriting the merged, equivalence-gate-bearing real fold for no
+  sim-side gain. The divergence, stated so nobody has to guess:
 
-  Deliberately absent: `type_id`/`clinician_id`. The canonical booked
-  payload carries money and the slot, not dimension ids (the §2b
-  mapping's PII-adjacent minimalism); a fold that needs dimensions
-  extends the mappings and then this module — the projection never
-  reaches back into the raw layer, for real truth or for sims.
+    * **Corrections** — this fold increments `:corrections` on
+      supersession (the engine's convention); the real fold leaves the
+      counter idle. Sim events never supersede, so the clause is
+      dormant here either way.
+    * **`recognized_at`** — this fold sets it only beside a recognized
+      amount (a no-type completion recognizes nothing, no instant);
+      the real fold sets it on every completion.
+    * **Coercion** — this fold parses the canonical shapes itself and
+      fails loudly on a kind it cannot digest; the real fold leans on
+      Ash's casts and answers only its own kinds.
+
+  What both folds share is the source contract: the §1.4 ledger row —
+  `action` (the canonical kind), `record_id` (the appointment id),
+  `data` (the mapping's canonical output — decimals ride their JSON
+  string form), `occurred_at` (truth time), `supersedes_event_id`. Ops
+  are order-deterministic per subject, so a replay re-derives identical
+  periods either way (the BIZEV-8 property, host-side).
   """
 
   import Decimal, only: [new: 1]

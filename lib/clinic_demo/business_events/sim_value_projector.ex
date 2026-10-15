@@ -10,9 +10,10 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjector do
   the host's choice, and pointing a sim drain at the real value
   projection would write future-dated, fabricated periods into the
   clinic's actual revenue fold, where any as-of(future) read and every
-  real rebuild would fold them in. The ruling, in one line: **the real
-  projector (BD-3's) and this one share the fold's handlers
-  (`VisitProjectionOps`), never the target table.**
+  real rebuild would fold them in.   The ruling, in one line: **the real projector (BD-3's) and this one
+  fold the same ledger-row contract into separate tables — the handlers
+  are each fold's own (`VisitProjectionOps` here, the real projector's
+  inline handlers there), and the target tables never cross.**
 
   What isolation means here, concretely:
 
@@ -40,10 +41,10 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjector do
 
   grain(fn event -> %{region: event.region, subject: event.record_id} end)
 
-  # The shared fold: the same handlers the real value projector uses,
-  # pointed at the sim table. Scenario events are terminal outcomes
-  # (completed / cancelled / no_show); the other routes exist so the
-  # fold is total over the six canonical kinds.
+  # The scenario fold: VisitProjectionOps' handlers over the sim table.
+  # The real value projector folds its own inline handlers into its own
+  # table — the folds share the ledger-row contract, not the code; see
+  # VisitProjectionOps' moduledoc for the stated divergence.
   project("visit_booked", &VisitProjectionOps.ops_for/1)
   project("visit_triaged", &VisitProjectionOps.ops_for/1)
   project("visit_completed", &VisitProjectionOps.ops_for/1)
