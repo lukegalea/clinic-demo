@@ -21,8 +21,8 @@ defmodule ClinicDemo.Finance do
 
   require Ash.Query
 
-  alias ClinicDemo.Finance.Charge
   alias ClinicDemo.BusinessEvents.ValueProjection
+  alias ClinicDemo.Finance.Charge
   alias ClinicDemo.Scheduling.Appointment
 
   resources do

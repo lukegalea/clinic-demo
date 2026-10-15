@@ -11,6 +11,7 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias ClinicDemo.BusinessEvents.ValueProjector
   alias ClinicDemo.Finance.Charge
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.AppointmentType
@@ -94,7 +95,7 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
     # The page reads the value projection (BD-3's source swap): fold the
     # events the walk just wrote before mounting it.
-    ClinicDemo.BusinessEvents.ValueProjector.drain(:clinic)
+    ValueProjector.drain(:clinic)
 
     {:ok, _view, html} = live(conn, ~p"/revenue")
 

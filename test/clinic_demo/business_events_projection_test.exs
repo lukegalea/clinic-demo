@@ -29,8 +29,8 @@ defmodule ClinicDemo.BusinessEventsProjectionTest do
   alias ClinicDemo.BusinessEvents.ValueProjection
   alias ClinicDemo.BusinessEvents.ValueProjector
   alias ClinicDemo.Finance
-  alias ClinicDemo.FinanceSeeds
   alias ClinicDemo.Finance.Charge
+  alias ClinicDemo.FinanceSeeds
   alias ClinicDemo.Repo
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.AppointmentType
