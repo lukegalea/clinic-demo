@@ -44,8 +44,8 @@ defmodule ClinicDemo.BusinessEvents do
   alias ClinicDemo.BusinessEvents.Declarations
   alias ClinicDemo.BusinessEvents.Ledger
   alias ClinicDemo.BusinessEvents.MappingVersion
-  alias ClinicDemo.BusinessEvents.ValueProjection
   alias ClinicDemo.BusinessEvents.SimValueProjection
+  alias ClinicDemo.BusinessEvents.ValueProjection
 
   resources do
     resource Ledger
