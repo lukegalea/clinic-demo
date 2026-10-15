@@ -30,6 +30,15 @@ config :ash_compliance,
   repo: ClinicDemo.Repo,
   table_prefix: "ash_compliance_"
 
+# ash_events_projections: same compile-time ruling as ash_compliance above —
+# the projector engine's internal resources (Checkpoint, DeadLetter, Registry)
+# resolve their repo and table prefix when the dep compiles. The value
+# projection's drain (BPSim BD-3) runs those resources against this app's
+# repo, under the engine's default table prefix.
+config :ash_events_projections,
+  repo: ClinicDemo.Repo,
+  table_prefix: "ash_projection_"
+
 # ash_compliance's host wiring, per its README.
 config :ash, ash_domains: [AshCompliance.Domain]
 
@@ -62,7 +71,13 @@ config :ash,
     # ash_events' replay-machinery guard: the `where:` validation that keeps
     # an introspection-only copy of a change from ever running. It executes
     # nothing by construction, so it is safe at any instant.
-    AshEvents.Events.Validations.Never
+    AshEvents.Events.Validations.Never,
+    # ash_events_projections' ops applier: the projector engine's write path
+    # onto a temporal projection. It reads no clock — the DRAIN is the
+    # temporal driver, handing each write its `as_of` (the event's
+    # `occurred_at`, the source's truth time). The fold itself is a pure
+    # function of the event and the row it lands on (BPSim BD-3).
+    AshEvents.Projections.ApplyOpsChange
   ]
 
 # ash_a2ui: this app rides the framework defaults. Experience v2 is the

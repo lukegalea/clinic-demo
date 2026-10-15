@@ -218,10 +218,11 @@ defmodule ClinicDemo.BusinessEventsTest do
       assert row.action_type == :create
       assert row.record_id == "apt-roundtrip"
 
-      # Chained from the first link, and provenance resolves to the
-      # active MappingVersion row.
+      # Chained from birth, and provenance resolves to the active
+      # MappingVersion row. (previous_hash is nil only for the region's
+      # genuinely first row — async tests share the table, so the link's
+      # integrity is VerifyChains' assertion below, not this one's.)
       assert is_binary(row.hash)
-      assert row.previous_hash == nil
       assert row.provenance["mapping_version_hash"] == booked.version_hash
 
       [read_back] = Ledger.by_subject!(@region, "apt-roundtrip")

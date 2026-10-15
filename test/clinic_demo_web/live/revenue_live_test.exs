@@ -11,6 +11,7 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias ClinicDemo.BusinessEvents.ValueProjector
   alias ClinicDemo.Finance.Charge
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.AppointmentType
@@ -18,6 +19,15 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
   # A UUID, because booking starts a visit process and the instance records
   # who acted in uuid columns.
   @staff %{id: "00000000-0000-0000-0000-000000000044", role: :veterinarian}
+
+  setup do
+    # The page reads the value projection (BD-3's source swap); its events
+    # only emit when the mapping rules are deployed — the seeds' install!
+    # order, at test scale. (test_helper publishes the rules; the mappings
+    # are this suite's own fixture.)
+    ClinicDemo.BusinessEvents.install!()
+    :ok
+  end
 
   defp fixtures do
     {:ok, vet} =
@@ -82,6 +92,10 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
     book(patient, vet, type, DateTime.add(DateTime.utc_now(), 2, :day))
 
     assert Charge |> Ash.read!(authorize?: false) |> length() == 1
+
+    # The page reads the value projection (BD-3's source swap): fold the
+    # events the walk just wrote before mounting it.
+    ValueProjector.drain(:clinic)
 
     {:ok, _view, html} = live(conn, ~p"/revenue")
 

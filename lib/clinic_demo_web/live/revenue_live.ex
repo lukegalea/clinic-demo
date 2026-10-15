@@ -6,11 +6,14 @@ defmodule ClinicDemoWeb.RevenueLive do
   A host LiveView on the Day view's pattern (chrome around the data, not an
   A2UI surface; no new assets, hand-rolled SVG under the app's strict CSP):
 
-    * **Recognized revenue, by month** — the paid charges as they read
+    * **Recognized revenue, by month** — the paid visits as they read
       *as of now*, grouped by the month each recognition took effect at.
-      The charges are temporal (`Finance.Charge`), so this chart and the
-      board's time travel share one grammar: revenue-at-T is the same
-      containment read the board does, pinned to a different instant.
+      Since BD-3 this reads the VALUE PROJECTION (`Finance.value_by_month/1`,
+      the ledger's fold over `BusinessEvents.ValueProjection`) — the same
+      numbers the charges derive, one equivalence gate between them
+      (`BusinessEventsProjectionTest`). The chart and the board's time
+      travel share one grammar: revenue-at-T is the same containment read
+      the board does, pinned to a different instant.
     * **The forecast, next four weeks** — every visit still `:scheduled`
       in the window, priced from its catalogue entry and weighted by the
       completion rate history teaches for its type, clinician and weekday
@@ -18,7 +21,8 @@ defmodule ClinicDemoWeb.RevenueLive do
       claim about evidence, and the rates table below shows the evidence.
     * **Completion rates** — observed terminal visits and completion share
       per catalogue type, plus the clinic-wide row the fallback chain
-      floors at.
+      floors at. Since BD-3 the evidence reads the projection's fold too
+      (`Finance.projected_outcomes/1`).
 
   Read-only by design: money is written by the lifecycle (`:complete`
   recognizes a charge in the same transaction), never by this page.
@@ -291,10 +295,17 @@ defmodule ClinicDemoWeb.RevenueLive do
   # One pass over the three reads the page is: the money as of now, the
   # history's outcomes, and the forward window. Demo scale — the whole
   # book once per mount, like the Day view.
+  #
+  # BD-3's source swap: the month chart, the money KPIs and the rates
+  # table read the VALUE PROJECTION (the ledger's fold, as of now) —
+  # same layout, same numbers, one derivation shown (the equivalence
+  # gate in `BusinessEventsProjectionTest` pins the projection to the
+  # charges it mirrors). The forecast keeps reading the live schedule;
+  # it is a claim about the future, not about history.
   defp load_revenue(socket) do
-    months = Finance.revenue_by_month(7)
+    months = Finance.value_by_month(months: 7)
 
-    outcomes = Finance.historical_outcomes()
+    outcomes = Finance.projected_outcomes()
     rates = Forecast.build_rates(outcomes)
 
     type_names =

@@ -42,11 +42,13 @@ defmodule ClinicDemo.BusinessEvents do
   alias ClinicDemo.BusinessEvents.Declarations
   alias ClinicDemo.BusinessEvents.Ledger
   alias ClinicDemo.BusinessEvents.MappingVersion
+  alias ClinicDemo.BusinessEvents.ValueProjection
 
   resources do
     resource Ledger
     resource Ledger.SimulationEvent
     resource MappingVersion
+    resource ValueProjection
   end
 
   @mapping_names [
