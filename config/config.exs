@@ -17,6 +17,7 @@ config :clinic_demo,
     ClinicDemo.Events,
     ClinicDemo.Spikes,
     ClinicDemo.Judgments,
+    ClinicDemo.BusinessEvents,
     AshCompliance.Domain
   ],
   generators: [timestamp_type: :utc_datetime]

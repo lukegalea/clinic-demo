@@ -148,6 +148,13 @@ defmodule ClinicDemo.MixProject do
       # evidence assertion, aeebd86) is the API this wiring exists to ride
       # — the hex ladder has not caught up yet.
       {:ash_judgments, github: "lukegalea/ash_judgments", branch: "main"},
+
+      # The value ledger (BPSim BD-1): the clinic's lifecycle moments become
+      # canonical discrete business events — locked, chained, delivery-
+      # idempotent — with mappings as versioned, content-hashed data.
+      # Pins the same ash_events fork this app already pins (see above), so
+      # resolution needs no further override.
+      {:ash_discrete_business_events, github: "lukegalea/ash_discrete_business_events"},
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
       {:oban, "~> 2.0"},
