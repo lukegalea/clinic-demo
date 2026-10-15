@@ -24,8 +24,11 @@ defmodule ClinicDemo.BusinessEventsTest do
 
   require Ash.Query
 
+  alias AshDiscreteBusinessEvents.Ledger.VerifyChains
+  alias AshDiscreteBusinessEvents.Mappings.Compiler
   alias ClinicDemo.BusinessEvents
   alias ClinicDemo.BusinessEvents.Ledger
+  alias ClinicDemo.BusinessEvents.Ledger.SimulationEvent
   alias ClinicDemo.BusinessEvents.MappingVersion
   alias ClinicDemo.Repo
 
@@ -86,7 +89,7 @@ defmodule ClinicDemo.BusinessEventsTest do
         assert version.version_hash =~ ~r/^[0-9a-f]{8}$/
 
         assert version.version_hash ==
-                 AshDiscreteBusinessEvents.Mappings.Compiler.hash(version.artifact)
+                 Compiler.hash(version.artifact)
 
         assert version.artifact["mapping_name"] == version.mapping_name
         # The one internal source, declaration-only: nothing syncs it.
@@ -281,7 +284,7 @@ defmodule ClinicDemo.BusinessEventsTest do
 
     test "sim rows carry the run label by shape, and simulation_runs/1 is the supported read" do
       sim =
-        Ledger.SimulationEvent.record!(sim_args(%{subject_external_id: "apt-sim-1"}),
+        SimulationEvent.record!(sim_args(%{subject_external_id: "apt-sim-1"}),
           actor: @staff
         )
 
@@ -315,13 +318,13 @@ defmodule ClinicDemo.BusinessEventsTest do
         )
       end
 
-      Ledger.SimulationEvent.record!(sim_args(%{subject_external_id: "apt-chain-sim"}),
+      SimulationEvent.record!(sim_args(%{subject_external_id: "apt-chain-sim"}),
         actor: @staff
       )
 
-      results = AshDiscreteBusinessEvents.Ledger.VerifyChains.verify_all(Ledger)
+      results = VerifyChains.verify_all(Ledger)
 
-      assert AshDiscreteBusinessEvents.Ledger.VerifyChains.clean?(results)
+      assert VerifyChains.clean?(results)
 
       clinic = Enum.find(results, &(&1.region == @region))
       assert clinic.checked >= 3
