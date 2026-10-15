@@ -177,14 +177,18 @@ defmodule ClinicDemo.BusinessEventsWiringTest do
       assert DateTime.compare(booked.occurred_at, booked_at) == :eq
       assert DateTime.compare(booked.observed_at, booked.occurred_at) == :gt
 
-      # Canonical data, post-mapping: expected value, the slot, severity —
-      # and the decimal rides its JSON string form, like every :map
+      # Canonical data, post-mapping: expected value, the slot, severity,
+      # and the two forecast dimensions BD-3's projection folds (BD-3
+      # extended the mapping — a changed declaration mints a new version
+      # row). The decimal rides its JSON string form, like every :map
       # attribute round-trip. The slot's canonical type is :utc_datetime
       # (second precision, no usec).
       assert booked.data == %{
                "expected_amount" => "175",
                "scheduled_at" => DateTime.to_iso8601(scheduled_at),
                "severity" => 2,
+               "clinician_id" => vet.id,
+               "type_id" => type.id,
                "source_system" => "clinic_core"
              }
 
@@ -196,32 +200,65 @@ defmodule ClinicDemo.BusinessEventsWiringTest do
       assert booked.provenance["mapping_version_hash"] == booked_version.version_hash
     end
 
-    test "the triage event carries the decision, and the walk's re-assert collapses into it", %{
+    test "the triage event carries the decision at the story instant", %{
       versions: _versions
     } do
       %{vet: vet, patient: patient} = fixtures()
       type = catalogue_type()
 
-      %{appointment: appointment} = back_dated_visit(patient, vet, type)
+      %{appointment: appointment, triaged_at: triaged_at} = back_dated_visit(patient, vet, type)
 
-      # TWO triage writes happened: the engine's synchronous answer at
-      # booking wall clock (the visit process runs the DMN table as the
-      # booking commits), and the walk's back-dated re-assert. They share
-      # one delivery key — "clinic.<kind>:<appointment_id>" — so the
-      # ledger holds ONE triage per visit, the seeds' double-walk
-      # absorbed. That surviving row is the engine's answer: the clinic
-      # learned the urgency when the visit was booked.
+      # TWO triage writes happened: the engine's synchronous answer inside
+      # the booking (at the booking's wall clock) and the walk's back-dated
+      # re-assert. Per the BD-3 RULING (2026-10-15, "the engine's triage
+      # event is live-only"), the engine's write for a BACK-DATED booking
+      # emits no ledger row — the walk's own re-assert lands at the story
+      # instant under the delivery key. One triage per visit, at the
+      # instant the story says it happened.
       assert [triaged] = Enum.filter(events_for(appointment.id), &(&1.action == :visit_triaged))
 
-      current = Scheduling.get_appointment!(appointment.id)
-      assert triaged.data["urgency"] == to_string(current.triage_urgency)
-
-      # The decode band always agrees with the urgency it decoded from.
-      band = %{"emergency" => "high", "urgent" => "high", "soon" => "medium", "routine" => "low"}
-      assert triaged.data["urgency_band"] == band[triaged.data["urgency"]]
+      assert triaged.delivery_key == "clinic.visit_triaged:#{appointment.id}"
+      assert DateTime.compare(triaged.occurred_at, triaged_at) == :eq
+      assert triaged.data["urgency"] == "urgent"
+      assert triaged.data["urgency_band"] == "high"
       assert triaged.data["severity"] == 2
       assert triaged.data["source_system"] == "clinic_core"
-      assert triaged.delivery_key == "clinic.visit_triaged:#{appointment.id}"
+    end
+
+    test "a live booking's engine triage emits, and a re-triage collapses into it", %{
+      versions: _versions
+    } do
+      %{vet: vet, patient: patient} = fixtures()
+      type = catalogue_type()
+
+      # A live booking: the engine's synchronous triage is the clinic's
+      # real answer, recorded at the wall clock.
+      {:ok, appointment} =
+        Scheduling.book_appointment(
+          %{
+            patient_id: patient.id,
+            clinician_id: vet.id,
+            appointment_type_id: type.id,
+            scheduled_at: tomorrow_at_hour(12),
+            duration_minutes: 30,
+            reason: "Wiring live triage",
+            severity: 2
+          },
+          actor: @staff
+        )
+
+      engine_triage =
+        Enum.find(events_for(appointment.id), &(&1.action == :visit_triaged))
+
+      assert engine_triage
+      standing = Scheduling.get_appointment!(appointment.id)
+      assert engine_triage.data["urgency"] == to_string(standing.triage_urgency)
+
+      # A later re-triage folds into the engine's answer (the live-bookings
+      # collapse — the amended BD-2 ruling).
+      Scheduling.record_appointment_triage!(appointment, :routine, actor: @staff)
+
+      assert Enum.count(events_for(appointment.id), &(&1.action == :visit_triaged)) == 1
     end
 
     test "the completion event reads the charge it recognized", %{versions: _versions} do

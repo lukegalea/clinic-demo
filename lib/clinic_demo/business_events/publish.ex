@@ -38,6 +38,12 @@ defmodule ClinicDemo.BusinessEvents.Publish do
   @residency "ca"
   @subject_type "clinic.visit"
 
+  # The live-write tolerance (BD-3 RULING, 2026-10-15): the seeds back-date
+  # their writes by hours (the story) to days (the finance walk); a live
+  # booking's writes sit within seconds of the wall clock. Five minutes is
+  # generous headroom for both.
+  @live_write_tolerance_seconds 300
+
   @doc "The booking: expected value at catalogue price, the slot, the severity."
   def visit_booked(changeset, appointment) do
     publish(:visit_booked, appointment.id, fn ->
@@ -64,16 +70,80 @@ defmodule ClinicDemo.BusinessEvents.Publish do
     end)
   end
 
-  @doc "The triage answer: the decision's weight, banded by the mapping's decode."
+  @doc """
+  The triage answer: the decision's weight, banded by the mapping's decode.
+
+  **Live-only emission (the BD-3 RULING, 2026-10-15).** The engine's
+  synchronous triage — which runs inside the booking transaction, at the
+  booking's wall clock — emits a ledger event ONLY when the booking itself
+  was live (its own `as_of` within the tolerance of the wall clock). For a
+  back-dated (story-replay) booking the engine's write is seed mechanics,
+  not clinic truth: it emits no ledger row, and the walk's own back-dated
+  `record_triage` lands at the story instant under the delivery key. This
+  amends BD-2's engine-triage-wins collapse ruling — that collapse now
+  applies only to live bookings, where a re-triage folds into the engine's
+  original answer.
+
+  The classification is replay-stable: it compares the write's own
+  resolved `as_of` against the visit's history start — both fixed by the
+  write — never to a clock when deciding an instant. The wall clock only
+  bounds the liveness check, and a replay months later classifies every
+  write exactly as the original run did.
+  """
   def visit_triaged(changeset, appointment) do
-    publish(:visit_triaged, appointment.id, fn ->
-      %{
-        "occurred_at" => as_of(changeset),
-        "appointment_id" => appointment.id,
-        "urgency" => to_string(appointment.triage_urgency),
-        "severity" => appointment.severity
-      }
-    end)
+    instant = as_of(changeset)
+
+    if triage_emits?(changeset, appointment, instant) do
+      publish(:visit_triaged, appointment.id, fn ->
+        %{
+          "occurred_at" => instant,
+          "appointment_id" => appointment.id,
+          "urgency" => to_string(appointment.triage_urgency),
+          "severity" => appointment.severity
+        }
+      end)
+    else
+      :ok
+    end
+  end
+
+  # The ruling's two-branch test. A back-dated write is the story's own
+  # truth — it emits. A wall-clock write is the engine's booking-time
+  # triage — it emits only when the booking itself was live.
+  defp triage_emits?(_changeset, appointment, instant) do
+    if live_write?(instant) do
+      live_booking?(appointment)
+    else
+      true
+    end
+  end
+
+  defp live_write?(instant) do
+    DateTime.diff(DateTime.utc_now(), instant) <= @live_write_tolerance_seconds
+  end
+
+  # The booking was live when its own truth instant sits within the
+  # tolerance of the wall clock — i.e. the visit's history began about
+  # now. The instant is the appointment's FIRST period's lower bound, a
+  # column the temporal extension owns; read (read-only) because no
+  # containment read can reach it — the period starts exactly there.
+  # Unreadable, the live posture wins: the event emits (BD-2's original
+  # behaviour), never silently dropping a real clinic's triage.
+  defp live_booking?(appointment) do
+    case booking_instant(appointment.id) do
+      nil -> true
+      lower -> DateTime.diff(DateTime.utc_now(), lower) <= @live_write_tolerance_seconds
+    end
+  end
+
+  defp booking_instant(appointment_id) do
+    case ClinicDemo.Repo.query!(
+           "SELECT lower(valid_at) FROM appointments WHERE id = $1 ORDER BY lower(valid_at) LIMIT 1",
+           [Ecto.UUID.dump!(appointment_id)]
+         ) do
+      %{rows: [[%DateTime{} = lower]]} -> lower
+      _ -> nil
+    end
   end
 
   @doc """

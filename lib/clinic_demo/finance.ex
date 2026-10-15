@@ -22,6 +22,7 @@ defmodule ClinicDemo.Finance do
   require Ash.Query
 
   alias ClinicDemo.Finance.Charge
+  alias ClinicDemo.BusinessEvents.ValueProjection
   alias ClinicDemo.Scheduling.Appointment
 
   resources do
@@ -39,14 +40,20 @@ defmodule ClinicDemo.Finance do
   oldest first. The running month counts — a partial month is shown as
   one, the way the clinic actually experiences it.
 
-  Read as of now, so a charge back-dated by the seeds sits in the month its
-  recognition took effect at. A month with no charges still gets a row
-  (zero total), so the chart's x-axis does not depend on the data's shape.
+  Read as of now (or `as_of:` when the equivalence gate and the scrubber
+  pin an instant), so a charge back-dated by the seeds sits in the month
+  its recognition took effect at. A month with no charges still gets a
+  row (zero total), so the chart's x-axis does not depend on the data's
+  shape.
+
+  This is one of the two derivations the equivalence gate pins (BD-3):
+  the projection-derived `value_by_month/1` must agree with this, month
+  for month, at every sampled instant.
   """
-  @spec revenue_by_month(pos_integer()) :: [
+  @spec revenue_by_month(pos_integer(), keyword()) :: [
           %{month: Date.t(), total: Decimal.t(), count: non_neg_integer()}
         ]
-  def revenue_by_month(months) when is_integer(months) and months > 0 do
+  def revenue_by_month(months, opts \\ []) when is_integer(months) and months > 0 do
     # Descending explicitly — a bare `(months - 1)..0` reads as a warning
     # under Elixir 1.20's range rules.
     month_starts =
@@ -56,26 +63,79 @@ defmodule ClinicDemo.Finance do
 
     window_start = DateTime.new!(hd(month_starts), ~T[00:00:00], "Etc/UTC")
 
-    charges =
+    query =
       Charge
       |> Ash.Query.filter(status == :paid and recognized_at >= ^window_start)
+
+    query =
+      case Keyword.fetch(opts, :as_of) do
+        {:ok, %DateTime{} = as_of} -> Ash.Query.as_of(query, as_of)
+        :error -> query
+      end
+
+    charges = Ash.read!(query, authorize?: false)
+
+    month_windows(month_starts, Enum.map(charges, &{&1.recognized_at, &1.amount}))
+  end
+
+  @doc """
+  The projection-derived twin of `revenue_by_month/2` (BD-3): the same
+  month windows, computed over `ValueProjection` rows read as of the same
+  instant — completed visits with a recognized amount and no write-off,
+  which is exactly the charge-derived side's `status == :paid` filter,
+  one fold over the ledger's truth.
+
+  The equivalence gate (`BusinessEventsProjectionTest`) pins these two
+  derivations to each other at sampled instants; `/revenue` reads this
+  one, the charges remain the audit's own derivation.
+  """
+  @spec value_by_month(keyword()) :: [
+          %{month: Date.t(), total: Decimal.t(), count: non_neg_integer()}
+        ]
+  def value_by_month(opts \\ []) do
+    months = Keyword.get(opts, :months, 7)
+    as_of = Keyword.get(opts, :as_of) || DateTime.utc_now()
+
+    month_starts =
+      for offset <- Range.new(months - 1, 0, -1) do
+        Date.utc_today() |> Date.beginning_of_month() |> shift_month(-offset)
+      end
+
+    window_start = DateTime.new!(hd(month_starts), ~T[00:00:00], "Etc/UTC")
+
+    rows =
+      ValueProjection
+      |> Ash.Query.filter(
+        outcome == :completed and not is_nil(recognized_amount) and
+          is_nil(written_off_amount) and recognized_at >= ^window_start
+      )
+      |> Ash.Query.as_of(as_of)
       |> Ash.read!(authorize?: false)
 
+    month_windows(month_starts, Enum.map(rows, &{&1.recognized_at, &1.recognized_amount}))
+  end
+
+  # The month windows both revenue derivations group into: one row per
+  # month, oldest first, counting and summing the `{instant, amount}`
+  # entries whose instant falls in the window. Datetimes order only
+  # through `DateTime.compare/2` — the `</>=` operators compare the struct
+  # maps by alphabetical key order, where `:day` outranks `:month` and
+  # October 14th sorts past November 1st.
+  defp month_windows(month_starts, entries) do
     for month <- month_starts do
       from = DateTime.new!(month, ~T[00:00:00], "Etc/UTC")
       to = DateTime.new!(shift_month(month, 1), ~T[00:00:00], "Etc/UTC")
 
-      # Datetimes order only through `DateTime.compare/2` — the `</>=`
-      # operators compare the struct maps by alphabetical key order, where
-      # `:day` outranks `:month` and October 14th sorts past November 1st.
       in_month =
-        Enum.filter(charges, fn charge ->
-          DateTime.compare(charge.recognized_at, from) != :lt and
-            DateTime.compare(charge.recognized_at, to) == :lt
+        Enum.filter(entries, fn {instant, _amount} ->
+          DateTime.compare(instant, from) != :lt and
+            DateTime.compare(instant, to) == :lt
         end)
 
       total =
-        Enum.reduce(in_month, Decimal.new(0), &Decimal.add(&2, &1.amount))
+        Enum.reduce(in_month, Decimal.new(0), fn {_instant, amount}, acc ->
+          Decimal.add(acc, amount)
+        end)
 
       %{month: month, total: total, count: length(in_month)}
     end
@@ -126,6 +186,38 @@ defmodule ClinicDemo.Finance do
         clinician_id: appointment.clinician_id,
         weekday: Date.day_of_week(DateTime.to_date(appointment.scheduled_at)),
         outcome: outcome(appointment)
+      }
+    end)
+  end
+
+  @doc """
+  The projection-derived twin of `historical_outcomes/1` (BD-3): the same
+  `%{appointment_type_id, clinician_id, weekday, outcome}` rows the rates
+  table and the forecast learn from, folded out of `ValueProjection`
+  as of the instant (now, unless pinned). Visits without a catalogue type
+  are excluded — the same filter the appointment-side read applies.
+  """
+  @spec projected_outcomes(keyword()) :: [
+          %{
+            appointment_type_id: Ecto.UUID.t(),
+            clinician_id: Ecto.UUID.t(),
+            weekday: 1..7,
+            outcome: :completed | :cancelled | :no_show | :open
+          }
+        ]
+  def projected_outcomes(opts \\ []) do
+    as_of = Keyword.get(opts, :as_of) || DateTime.utc_now()
+
+    ValueProjection
+    |> Ash.Query.filter(not is_nil(type_id))
+    |> Ash.Query.as_of(as_of)
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(fn row ->
+      %{
+        appointment_type_id: row.type_id,
+        clinician_id: row.clinician_id,
+        weekday: Date.day_of_week(DateTime.to_date(row.scheduled_at)),
+        outcome: row.outcome
       }
     end)
   end

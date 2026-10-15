@@ -35,7 +35,10 @@ defmodule ClinicDemo.BusinessEvents.Declarations do
       stream(:appointment, select: "appointment lifecycle observations, built by Publish")
     end
 
-    # The catalogue price at booking — value as expectation.
+    # The catalogue price at booking — value as expectation — plus the two
+    # forecast dimensions (BD-3's projection folds them into the rates
+    # table). Both are absent-path: a pre-catalogue booking carries no
+    # price and no type.
     mapping :visit_booked do
       source {:clinic_core, :appointment}
 
@@ -43,6 +46,8 @@ defmodule ClinicDemo.BusinessEvents.Declarations do
       map(:expected_amount, from: "base_price", type: :decimal)
       map(:scheduled_at, from: "scheduled_at", type: :utc_datetime)
       map(:severity, from: "severity", type: :integer)
+      map(:clinician_id, from: "clinician_id", type: :uuid)
+      map(:type_id, from: "appointment_type_id", type: :uuid)
 
       constant(:source_system, value: "clinic_core")
 

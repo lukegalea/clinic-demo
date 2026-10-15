@@ -9,6 +9,13 @@ defmodule ClinicDemo.Scheduling.Changes.PublishVisitTriaged do
   `ClinicDemo.BusinessEvents.Publish`. The urgency vocabulary is the
   action's own `one_of` constraint, which is exactly the decode's four
   cases — a miss is unrepresentable.
+
+  Emission is live-only for the engine's booking-time triage, per the
+  BD-3 RULING (2026-10-15, "the engine's triage event is live-only"):
+  for a back-dated (story-replay) booking the engine's write — seed
+  mechanics at seed-run wall clock — records no ledger row, and the walk's
+  own back-dated `record_triage` lands at the story instant. The
+  detection lives in `ClinicDemo.BusinessEvents.Publish.visit_triaged/2`.
   """
 
   use Ash.Resource.Change

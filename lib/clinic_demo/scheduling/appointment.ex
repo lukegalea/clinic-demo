@@ -363,15 +363,21 @@ defmodule ClinicDemo.Scheduling.Appointment do
       change manage_relationship(:appointment_type_id, :appointment_type, type: :append),
         where: [present(:appointment_type_id)]
 
+      # The value event (BPSim BD-2) — emitted BEFORE the process starts.
+      # The design's sketch had it after `StartVisitProcess`; the fold
+      # needs this order (BD-3): the ledger's commit order is the
+      # projector's feed order, and the booked event carries the visit's
+      # earliest instant — if the engine's triage event committed first,
+      # its period would open first and the booked fold (one instant
+      # earlier, across a second boundary) would silently lose its ops.
+      # Same transaction either way: a booking, its value event and its
+      # process exist together or not at all.
+      change ClinicDemo.Scheduling.Changes.PublishVisitBooked
+
       # Booking is what starts the visit process. Everything the appointment
       # goes through after this -- triage, check-in, the lab wait, discharge --
       # is a token walking `priv/processes/appointment_visit.bpmn`.
       change StartVisitProcess
-
-      # The value event (BPSim BD-2): the visit's expected price enters the
-      # ledger in this same transaction, after the process exists. See
-      # `ClinicDemo.Scheduling.Changes.PublishVisitBooked`.
-      change ClinicDemo.Scheduling.Changes.PublishVisitBooked
 
       validate {NotInThePast, attribute: :scheduled_at}
     end

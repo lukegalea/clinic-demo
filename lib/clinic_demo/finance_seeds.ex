@@ -512,7 +512,14 @@ defmodule ClinicDemo.FinanceSeeds do
   defp walk_outcome(appointment, :cancelled, slot, stats) do
     triage_in_history(appointment, slot)
 
-    cancel_at = DateTime.add(slot, -2 * 3600, :second) |> DateTime.truncate(:second)
+    # The cancellation lands an hour before the slot — AFTER the triage
+    # re-assert (slot − 90 minutes) in BOTH write order and instant order.
+    # The order matters since BD-3: the value ledger's fold is
+    # feed-ordered, and a cancellation whose instant preceded the triage's
+    # would leave the projection's current period reading :open forever
+    # (the lifecycle's own validations forbid triaging a cancelled visit,
+    # so the writes cannot simply be swapped — the instants give).
+    cancel_at = DateTime.add(slot, -60 * 60, :second) |> DateTime.truncate(:second)
     reason = Enum.fetch!(@cancel_reasons, ranged(1, length(@cancel_reasons)) - 1)
 
     unless_history_is?(appointment, cancel_at, [:cancelled], fn version ->

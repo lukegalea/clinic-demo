@@ -723,3 +723,16 @@ Triage decided:
 bundle = ClinicDemo.Compliance.activate_appointment_bundle!()
 
 IO.puts("Compliance: clinic_appointment_rules in force (bundle #{bundle.content_hash}).")
+
+# ── The value projection: the ledger's truth, folded once at seed end ──────
+#
+# BD-3: the walk produced the ledger; this one call folds it into the
+# temporal `ValueProjection` rows `/revenue` reads. Idempotent — the
+# checkpoint is the cursor — so a reseed (or a top-up run) drains only
+# what is new. `/revenue` and the board now agree on the past by fold,
+# and the equivalence test pins the two derivations together.
+drained = ClinicDemo.BusinessEvents.ValueProjector.drain(:clinic)
+
+IO.puts(
+  "Value projection: folded #{drained} value events into #{ClinicDemo.BusinessEvents.ValueProjection} as of now."
+)
