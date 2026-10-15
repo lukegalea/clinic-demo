@@ -254,7 +254,9 @@ defmodule ClinicDemo.Finance do
 
     query =
       Appointment
-      |> Ash.Query.filter(status == :scheduled and scheduled_at >= ^now and scheduled_at < ^horizon)
+      |> Ash.Query.filter(
+        status == :scheduled and scheduled_at >= ^now and scheduled_at < ^horizon
+      )
 
     query =
       case Keyword.get(opts, :as_of) do
