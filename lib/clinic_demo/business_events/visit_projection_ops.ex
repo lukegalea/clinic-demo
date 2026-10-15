@@ -30,7 +30,7 @@ defmodule ClinicDemo.BusinessEvents.VisitProjectionOps do
   the outcome state, the amounts and instants its kind carries, plus
   the engine's corrections convention.
   """
-  @spec ops_for(AshEvents.Projections.Projector.event()) :: [
+  @spec ops_for(map()) :: [
           {:set, atom(), term()} | {:increment, atom(), non_neg_integer()}
         ]
   def ops_for(event),
