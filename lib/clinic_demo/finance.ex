@@ -68,9 +68,9 @@ defmodule ClinicDemo.Finance do
       |> Ash.Query.filter(status == :paid and recognized_at >= ^window_start)
 
     query =
-      case Keyword.fetch(opts, :as_of) do
-        {:ok, %DateTime{} = as_of} -> Ash.Query.as_of(query, as_of)
-        :error -> query
+      case Keyword.get(opts, :as_of) do
+        %DateTime{} = as_of -> Ash.Query.as_of(query, as_of)
+        _absent_or_nil -> query
       end
 
     charges = Ash.read!(query, authorize?: false)
@@ -233,8 +233,13 @@ defmodule ClinicDemo.Finance do
 
   `amount` is the price the visit would recognize on completion — read from
   the catalogue now, the same place a real completion would snapshot from.
+
+  With `as_of:` the read pins to the instant (the schedule as it read at T —
+  the retro-forecast the scrubbed page shows): the window anchors at T and
+  the statuses are the temporal containment read. Without it, the live
+  window from now — the exact pre-BD-4 path.
   """
-  @spec scheduled_with_prices(pos_integer()) :: [
+  @spec scheduled_with_prices(pos_integer(), keyword()) :: [
           %{
             id: Ecto.UUID.t(),
             appointment_type_id: Ecto.UUID.t(),
@@ -243,12 +248,21 @@ defmodule ClinicDemo.Finance do
             amount: Decimal.t()
           }
         ]
-  def scheduled_with_prices(weeks) when is_integer(weeks) and weeks > 0 do
-    now = DateTime.utc_now()
+  def scheduled_with_prices(weeks, opts \\ []) when is_integer(weeks) and weeks > 0 do
+    now = Keyword.get(opts, :as_of) || DateTime.utc_now()
     horizon = DateTime.add(now, weeks * 7 * 24 * 3600, :second)
 
-    Appointment
-    |> Ash.Query.filter(status == :scheduled and scheduled_at >= ^now and scheduled_at < ^horizon)
+    query =
+      Appointment
+      |> Ash.Query.filter(status == :scheduled and scheduled_at >= ^now and scheduled_at < ^horizon)
+
+    query =
+      case Keyword.get(opts, :as_of) do
+        %DateTime{} = as_of -> Ash.Query.as_of(query, as_of)
+        _absent_or_nil -> query
+      end
+
+    query
     |> Ash.Query.load(:appointment_type)
     |> Ash.read!(authorize?: false)
     |> Enum.flat_map(fn appointment ->
