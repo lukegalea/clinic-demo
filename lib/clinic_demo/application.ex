@@ -11,9 +11,10 @@ defmodule ClinicDemo.Application do
     # log's `action` column through `to_existing_atom` — an atom that only
     # exists once the wrapped resource's beam is loaded (the judgment
     # record's `:revise`/`:materialise` are the ones no other boot path
-    # touches). A seeded log carries those rows from row one, so the
-    # audit-writing resources load before any surface can read the log.
-    Enum.each(audited_resources(), &Code.ensure_loaded/1)
+    # touches). Same for the value projection's `region` (`:clinic` lives
+    # in the declarations' beam). A seeded log carries those rows from row
+    # one, so the atom-carrier modules load before any surface can read.
+    Enum.each(atom_carrier_modules(), &Code.ensure_loaded/1)
 
     children =
       [
@@ -37,9 +38,14 @@ defmodule ClinicDemo.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Every resource wrapped with `AshEvents.Events` — the writers whose
-  # action names appear in the audit log's `action` column.
-  defp audited_resources do
+  # Modules whose beams carry the atoms stored in seeded database rows that
+  # surfaces read through `to_existing_atom`:
+  #
+  #   * every resource wrapped with `AshEvents.Events` — the writers whose
+  #     action names appear in the audit log's `action` column;
+  #   * the value-ledger declarations — `:clinic` (the projection's region)
+  #     and `:clinic_core` (the mapping source) are their literals.
+  defp atom_carrier_modules do
     [
       ClinicDemo.Scheduling.Appointment,
       ClinicDemo.Scheduling.Clinician,
@@ -47,7 +53,8 @@ defmodule ClinicDemo.Application do
       ClinicDemo.Finance.Charge,
       ClinicDemo.Decisions.Evaluation,
       ClinicDemo.Judgments.Fact,
-      ClinicDemo.Judgments.Observation
+      ClinicDemo.Judgments.Observation,
+      ClinicDemo.BusinessEvents.Declarations
     ]
   end
 
