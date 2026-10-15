@@ -25,10 +25,14 @@ defmodule ClinicDemoWeb.A2ui.Host do
   a background refresh re-runs the viewer's current search and page rather than
   resetting them.
 
-  Surface *contexts* are not tracked. No surface in this application declares
-  one, and carrying state for a feature nothing uses would be untested code that
-  looks load-bearing. `AshA2ui.LiveRenderer` does track them, and is the thing to
-  copy from if a context surface ever needs hosting here.
+  Surface *contexts* are not tracked. The Patients and Clinicians surfaces
+  declare one (master/detail), and hosted here their selections still work:
+  `"context_select"` is stateless — the client sends its `/context` with the
+  action and `AshA2ui.ActionHandler` answers from it. What is not carried is the
+  selection across a data-only `refresh/3`, which only a publishing resource
+  triggers, and none of this demo's resources publish. `AshA2ui.LiveRenderer`
+  tracks `/context` (`:context_state`) and is the thing to copy from if one
+  starts to.
   """
 
   import Phoenix.LiveView, only: [push_event: 3]

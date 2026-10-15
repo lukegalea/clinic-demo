@@ -73,7 +73,8 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       blurb: "Registered animals, with the register form.",
       description:
         "Registered patients — the clinic's animals — with their details and weight " <>
-          "recordings, and the register form whose validations live on the action."
+          "recordings, the register form whose validations live on the action, and, " <>
+          "for the patient picked from the list, their appointments."
     },
     %{
       name: "clinicians",
@@ -82,8 +83,9 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       path: "/clinicians",
       blurb: "Bookable staff, and who can see them.",
       description:
-        "The clinicians — bookable staff — with their role and license, and the form " <>
-          "whose license-number rule lives on the create action."
+        "The clinicians — bookable staff — with their role and license, the form " <>
+          "whose license-number rule lives on the create action, and, for the " <>
+          "clinician picked from the list, their appointments."
     },
     %{
       name: "processes",

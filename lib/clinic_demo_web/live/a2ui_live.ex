@@ -370,9 +370,14 @@ defmodule ClinicDemoWeb.A2ui.IntakeLive do
 end
 
 defmodule ClinicDemoWeb.A2ui.ScheduleLive do
+  alias ClinicDemoWeb.A2ui.Links
+
+  # The patient and clinician columns are reference links; opening one
+  # lands on that surface with the record selected.
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.AppointmentUI,
-    actor_fn: & &1.assigns.a2ui_actor
+    actor_fn: & &1.assigns.a2ui_actor,
+    open_surface: &Links.open/2
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_schedule"
 
@@ -445,9 +450,12 @@ defmodule ClinicDemoWeb.A2ui.VisitsLive do
 end
 
 defmodule ClinicDemoWeb.A2ui.PatientsLive do
+  # deep_link: the selected patient rides the URL (?ctx[patient]=<id>), so a pick
+  # is shareable and back-button friendly, and the schedule's links land on it.
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.PatientUI,
-    actor_fn: & &1.assigns.a2ui_actor
+    actor_fn: & &1.assigns.a2ui_actor,
+    deep_link: true
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_patients"
 
@@ -462,9 +470,12 @@ defmodule ClinicDemoWeb.A2ui.PatientsLive do
 end
 
 defmodule ClinicDemoWeb.A2ui.CliniciansLive do
+  # deep_link: the selected clinician rides the URL (?ctx[clinician]=<id>), so a pick
+  # is shareable and back-button friendly, and the schedule's links land on it.
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.ClinicianUI,
-    actor_fn: & &1.assigns.a2ui_actor
+    actor_fn: & &1.assigns.a2ui_actor,
+    deep_link: true
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_clinicians"
 
