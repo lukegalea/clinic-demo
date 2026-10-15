@@ -7,6 +7,14 @@ defmodule ClinicDemo.Application do
 
   @impl true
   def start(_type, _args) do
+    # The audit surface (/events and the a2ui audit tables) reads the event
+    # log's `action` column through `to_existing_atom` — an atom that only
+    # exists once the wrapped resource's beam is loaded (the judgment
+    # record's `:revise`/`:materialise` are the ones no other boot path
+    # touches). A seeded log carries those rows from row one, so the
+    # audit-writing resources load before any surface can read the log.
+    Enum.each(audited_resources(), &Code.ensure_loaded/1)
+
     children =
       [
         ClinicDemoWeb.Telemetry,
@@ -27,6 +35,20 @@ defmodule ClinicDemo.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: ClinicDemo.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Every resource wrapped with `AshEvents.Events` — the writers whose
+  # action names appear in the audit log's `action` column.
+  defp audited_resources do
+    [
+      ClinicDemo.Scheduling.Appointment,
+      ClinicDemo.Scheduling.Clinician,
+      ClinicDemo.Scheduling.Patient,
+      ClinicDemo.Finance.Charge,
+      ClinicDemo.Decisions.Evaluation,
+      ClinicDemo.Judgments.Fact,
+      ClinicDemo.Judgments.Observation
+    ]
   end
 
   # The MCP supervisor behind the endpoint's Tidewave plug — it owns the ETS
