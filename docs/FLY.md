@@ -210,17 +210,31 @@ fly volumes destroy clinic_demo_pg_data -a clinic-demo-pg
   `/app/bin/clinic_demo eval "ClinicDemo.Release.migrate()"` etc.
 
 
-## Seeding (the proven procedure — validated 2026-10-07)
+## Seeding (the proven procedure — validated 2026-10-16, redeploy #3)
 
-One-off `fly machine run` machines CANNOT resolve `<app>-pg.internal` (no 6proxy DNS) — seeding
-from them silently fails with nxdomain. `fly ssh console` on the 512MB app machine OOMs (two BEAMs).
-The working method:
+Run the seed on the app machine itself. Three things rule out the alternatives:
+
+* One-off `fly machine run` machines can't resolve `<app>-pg.internal` (no 6proxy DNS), so a seed
+  from one fails with nxdomain.
+* A seed from a laptop over `fly proxy` takes hours and dies when the proxy drops. That killed
+  two walks on 10-14 and 10-15.
+* The seed runs as a second BEAM beside the app. That is why `fly.toml` sizes the machine at 2gb,
+  and why the seed must be detached: the walk takes about 85 minutes, longer than an ssh session
+  or the auto-stop idle window reliably lasts.
 
 ```bash
-fly machine update <app-machine-id> -a clinic-demo-lg --memory 1024 --yes   # restarts; ~30s
-fly ssh console -a clinic-demo-lg -C "/app/bin/clinic_demo eval 'ClinicDemo.Release.seed()'"
-fly machine update <app-machine-id> -a clinic-demo-lg --memory 512 --yes    # back to the allowance-adjacent size
+M=<app-machine-id>
+fly machine update $M -a clinic-demo-lg --autostop=off --yes    # an idle app would stop mid-seed
+fly ssh console -a clinic-demo-lg -C "sh -c 'setsid nohup /app/bin/clinic_demo eval ClinicDemo.Release.seed\(\) > /tmp/seed.log 2>&1 < /dev/null &'"
+# poll until the last step prints; it lands after "Value projection: folded N value events"
+fly ssh console -a clinic-demo-lg -C "sh -c 'grep -c . /tmp/seed.log; grep -E \"Value projection: folded|\\*\\* \\(\" /tmp/seed.log'"
+fly machine update $M -a clinic-demo-lg --autostop=stop --yes   # back to fly.toml's posture
 ```
 
-Verify data (not page chrome — nav labels lie): proxy + psql `SELECT count(*) FROM appointments`,
-or an eval that prints the aggregate. Reset = destroy the PG volume + re-run migrate + this seed.
+The image has no `pgrep`/`ps`. Check progress through the log, not the process table. Expect one
+Ash "missed notifications" warning per folded event in the log; it is noise, not a failure.
+
+Verify data (not page chrome — nav labels lie). From the pg app, `psql -h /var/run/postgresql -U
+clinic -d clinic_demo` and count `appointments`, `finance_charges`, `business_event_ledger`,
+`value_projections` and `ash_projection_dead_letter_events` (which should be 0). A reset is §7's
+`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`, then migrate, then this seed.
