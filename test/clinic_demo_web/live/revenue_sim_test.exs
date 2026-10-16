@@ -231,16 +231,31 @@ defmodule ClinicDemoWeb.RevenueSimTest do
       assert html =~ "Sim visits remaining after"
     end
 
-    test "history scrub stays history even with a run selected", %{conn: conn} = world do
+    test "dragging the scrubber patches a day-granular as_of and keeps the run", %{conn: conn} do
+      {:ok, result} = generate_run("1.20", nil)
+      {:ok, view, _html} = live(conn, "/revenue?run=#{result.run}")
+
+      # `form/3` checks the keys against the inputs in the DOM, so this is
+      # the payload the browser's range input actually posts.
+      view |> form("#revenue-scrubber-form", %{"offset" => "-30"}) |> render_change()
+
+      query = view |> assert_patch() |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+      expected = DateTime.new!(Date.add(Date.utc_today(), -30), ~T[00:00:00], "Etc/UTC")
+
+      assert query == %{"as_of" => DateTime.to_iso8601(expected), "run" => result.run}
+      assert render(view) =~ "— history"
+    end
+
+    test "history scrub stays history even with a run selected", %{conn: conn} do
       {:ok, result} = generate_run("1.20", nil)
 
-      past = days_from_now(5) |> DateTime.to_iso8601()
+      past = days_from_now(-5) |> DateTime.to_iso8601()
       {:ok, _view, html} = live(conn, "/revenue?as_of=#{past}&run=#{result.run}")
 
-      assert html =~ "history"
       # The overlay badge rides the forecast card (with a run), but the
       # status chip answers for the cursor.
-      assert html =~ "history"
+      assert html =~ "— history"
+      refute html =~ "Projecting — SIM"
     end
   end
 
@@ -258,6 +273,16 @@ defmodule ClinicDemoWeb.RevenueSimTest do
 
       {:ok, _view, html} = live(conn, ~p"/revenue")
       refute html =~ ~s(data-testid="sim-overlay")
+    end
+
+    test "an unknown run keeps the cursor when it degrades", %{conn: conn} do
+      past = days_from_now(-5)
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               live(conn, "/revenue?as_of=#{DateTime.to_iso8601(past)}&run=ghost-run")
+
+      assert to |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query() ==
+               %{"as_of" => DateTime.to_iso8601(past)}
     end
 
     test "run isolation: two runs project their own labels", %{conn: conn} = world do

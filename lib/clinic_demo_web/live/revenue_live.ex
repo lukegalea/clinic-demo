@@ -76,7 +76,7 @@ defmodule ClinicDemoWeb.RevenueLive do
       # The scenario panel's draft: a param-only form per control — the
       # change/click events are what matter; the knob is a draft until
       # Generate turns it into a run.
-      |> assign(:scenario_form, to_form(%{multiplier: "1.00"}, as: :scenario))
+      |> assign(:scenario_form, to_form(%{"multiplier" => "1.00"}, as: :scenario))
       |> assign(:label_form, to_form(%{}, as: :label))
       |> assign(:multiplier, Decimal.new("1.00"))
       |> assign(:label_draft, nil)
@@ -127,7 +127,7 @@ defmodule ClinicDemoWeb.RevenueLive do
               :info,
               "That scenario run no longer exists — showing the live forecast."
             )
-            |> push_patch(to: ~p"/revenue?#{revenue_query(params["as_of"], nil)}")
+            |> push_patch(to: ~p"/revenue?#{revenue_query(as_of_from_params(params), nil)}")
 
           {nil, socket}
         end
@@ -141,8 +141,10 @@ defmodule ClinicDemoWeb.RevenueLive do
 
   # The scrubber: a day offset in, a canonical day-granular `?as_of=` out.
   # The run rides along (scrubbing must not drop a selected scenario).
+  # The range input is a bare `name="offset"`, so that is the shape the
+  # browser posts.
   @impl true
-  def handle_event("scrub", %{"rev_scrubber" => %{"offset" => raw}}, socket) do
+  def handle_event("scrub", %{"offset" => raw}, socket) do
     offset =
       case Integer.parse(raw) do
         {int, _rest} -> clamp(int, -@past_days, @future_days)
@@ -153,7 +155,7 @@ defmodule ClinicDemoWeb.RevenueLive do
 
     {:noreply,
      push_patch(socket,
-       to: ~p"/revenue?#{revenue_query(DateTime.to_iso8601(as_of), socket.assigns.run)}"
+       to: ~p"/revenue?#{revenue_query(as_of, socket.assigns.run)}"
      )}
   end
 
@@ -267,7 +269,6 @@ defmodule ClinicDemoWeb.RevenueLive do
         <div class="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
           <.form
             for={%{}}
-            as={:rev_scrubber}
             id="revenue-scrubber-form"
             phx-change="scrub"
             class="flex flex-1 flex-wrap items-center gap-x-3 gap-y-2 min-w-64"
@@ -936,7 +937,7 @@ defmodule ClinicDemoWeb.RevenueLive do
   end
 
   defp history_kpis(opts) do
-    month_label_at = opts.cursor_date && Calendar.strftime(opts.cursor_date, "%b %Y")
+    month_label_at = Calendar.strftime(opts.cursor_date, "%b %Y")
 
     opts
     |> live_kpis()
