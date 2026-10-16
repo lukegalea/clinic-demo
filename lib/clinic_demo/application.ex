@@ -45,7 +45,10 @@ defmodule ClinicDemo.Application do
   #   * every resource wrapped with `AshEvents.Events` — the writers whose
   #     action names appear in the audit log's `action` column;
   #   * the value-ledger declarations — `:clinic` (the projection's region)
-  #     and `:clinic_core` (the mapping source) are their literals.
+  #     and `:clinic_core` (the mapping source) are their literals;
+  #   * the ledger's default event `resource`, `:"bizev.event"`, which only
+  #     the package's StampEvent change carries (ash_discrete_business_events
+  #     #12). The drainer reads the ledger before this VM has written to it.
   defp atom_carrier_modules do
     [
       ClinicDemo.Scheduling.Appointment,
@@ -55,7 +58,8 @@ defmodule ClinicDemo.Application do
       ClinicDemo.Decisions.Evaluation,
       ClinicDemo.Judgments.Fact,
       ClinicDemo.Judgments.Observation,
-      ClinicDemo.BusinessEvents.Declarations
+      ClinicDemo.BusinessEvents.Declarations,
+      AshDiscreteBusinessEvents.Ledger.Changes.StampEvent
     ]
   end
 
