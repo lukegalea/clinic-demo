@@ -34,6 +34,7 @@ defmodule ClinicDemoWeb.RevenueLive do
   use ClinicDemoWeb, :live_view
 
   alias ClinicDemo.BusinessEvents.Scenarios
+  alias ClinicDemo.BusinessEvents.ValueDrainer
   alias ClinicDemo.Finance
   alias ClinicDemo.Finance.Forecast
   alias ClinicDemoWeb.A2ui.AsOfSurface
@@ -81,7 +82,26 @@ defmodule ClinicDemoWeb.RevenueLive do
       |> assign(:multiplier, Decimal.new("1.00"))
       |> assign(:label_draft, nil)
 
+    # A fold that applied new ledger events (ValueDrainer) re-reads the
+    # page, so a visit completed on the board lands here (iron law #03).
+    if connected?(socket),
+      do: Phoenix.PubSub.subscribe(ClinicDemo.PubSub, ValueDrainer.topic())
+
     {:ok, SurfaceChrome.mount_presence(socket, @surface_id)}
+  end
+
+  @impl true
+  def handle_info({:value_projection_drained, _count}, socket) do
+    {:noreply,
+     load_revenue(socket, socket.assigns.as_of, socket.assigns.run, socket.assigns.runs)}
+  end
+
+  # Presence broadcasts for the nav's who-else-is-here, as on the surfaces.
+  def handle_info(msg, socket) do
+    case AshA2ui.Presence.handle_broadcast(msg, ClinicDemoWeb.A2uiPresence, socket) do
+      {:noreply, socket} -> {:noreply, socket}
+      :ignored -> {:noreply, socket}
+    end
   end
 
   # Scrubbing, selecting, generating — every state change is navigation or

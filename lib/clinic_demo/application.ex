@@ -25,12 +25,13 @@ defmodule ClinicDemo.Application do
         # Who-else-is-here for the a2ui surfaces (avatar stack in the
         # surface header). Rides the PubSub above; each host supervises its
         # own presence module per AshA2ui.Presence's wiring contract.
-        ClinicDemoWeb.A2uiPresence,
-        # Start a worker by calling: ClinicDemo.Worker.start_link(arg)
-        # {ClinicDemo.Worker, arg},
-        # Start to serve requests, typically the last entry
-        ClinicDemoWeb.Endpoint
-      ] ++ tidewave()
+        ClinicDemoWeb.A2uiPresence
+      ] ++
+        value_drainer() ++
+        [
+          # Start to serve requests, typically the last entry
+          ClinicDemoWeb.Endpoint
+        ] ++ tidewave()
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
@@ -56,6 +57,15 @@ defmodule ClinicDemo.Application do
       ClinicDemo.Judgments.Observation,
       ClinicDemo.BusinessEvents.Declarations
     ]
+  end
+
+  # Folds new ledger events into the value projection as they land, so
+  # /revenue follows the board live. Off in test, where the suite drains
+  # explicitly inside its sandbox.
+  defp value_drainer do
+    if Application.get_env(:clinic_demo, :value_drainer, true),
+      do: [ClinicDemo.BusinessEvents.ValueDrainer],
+      else: []
   end
 
   # The MCP supervisor behind the endpoint's Tidewave plug — it owns the ETS

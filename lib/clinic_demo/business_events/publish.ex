@@ -31,6 +31,7 @@ defmodule ClinicDemo.BusinessEvents.Publish do
 
   alias ClinicDemo.BusinessEvents.Ledger
   alias ClinicDemo.BusinessEvents.MappingVersion
+  alias ClinicDemo.BusinessEvents.ValueDrainer
   alias ClinicDemo.Finance
   alias ClinicDemo.Scheduling.AppointmentType
 
@@ -228,7 +229,9 @@ defmodule ClinicDemo.BusinessEvents.Publish do
           authorize?: false
         )
 
-        :ok
+        # The fold runs after this transaction commits (debounced, and
+        # serialized in ValueDrainer), so /revenue follows the board.
+        ValueDrainer.nudge()
     end
   end
 

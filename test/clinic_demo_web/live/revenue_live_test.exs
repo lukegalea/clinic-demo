@@ -11,6 +11,7 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias ClinicDemo.BusinessEvents.ValueDrainer
   alias ClinicDemo.BusinessEvents.ValueProjector
   alias ClinicDemo.Finance.Charge
   alias ClinicDemo.Scheduling
@@ -109,6 +110,28 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
     # The scheduled visit is counted for the forecast.
     assert html =~ "visits on the books"
+  end
+
+  test "an open page re-reads when a fold lands: the board's completion shows up live", %{
+    conn: conn
+  } do
+    %{vet: vet, patient: patient, type: type} = fixtures()
+
+    {:ok, view, html} = live(conn, ~p"/revenue")
+    assert html =~ "0 charges"
+
+    appointment = book(patient, vet, type, DateTime.add(DateTime.utc_now(), 1, :day))
+    appointment = Scheduling.check_in_appointment!(appointment, actor: @staff)
+
+    Scheduling.complete_appointment!(appointment, "Written up while the page was open",
+      actor: @staff
+    )
+
+    # What ValueDrainer does after a fold: fold, then announce.
+    count = ValueDrainer.drain()
+    send(view.pid, {:value_projection_drained, count})
+
+    assert render(view) =~ "1 charges"
   end
 
   test "an empty ledger renders a flat, honest zero", %{conn: conn} do
