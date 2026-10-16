@@ -28,19 +28,21 @@ export const PAGES = [
     marker: { kind: "a2ui" },
     extraMarker: { kind: "host", selector: '[data-testid="as-of-indicator"]' },
   },
-  { route: "/intake", name: "intake", marker: { kind: "a2ui" }, navCurrent: "/intake" },
   {
-    // The revenue page in time-travel mode (BD-4). The instant is two
-    // hours back — inside the current month's recognized history, so the
-    // at-rest and scrubbed renders differ only in the travel card's state
-    // (violet fill, the viewing chip) and the pinned-as-of numbers on it.
-    // The indicator's timestamp is digit-scrubbed like every other seeded
-    // time.
-    route: `/revenue?as_of=${new Date(Date.now() - 2 * 3_600_000).toISOString().replace(/\.\d+Z$/, "Z")}`,
+    // The revenue page in time-travel mode (BD-4/BD-6). The instant is 30
+    // days back — inside the 26-week seed history, so the pinned reads
+    // have real months to show — and the status chip (rev-status-chip)
+    // reads "Viewing … — history". The indicator's timestamp is
+    // digit-scrubbed like every other seeded time.
+    route: `/revenue?as_of=${new Date(Date.now() - 30 * 86_400_000).toISOString().replace(/\.\d+Z$/, "Z")}`,
     name: "revenue-as-of",
     marker: { kind: "h1", text: "Revenue" },
-    extraMarker: { kind: "host", selector: '[data-testid="revenue-as-of-indicator"]' },
+    extraMarker: { kind: "host", selector: '[data-testid="rev-status-chip"]' },
   },
+  // The PROJECTING revenue golden (revenue-sim) is captured by the
+  // revenue-scenario behavioral pin, not by the page inventory: the run
+  // only exists after that pin generates it, and an unknown run in the
+  // URL degrades to the live page by design.
   { route: "/schedule", name: "schedule", marker: { kind: "a2ui" }, navCurrent: "/schedule" },
   {
     route: "/day",

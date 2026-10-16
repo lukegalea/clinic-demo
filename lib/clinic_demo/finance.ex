@@ -21,6 +21,7 @@ defmodule ClinicDemo.Finance do
 
   require Ash.Query
 
+  alias ClinicDemo.BusinessEvents
   alias ClinicDemo.BusinessEvents.ValueProjection
   alias ClinicDemo.Finance.Charge
   alias ClinicDemo.Scheduling.Appointment
@@ -296,5 +297,123 @@ defmodule ClinicDemo.Finance do
     Charge
     |> Ash.Query.filter(appointment_id == ^appointment_id)
     |> Ash.read_one!(authorize?: false)
+  end
+
+  @doc """
+  The scenario overlay's read (BD-6): one simulation run's drawn
+  completions, folded per Monday-anchored week — the same week shape
+  `Forecast.weekly/3` plots, so real and simulated futures share one axis.
+
+  **The read is the TWIN, not the sim projection, and the run label filters
+  it** — the projection's grains are per-subject, so two runs over the same
+  visit would straddle one grain; the run's own rows are its ground truth
+  (BD-5's ruling, restated where the overlay needs it). `as_of:` caps the
+  fold at "recognized BY T" (completions whose drawn instant has passed by
+  T); without it the run's full horizon folds — the overlay's complete
+  answer.
+
+  Options:
+
+    * `:as_of` — the cursor instant capping the fold (nil: full horizon).
+    * `:weeks` — how many Monday-anchored horizon weeks to emit (default
+      4, the forecast's own horizon; a completion spilling past the last
+      week opens a trailing week, per the generator's own folding).
+
+  Returns `%{weeks: [%{week_start, week_end, recognized, completions}],
+  horizon_expected, recognized_to_t, remaining_after_t}` — the overlay's
+  polyline and the SIM-mode KPIs, from one read.
+  """
+  @spec sim_run_summary(String.t(), keyword()) :: %{
+          weeks: [
+            %{
+              week_start: Date.t(),
+              week_end: Date.t(),
+              recognized: Decimal.t(),
+              completions: non_neg_integer()
+            }
+          ],
+          horizon_expected: Decimal.t(),
+          recognized_to_t: Decimal.t(),
+          remaining_after_t: non_neg_integer()
+        }
+  def sim_run_summary(run, opts \\ []) when is_binary(run) do
+    as_of = Keyword.get(opts, :as_of)
+    horizon_weeks = Keyword.get(opts, :weeks, 4)
+    today = Date.utc_today()
+
+    # One read of the run's own rows: completions carry the money, every
+    # outcome counts toward "remaining after T".
+    drawn =
+      BusinessEvents.Ledger.SimulationEvent
+      |> Ash.Query.filter(simulation_run == ^run)
+      |> Ash.Query.sort(:sequence)
+      |> Ash.read!(authorize?: false)
+
+    completions =
+      drawn
+      |> Enum.filter(&(&1.action == :visit_completed))
+      |> Enum.map(&{&1.occurred_at, parse_amount(&1.data["amount"])})
+
+    within_t = fn %DateTime{} = at ->
+      is_nil(as_of) or DateTime.compare(at, as_of) != :gt
+    end
+
+    horizon_starts =
+      for offset <- 0..(horizon_weeks - 1) do
+        today |> Date.beginning_of_week() |> Date.add(7 * offset)
+      end
+
+    %{
+      weeks:
+        week_buckets(horizon_starts, Enum.filter(completions, fn {at, _} -> within_t.(at) end)),
+      horizon_expected:
+        completions
+        |> Enum.reduce(Decimal.new(0), fn {_at, amount}, acc -> Decimal.add(acc, amount) end)
+        |> Decimal.round(2),
+      recognized_to_t:
+        completions
+        |> Enum.filter(fn {at, _} -> within_t.(at) end)
+        |> Enum.reduce(Decimal.new(0), fn {_at, amount}, acc -> Decimal.add(acc, amount) end)
+        |> Decimal.round(2),
+      remaining_after_t: Enum.count(drawn, fn e -> not within_t.(e.occurred_at) end)
+    }
+  end
+
+  defp parse_amount(nil), do: Decimal.new(0)
+  defp parse_amount(%Decimal{} = amount), do: amount
+  defp parse_amount(amount) when is_binary(amount), do: Decimal.new(amount)
+
+  # The Monday-anchored horizon weeks, each summing the completions whose
+  # drawn instant falls in the week. A completion past the horizon's last
+  # week opens a trailing week, like the generator's own folding.
+  defp week_buckets(horizon_starts, completions) do
+    horizon_starts
+    |> Map.new(&{&1, empty_week(&1)})
+    |> fold_completions(completions)
+    |> Map.values()
+    |> Enum.sort_by(& &1.week_start, &(Date.compare(&1, &2) != :gt))
+    |> Enum.map(&Map.update!(&1, :recognized, fn total -> Decimal.round(total, 2) end))
+  end
+
+  defp empty_week(week_start) do
+    %{
+      week_start: week_start,
+      week_end: Date.add(week_start, 6),
+      recognized: Decimal.new(0),
+      completions: 0
+    }
+  end
+
+  defp fold_completions(buckets, completions) do
+    Enum.reduce(completions, buckets, fn {at, amount}, buckets ->
+      week_start = at |> DateTime.to_date() |> Date.beginning_of_week()
+
+      bucket = Map.get_lazy(buckets, week_start, fn -> empty_week(week_start) end)
+
+      bucket
+      |> Map.update!(:recognized, &Decimal.add(&1, amount))
+      |> Map.update!(:completions, &(&1 + 1))
+      |> then(&Map.put(buckets, week_start, &1))
+    end)
   end
 end

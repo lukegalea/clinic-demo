@@ -124,6 +124,120 @@ async function goToPage(page, baseUrl, route) {
   return response;
 }
 
+
+// ── BD-4/BD-6: the revenue scrubber and the scenario overlay ──────────────
+
+async function pinRevenueTimeTravel(reporter, baseUrl, page) {
+  const pageId = "behavior:revenue-time-travel";
+  try {
+    // (a) A deep link 30 days back: the status chip reads history, the
+    // month chart hydrates (the flat-zero bars render), and the money KPI
+    // relabels to the pinned instant.
+    await goToPage(page, baseUrl, `/revenue?as_of=${new Date(Date.now() - 30 * 86_400_000).toISOString().replace(/\.\d+Z$/, "Z")}`);
+    const chip = page.locator('[data-testid="rev-status-chip"]');
+    await chip.waitFor({ state: "visible", timeout: 10_000 });
+    const chipText = ((await chip.textContent()) || "").replace(/\s+/g, " ").trim();
+    const monthBars = page.locator('[aria-label="Revenue by month"] svg');
+    await monthBars.waitFor({ state: "visible", timeout: 10_000 });
+    const historyOk = /history/.test(chipText) && /Viewing/.test(chipText);
+
+    // (b) The Now chip drops the param and the live chip returns.
+    await page.locator('[data-testid="rev-preset-now"]').click();
+    await page.waitForFunction(() => !new URL(window.location).searchParams.has("as_of"), null, { timeout: 10_000 });
+    const chipNow = page.locator('[data-testid="rev-status-chip"]');
+    await chipNow.waitFor({ state: "visible", timeout: 10_000 });
+    await page.waitForFunction(
+      () => /Live now/.test((document.querySelector('[data-testid="rev-status-chip"]').textContent || "").replace(/\s+/g, " ")),
+      null,
+      { timeout: 10_000 }
+    );
+    const liveText = ((await chipNow.textContent()) || "").replace(/\s+/g, " ").trim();
+    const urlHasAsOf = new URL(page.url()).searchParams.has("as_of");
+
+    if (historyOk && /Live now/.test(liveText) && !urlHasAsOf) {
+      reporter.pass(pageId, `history chip + Now chip round-trip: ${JSON.stringify(chipText.slice(0, 50))}`);
+    } else {
+      reporter.fail(
+        pageId,
+        `history chip ${JSON.stringify(chipText.slice(0, 50))}, live chip ${JSON.stringify(liveText.slice(0, 50))}, url as_of=${urlHasAsOf}`
+      );
+    }
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  }
+}
+
+async function pinRevenueScenario(reporter, baseUrl, page, state) {
+  const pageId = "behavior:revenue-scenario";
+  try {
+    await goToPage(page, baseUrl, "/revenue");
+
+    // The knob: ×1.20 via the quick-set chip (a range input takes no
+    // fill; the chip fires the same assign the knob would).
+    await page.locator('[data-testid="scenario-quick-120"]').click();
+    await page.locator('[data-testid="scenario-multiplier"]').waitFor({ state: "visible", timeout: 10_000 });
+
+    // The label draft CLEARED: the run takes its content-addressed label
+    // (scenario:x1.20-h4 — stable across runs, matching the revenue-sim
+    // golden's route).
+    const labelInput = page.locator("#scenario-label-draft");
+    await labelInput.fill("");
+    await labelInput.dispatchEvent("change");
+
+    // Generate: the async lands (the drain takes seconds), then the patch
+    // carries the new run.
+    await page.locator('[data-testid="scenario-generate"]').click();
+    await page.locator('[data-testid="sim-badge"]').waitFor({ state: "visible", timeout: 15_000 });
+
+    const badge = ((await page.locator('[data-testid="sim-badge"]').textContent()) || "").replace(/\s+/g, " ").trim();
+    const overlay = await page.locator('[data-testid="sim-overlay"]').count();
+
+    // Scrub to +2w: the URL carries both params and the chip reads SIM.
+    await page.locator('[data-testid="rev-preset-2w"]').click();
+    await page.waitForFunction(
+      () => new URL(window.location).searchParams.has("as_of") && new URL(window.location).searchParams.has("run"),
+      null,
+      { timeout: 10_000 }
+    );
+    const url = new URL(page.url());
+    const chipText = ((await page.locator('[data-testid="rev-status-chip"]').textContent()) || "").replace(/\s+/g, " ").trim();
+
+    const bothParams = url.searchParams.has("as_of") && url.searchParams.has("run");
+    const projecting = /Projecting/.test(chipText) && /SIM/.test(chipText);
+
+    if (overlay > 0 && /SIMULATION ·/.test(badge) && bothParams && projecting) {
+      reporter.pass(pageId, `overlay + badge ${JSON.stringify(badge.slice(0, 44))}, chip projecting, URL ${url.search}`);
+    } else {
+      reporter.fail(
+        pageId,
+        `overlay=${overlay}, badge=${JSON.stringify(badge.slice(0, 44))}, params=${url.search}, chip=${JSON.stringify(chipText.slice(0, 50))}`
+      );
+    }
+
+    // The projecting golden: captured HERE, inside the pin — the run's
+    // label only exists after this very generate (the golden's route is
+    // the URL the pin landed on).
+    try {
+      await prepareForScreenshot(page);
+      const png = await capture(page);
+      const result = await compareAgainstBaseline("revenue-sim", png, {
+        updateBaselines: state.updateBaselines,
+      });
+      if (result.status === "match") {
+        reporter.pass("page:revenue-sim:screenshot", result.detail);
+      } else if (result.status === "updated") {
+        reporter.pass("page:revenue-sim:screenshot", "baseline written (test/visual/__screenshots__/revenue-sim.png)");
+      } else {
+        reporter.fail("page:revenue-sim:screenshot", result.detail);
+      }
+    } catch (error) {
+      reporter.fail("page:revenue-sim:screenshot", describeError(error));
+    }
+  } catch (error) {
+    reporter.fail(pageId, describeError(error));
+  }
+}
+
 // ── Phase 0: actor setup (the pill and presence ride along) ───────────────
 
 async function pickActor(browser, reporter, baseUrl) {
@@ -830,6 +944,12 @@ async function main() {
     }
     if (reporter.shouldRun("behavior:board-time-travel")) {
       await pinBoardTimeTravel(reporter, options.baseUrl, main.page);
+    }
+    if (reporter.shouldRun("behavior:revenue-time-travel")) {
+      await pinRevenueTimeTravel(reporter, options.baseUrl, main.page);
+    }
+    if (reporter.shouldRun("behavior:revenue-scenario")) {
+      await pinRevenueScenario(reporter, options.baseUrl, main.page, state);
     }
 
     // Cleanup of the long-lived contexts.
