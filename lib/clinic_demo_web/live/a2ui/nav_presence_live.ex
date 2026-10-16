@@ -48,7 +48,8 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
     {"Clinicians", "/clinicians", "clinic_clinicians"},
     {"Processes", "/processes", "clinic_process_definitions"},
     {"Decisions", "/decisions", "clinic_decision_definitions"},
-    {"Evidence", "/evaluations", "clinic_evaluations"}
+    {"Evidence", "/evaluations", "clinic_evaluations"},
+    {"Revenue", "/revenue", "clinic_revenue"}
   ]
 
   @presence_events ["presence_state", "presence_diff"]
