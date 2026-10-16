@@ -52,7 +52,10 @@ kill_signal = "SIGTERM"
     [http_service.checks.headers]
       X-Forwarded-Proto = "https"
 
+# 2gb (Luke, 2026-10-15): the release seed runs as a second BEAM beside the
+# app (`fly ssh console ... Release.seed()`), and a deploy re-applies this
+# block, so the size has to live here rather than on the machine.
 [vm]
   size = "shared-cpu-1x"
-  memory = "1024mb"
+  memory = "2048mb"
   swap_size_mb = 512
