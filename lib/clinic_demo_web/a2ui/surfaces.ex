@@ -48,11 +48,12 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       label: "Worklist",
       ui: A2ui.WorklistUI,
       path: "/worklist",
-      blurb: "Human tasks waiting on a person, completed through the engine.",
+      blurb: "Your tasks as a board, Open and Claimed: claim, complete, delegate.",
       description:
-        "The worklist: human tasks from running visit processes that are waiting on a " <>
-          "person, with their step, status and due time, completed through the process " <>
-          "engine so the token advances."
+        "The worklist: the acting clinician's human tasks from running visit processes, " <>
+          "as a board with an Open lane (tasks they may take) and a Claimed lane (tasks " <>
+          "they hold), each with its step and due time. Claim, complete with an outcome, " <>
+          "or delegate to a colleague, all through the process engine so the token advances."
     },
     %{
       name: "visits",

@@ -88,7 +88,6 @@ defmodule ClinicDemoWeb.Router do
       live "/events", A2ui.EventsLive
       live "/canvas", CanvasLive
       live "/agent", AgentLive
-      live "/operator/tasks", Bpmn.TaskListLive
       live "/operator/processes/:key/designer", Bpmn.DesignerLive
       live "/operator/instances/:id", Bpmn.ViewerLive
       live "/operator/decisions/:key/editor", Decisions.EditorLive
