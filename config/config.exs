@@ -85,8 +85,7 @@ config :ash,
 # catalog stays at its `:basic` default. f777ede turned admin_v1 off
 # because the admin composition dropped the board's sectioned table;
 # ash_a2ui #16 fixed that, and admin_v1 was re-tried against a3c1763 with
-# the visual suite. It drew the schedule's reference links, but it broke
-# three things this app depends on:
+# the visual suite. It broke three things this app depends on:
 #
 #   * prompt row actions (Record weight, Complete, Cancel) invoke straight
 #     away with no prompt to collect their values, so they fail with
@@ -99,7 +98,10 @@ config :ash,
 # Re-enable `catalog: :admin_v1` when those land upstream.
 #
 # Reference links (the schedule's patient and clinician columns) resolve to
-# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them.
+# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them. They
+# no longer need admin_v1: since ash_a2ui 25c6b8f the basic catalog draws a
+# to-one link as a button whenever the LiveRenderer can navigate, which
+# ScheduleLive's :open_surface callback provides.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,
