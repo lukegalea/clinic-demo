@@ -789,87 +789,224 @@ defmodule ClinicDemoWeb.RevenueLive do
     cursor_date = cursor_date(as_of, today)
 
     months = Finance.value_by_month(months: 7, as_of: as_of)
+    rates = projection_rates(as_of)
+    scheduled = forecast_schedule(as_of)
+    weeks = Forecast.weekly(scheduled, rates, cursor_date)
 
-    outcomes = Finance.projected_outcomes(as_of: as_of)
-    rates = Forecast.build_rates(outcomes)
+    sim = sim_summary(run, as_of)
 
     type_names =
       ClinicDemo.Scheduling.list_appointment_types!(authorize?: false)
       |> Map.new(&{&1.id, &1.name})
 
-    history? = as_of != nil and Date.compare(cursor_date, today) == :lt
-
-    scheduled =
-      if history? do
-        Finance.scheduled_with_prices(4, as_of: as_of)
-      else
-        Finance.scheduled_with_prices(4)
-      end
-
-    weeks = Forecast.weekly(scheduled, rates, cursor_date)
-
-    sim =
-      if run do
-        Finance.sim_run_summary(run, as_of: as_of, weeks: @horizon_weeks)
-      end
-
     ceiling_values =
-      Enum.map(weeks, & &1.expected) ++
-        Enum.map(Kernel.get_in(sim, [:weeks]) || [], & &1.recognized)
+      Enum.map(weeks, & &1.expected) ++ Enum.map(sim_week_list(sim), & &1.recognized)
 
-    line_ceiling = clean_ceiling(ceiling_values, 1_000)
-
-    %{month: _, total: month_to_date, count: month_count} = List.last(months)
-
-    trailing_total =
-      months
-      |> Enum.drop(-1)
-      |> Enum.reduce(Decimal.new(0), &Decimal.add(&2, &1.total))
-
-    forecast_total = Enum.reduce(weeks, Decimal.new(0), &Decimal.add(&2, &1.expected))
-
-    cursor_week =
-      if run && as_of, do: as_of |> DateTime.to_date() |> Date.beginning_of_week()
+    kpis =
+      kpis(%{
+        mode: mode,
+        as_of: as_of,
+        cursor_date: cursor_date,
+        month_to_date: month_total(months),
+        month_count: month_count(months),
+        trailing_total: trailing_total(months),
+        scheduled_count: length(scheduled),
+        forecast_total: forecast_total(weeks),
+        sim: sim
+      })
 
     socket
     |> assign(:mode, mode)
     |> assign(:day_offset, day_offset(as_of, today))
     |> assign(:months, months)
     |> assign(:bar_ceiling, clean_ceiling(Enum.map(months, & &1.total), 5_000))
-    |> assign(:month_to_date, month_to_date)
-    |> assign(:month_count, month_count)
-    |> assign(:trailing_total, trailing_total)
+    |> assign(:month_to_date, month_total(months))
+    |> assign(:month_count, month_count(months))
+    |> assign(:trailing_total, trailing_total(months))
     |> assign(:scheduled_count, length(scheduled))
     |> assign(:weeks, weeks)
-    |> assign(:line_ceiling, line_ceiling)
-    |> assign(:forecast_total, forecast_total)
+    |> assign(:line_ceiling, clean_ceiling(ceiling_values, 1_000))
+    |> assign(:forecast_total, forecast_total(weeks))
     |> assign(:rate_table, Forecast.rate_table(rates, type_names))
-    |> assign(:sim_weeks, Kernel.get_in(sim, [:weeks]) || [])
+    |> assign(:sim_weeks, sim_week_list(sim))
     |> assign(:sim_horizon_expected, sim && sim.horizon_expected)
     |> assign(:sim_recognized_to_t, sim && sim.recognized_to_t)
     |> assign(:sim_remaining, sim && sim.remaining_after_t)
-    |> assign(:cursor_week, if(run, do: cursor_week, else: nil))
-    |> assign(
-      :kpis,
-      kpis(
-        mode,
-        as_of,
-        month_to_date,
-        month_count,
-        trailing_total,
-        length(scheduled),
-        forecast_total,
-        sim,
-        cursor_date
-      )
-    )
+    |> assign(:cursor_week, cursor_week(run, as_of))
+    |> assign(:kpis, kpis)
     |> assign(:ledger_not_started, ledger_not_started?(months, as_of))
     |> assign(:run_options, run_options(socket.assigns[:runs] || []))
   end
 
+  # The rates read the projection's evidence as of the cursor (the fold is
+  # the /revenue source since BD-3).
+  defp projection_rates(as_of) do
+    as_of
+    |> then(&Finance.projected_outcomes(as_of: &1))
+    |> Forecast.build_rates()
+  end
+
+  # The forecast's window: over the schedule as it read at a past cursor
+  # (the retro-forecast), over the live schedule from now otherwise.
+  defp forecast_schedule(as_of) do
+    history? =
+      as_of != nil and Date.compare(cursor_date(as_of, Date.utc_today()), Date.utc_today()) == :lt
+
+    if history? do
+      Finance.scheduled_with_prices(4, as_of: as_of)
+    else
+      Finance.scheduled_with_prices(4)
+    end
+  end
+
+  # The run's own summary, or nil without a selected run.
+  defp sim_summary(nil, _as_of), do: nil
+
+  defp sim_summary(run, as_of),
+    do: Finance.sim_run_summary(run, as_of: as_of, weeks: @horizon_weeks)
+
+  defp sim_week_list(nil), do: []
+  defp sim_week_list(%{weeks: weeks}), do: weeks
+
+  # The overlay's cursor dot rides the week containing the cursor — only
+  # while a cursor is pinned (the live page shows the full answer).
+  defp cursor_week(_run, nil), do: nil
+
+  defp cursor_week(_run, %DateTime{} = as_of),
+    do: as_of |> DateTime.to_date() |> Date.beginning_of_week()
+
   defp ledger_not_started?(months, as_of) do
     as_of != nil and Enum.all?(months, fn m -> Decimal.eq?(m.total, Decimal.new(0)) end)
   end
+
+  defp month_total(months), do: List.last(months).total
+  defp month_count(months), do: List.last(months).count
+
+  defp trailing_total(months) do
+    months
+    |> Enum.drop(-1)
+    |> Enum.reduce(Decimal.new(0), &Decimal.add(&2, &1.total))
+  end
+
+  defp forecast_total(weeks) do
+    Enum.reduce(weeks, Decimal.new(0), &Decimal.add(&2, &1.expected))
+  end
+
+  # The SIM-mode KPI numbers, off one sim summary.
+  defp kpis(opts) do
+    cond do
+      opts.mode == :history and opts[:sim] == nil -> history_kpis(opts)
+      opts.mode == :sim and opts[:sim] != nil -> sim_kpis(opts[:sim], opts[:as_of])
+      opts.mode == :future -> future_kpis(opts)
+      true -> live_kpis(opts)
+    end
+  end
+
+  defp live_kpis(opts) do
+    [
+      %{
+        label: "Recognized this month",
+        value: money(opts.month_to_date),
+        sub: "#{opts.month_count} charges",
+        accent: nil,
+        badge: nil
+      },
+      %{
+        label: "Trailing six months",
+        value: money(opts.trailing_total),
+        sub: "paid charges",
+        accent: nil,
+        badge: nil
+      },
+      %{
+        label: "Scheduled, next 4 weeks",
+        value: Integer.to_string(opts.scheduled_count),
+        sub: "visits on the books",
+        accent: nil,
+        badge: nil
+      },
+      %{
+        label: "Four-week forecast",
+        value: money(opts.forecast_total),
+        sub: "expected revenue",
+        accent: nil,
+        badge: nil
+      }
+    ]
+  end
+
+  defp history_kpis(opts) do
+    month_label_at = opts.cursor_date && Calendar.strftime(opts.cursor_date, "%b %Y")
+
+    opts
+    |> live_kpis()
+    |> put_in([Access.at(0), :label], "Recognized as of #{month_label_at}")
+    |> put_in([Access.at(1), :label], "Trailing at #{month_label_at}")
+    |> put_in([Access.at(2), :label], "On the books at #{month_label_at}")
+    |> put_in([Access.at(3), :label], "Forecast as known at #{month_label_at}")
+    |> then(fn kpis ->
+      kpis
+      |> List.update_at(0, &Map.put(&1, :accent, :violet))
+      |> List.update_at(1, &Map.put(&1, :accent, :violet))
+    end)
+  end
+
+  defp sim_kpis(sim, as_of) do
+    week_of_t = sim_week_of(sim, opts_cursor_date(as_of))
+
+    [
+      %{
+        label: "Sim recognized, week of #{week_label(week_of_t)}",
+        value: money(sim.recognized_to_t),
+        sub: "simulated",
+        accent: :cyan,
+        badge: "sim"
+      },
+      %{
+        label: "Sim cumulative to #{format_date(as_of)}",
+        value: money(sim.recognized_to_t),
+        sub: "simulated",
+        accent: :cyan,
+        badge: "sim"
+      },
+      %{
+        label: "Sim visits remaining after #{format_date(as_of)}",
+        value: Integer.to_string(sim.remaining_after_t),
+        sub: "simulated",
+        accent: :cyan,
+        badge: "sim"
+      },
+      %{
+        label: "Run's full-horizon expectation",
+        value: money(sim.horizon_expected),
+        sub: "simulated",
+        accent: :cyan,
+        badge: "sim"
+      }
+    ]
+  end
+
+  defp future_kpis(opts) do
+    # Future cursor without a run: the real numbers clamp at now.
+    opts
+    |> live_kpis()
+    |> put_in([Access.at(2), :sub], "as of now")
+    |> put_in([Access.at(3), :sub], "as of now")
+  end
+
+  defp opts_cursor_date(as_of) do
+    if as_of, do: DateTime.to_date(as_of), else: Date.utc_today()
+  end
+
+  defp sim_week_of(sim, cursor_date) do
+    Enum.find(sim.weeks, fn week ->
+      Date.compare(week.week_start, cursor_date) != :gt and
+        Date.compare(week.week_end, cursor_date) != :lt
+    end) || List.last(sim.weeks)
+  end
+
+  defp week_label(nil), do: ""
+  defp week_label(%{week_start: week_start}), do: Calendar.strftime(week_start, "%b %-d")
 
   # The mode: where the cursor stands relative to today, and whether a run
   # is projected into the future.
@@ -911,122 +1048,6 @@ defmodule ClinicDemoWeb.RevenueLive do
   defp readout_label(%DateTime{} = as_of, _today, _run) do
     Calendar.strftime(DateTime.to_date(as_of), "%b %-d %Y")
   end
-
-  # The KPI row (§6.1): LIVE shows today's page; HISTORY relabels 1–2 and
-  # violets their fill; SIM swaps all four to the run's numbers, cyan with
-  # badges; FUTURE-no-run keeps the real numbers clamped at now with the
-  # "as of now" sub-label honesty.
-  defp kpis(
-         mode,
-         as_of,
-         month_to_date,
-         month_count,
-         trailing_total,
-         scheduled_count,
-         forecast_total,
-         sim,
-         cursor_date
-       ) do
-    month_label_at = cursor_date && Calendar.strftime(cursor_date, "%b %Y")
-
-    live = [
-      %{
-        label: "Recognized this month",
-        value: money(month_to_date),
-        sub: "#{month_count} charges",
-        accent: nil,
-        badge: nil
-      },
-      %{
-        label: "Trailing six months",
-        value: money(trailing_total),
-        sub: "paid charges",
-        accent: nil,
-        badge: nil
-      },
-      %{
-        label: "Scheduled, next 4 weeks",
-        value: Integer.to_string(scheduled_count),
-        sub: "visits on the books",
-        accent: nil,
-        badge: nil
-      },
-      %{
-        label: "Four-week forecast",
-        value: money(forecast_total),
-        sub: "expected revenue",
-        accent: nil,
-        badge: nil
-      }
-    ]
-
-    cond do
-      mode == :history and sim == nil ->
-        past_month_label = month_label_at || ""
-
-        put_in(live, [Access.at(0), :label], "Recognized as of #{past_month_label}")
-        |> put_in([Access.at(1), :label], "Trailing at #{past_month_label}")
-        |> put_in([Access.at(2), :label], "On the books at #{past_month_label}")
-        |> put_in([Access.at(3), :label], "Forecast as known at #{past_month_label}")
-        |> then(fn kpis ->
-          kpis
-          |> List.update_at(0, &Map.put(&1, :accent, :violet))
-          |> List.update_at(1, &Map.put(&1, :accent, :violet))
-        end)
-
-      mode == :sim and sim != nil ->
-        week_of_t = sim_week_of(sim, cursor_date)
-
-        [
-          %{
-            label: "Sim recognized, week of #{week_label(week_of_t)}",
-            value: money(sim.recognized_to_t),
-            sub: "simulated",
-            accent: :cyan,
-            badge: "sim"
-          },
-          %{
-            label: "Sim cumulative to #{format_date(as_of)}",
-            value: money(sim.recognized_to_t),
-            sub: "simulated",
-            accent: :cyan,
-            badge: "sim"
-          },
-          %{
-            label: "Sim visits remaining after #{format_date(as_of)}",
-            value: Integer.to_string(sim.remaining_after_t),
-            sub: "simulated",
-            accent: :cyan,
-            badge: "sim"
-          },
-          %{
-            label: "Run's full-horizon expectation",
-            value: money(sim.horizon_expected),
-            sub: "simulated",
-            accent: :cyan,
-            badge: "sim"
-          }
-        ]
-
-      mode == :future ->
-        # Future cursor without a run: the real numbers clamp at now.
-        put_in(live, [Access.at(2), :sub], "as of now")
-        |> put_in([Access.at(3), :sub], "as of now")
-
-      true ->
-        live
-    end
-  end
-
-  defp sim_week_of(sim, cursor_date) do
-    Enum.find(sim.weeks, fn week ->
-      Date.compare(week.week_start, cursor_date) != :gt and
-        Date.compare(week.week_end, cursor_date) != :lt
-    end) || List.last(sim.weeks)
-  end
-
-  defp week_label(nil), do: ""
-  defp week_label(%{week_start: week_start}), do: Calendar.strftime(week_start, "%b %-d")
 
   # ── helpers ──────────────────────────────────────────────────────────────
 

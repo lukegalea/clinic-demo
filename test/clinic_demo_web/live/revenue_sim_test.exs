@@ -19,10 +19,10 @@ defmodule ClinicDemoWeb.RevenueSimTest do
   require Ash.Query
 
   alias ClinicDemo.BusinessEvents
-  alias ClinicDemo.BusinessEvents.Scenarios
-  alias ClinicDemo.Finance
   alias ClinicDemo.BusinessEvents.Ledger
+  alias ClinicDemo.BusinessEvents.Scenarios
   alias ClinicDemo.BusinessEvents.ValueProjector
+  alias ClinicDemo.Finance
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.AppointmentType
 

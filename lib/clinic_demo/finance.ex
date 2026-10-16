@@ -387,29 +387,33 @@ defmodule ClinicDemo.Finance do
   # drawn instant falls in the week. A completion past the horizon's last
   # week opens a trailing week, like the generator's own folding.
   defp week_buckets(horizon_starts, completions) do
-    empty = %{week_start: nil, week_end: nil, recognized: Decimal.new(0), completions: 0}
-
     horizon_starts
-    |> Map.new(fn week_start ->
-      {week_start, %{empty | week_start: week_start, week_end: Date.add(week_start, 6)}}
-    end)
-    |> then(fn buckets ->
-      Enum.reduce(completions, buckets, fn {at, amount}, buckets ->
-        week_start = at |> DateTime.to_date() |> Date.beginning_of_week()
-
-        bucket =
-          Map.get_lazy(buckets, week_start, fn ->
-            %{empty | week_start: week_start, week_end: Date.add(week_start, 6)}
-          end)
-
-        bucket
-        |> Map.update!(:recognized, &Decimal.add(&1, amount))
-        |> Map.update!(:completions, &(&1 + 1))
-        |> then(&Map.put(buckets, week_start, &1))
-      end)
-    end)
+    |> Map.new(&{&1, empty_week(&1)})
+    |> fold_completions(completions)
     |> Map.values()
     |> Enum.sort_by(& &1.week_start, &(Date.compare(&1, &2) != :gt))
     |> Enum.map(&Map.update!(&1, :recognized, fn total -> Decimal.round(total, 2) end))
+  end
+
+  defp empty_week(week_start) do
+    %{
+      week_start: week_start,
+      week_end: Date.add(week_start, 6),
+      recognized: Decimal.new(0),
+      completions: 0
+    }
+  end
+
+  defp fold_completions(buckets, completions) do
+    Enum.reduce(completions, buckets, fn {at, amount}, buckets ->
+      week_start = at |> DateTime.to_date() |> Date.beginning_of_week()
+
+      bucket = Map.get_lazy(buckets, week_start, fn -> empty_week(week_start) end)
+
+      bucket
+      |> Map.update!(:recognized, &Decimal.add(&1, amount))
+      |> Map.update!(:completions, &(&1 + 1))
+      |> then(&Map.put(buckets, week_start, &1))
+    end)
   end
 end
