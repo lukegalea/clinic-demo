@@ -25,6 +25,8 @@ defmodule ClinicDemo.Visits.TaskDesk do
 
   require Ash.Query
 
+  alias Ash.Error.Changes.InvalidArgument
+  alias Ash.Error.Forbidden
   alias ClinicDemo.Scheduling.Clinician
   alias ClinicDemo.Visits.{HumanTask, TaskCandidate}
 
@@ -122,8 +124,8 @@ defmodule ClinicDemo.Visits.TaskDesk do
     end
   end
 
-  defp forbidden, do: {:error, Ash.Error.Forbidden.exception([])}
+  defp forbidden, do: {:error, Forbidden.exception([])}
 
   defp invalid(message),
-    do: {:error, Ash.Error.Changes.InvalidArgument.exception(field: :to, message: message)}
+    do: {:error, InvalidArgument.exception(field: :to, message: message)}
 end

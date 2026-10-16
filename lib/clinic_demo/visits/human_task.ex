@@ -11,6 +11,8 @@ defmodule ClinicDemo.Visits.HumanTask do
     token: ClinicDemo.Visits.Token,
     table: "bpmn_human_tasks"
 
+  alias ClinicDemo.Visits.TaskDesk
+
   relationships do
     # Candidacy rows are materialised when the task is created. The worklist
     # read filters through them — "what may *this* clinician act on?".
@@ -42,7 +44,7 @@ defmodule ClinicDemo.Visits.HumanTask do
       end
 
       run fn input, %{actor: actor} ->
-        ClinicDemo.Visits.TaskDesk.claim(input.arguments.record_id, actor)
+        TaskDesk.claim(input.arguments.record_id, actor)
       end
     end
 
@@ -65,7 +67,7 @@ defmodule ClinicDemo.Visits.HumanTask do
       end
 
       run fn input, %{actor: actor} ->
-        ClinicDemo.Visits.TaskDesk.complete(
+        TaskDesk.complete(
           input.arguments.record_id,
           input.arguments.outcome,
           input.arguments.comment,
@@ -88,7 +90,7 @@ defmodule ClinicDemo.Visits.HumanTask do
       end
 
       run fn input, %{actor: actor} ->
-        ClinicDemo.Visits.TaskDesk.delegate(input.arguments.record_id, input.arguments.to, actor)
+        TaskDesk.delegate(input.arguments.record_id, input.arguments.to, actor)
       end
     end
   end
