@@ -444,22 +444,20 @@ defmodule ClinicDemoWeb.A2ui.VisitsLive do
 
   use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_visits"
 
-  # The surface shows where each visit stands; the engine's own task inbox
-  # is the view that carries the per-instance context — the BPMN viewer's
-  # live token overlay renders from there.
+  # The surface shows where each visit stands; the operator hub's recent
+  # instances carry the per-instance context — each opens the BPMN viewer's
+  # live token overlay.
   @impl true
   def render(assigns) do
     ~H"""
     <div class="flex flex-col gap-4">
       <AshA2ui.LiveRenderer.surface_container />
       <div class="flex flex-wrap gap-2">
-        <%!-- Live navigation: /operator/tasks is inside live_session :a2ui,
-             so the visit surface stays mounted while the browser moves. --%>
         <.link
-          navigate="/operator/tasks"
+          href="/operator#recent-instances"
           class="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-base border-2 border-border bg-secondary-background px-3 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
         >
-          Open instances in the process viewer (via tasks)
+          Open instances in the process viewer
         </.link>
       </div>
     </div>

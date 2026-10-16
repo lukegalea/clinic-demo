@@ -11,9 +11,11 @@ defmodule ClinicDemo.Visits.HumanTask do
     token: ClinicDemo.Visits.Token,
     table: "bpmn_human_tasks"
 
+  alias ClinicDemo.Visits.TaskDesk
+
   relationships do
     # Candidacy rows are materialised when the task is created. The worklist
-    # surfaces filter through them — "what may *this* clinician act on?".
+    # read filters through them — "what may *this* clinician act on?".
     has_many :candidates, ClinicDemo.Visits.TaskCandidate do
       destination_attribute :task_id
       public? true
@@ -21,12 +23,32 @@ defmodule ClinicDemo.Visits.HumanTask do
   end
 
   actions do
-    # The worklist surface completes tasks through the engine facade so the
-    # token advances with the outcome; a plain update would leave the visit
-    # standing at the same node. ActionHandler invokes this as a generic row
-    # action, injecting the row's id as :record_id; the engine enforces
-    # candidacy itself, so the policy only asks that someone is acting.
-    action :a2ui_complete, :struct do
+    # The worklist board's read: what the acting clinician can act on. Open
+    # tasks they are a candidate for and claimed tasks they hold; nobody
+    # acting reads nothing (see the preparation for why it is not a filter).
+    read :worklist do
+      description "Open tasks the actor is a candidate for, and claimed tasks the actor holds."
+      prepare ClinicDemo.Visits.Preparations.Worklist
+    end
+
+    # The board's three moves, each a generic action the surface invokes
+    # with the card's id as :record_id. They run through
+    # ClinicDemo.Visits.TaskDesk, which makes them as the actor and checks
+    # what the engine does not: who may complete or delegate which task.
+    action :claim_task, :struct do
+      description "Claim an open task for the acting clinician."
+
+      argument :record_id, :uuid do
+        allow_nil? false
+        description "The task being claimed (injected by the surface)."
+      end
+
+      run fn input, %{actor: actor} ->
+        TaskDesk.claim(input.arguments.record_id, actor)
+      end
+    end
+
+    action :complete_task, :struct do
       description "Complete the task through the engine, routing the token onwards."
 
       argument :record_id, :uuid do
@@ -45,18 +67,30 @@ defmodule ClinicDemo.Visits.HumanTask do
       end
 
       run fn input, %{actor: actor} ->
-        # Ash.get!/3 is (resource, id, opts) — the record id is the SECOND
-        # argument. Piping the id in made it the resource, which raised
-        # ArgumentError inside the LiveView process and took the surface's
-        # GenServer with it (the client saw a "Surface already exists"
-        # remount instead of an error).
-        ClinicDemo.Visits.HumanTask
-        |> Ash.get!(input.arguments.record_id, authorize?: false)
-        |> AshBpmn.complete_task(
-          outcome: input.arguments.outcome,
-          comment: input.arguments.comment,
-          actor: actor
+        TaskDesk.complete(
+          input.arguments.record_id,
+          input.arguments.outcome,
+          input.arguments.comment,
+          actor
         )
+      end
+    end
+
+    action :delegate_task, :struct do
+      description "Hand a claimed task to another active clinician."
+
+      argument :record_id, :uuid do
+        allow_nil? false
+        description "The task being delegated (injected by the surface)."
+      end
+
+      argument :to, :string do
+        allow_nil? false
+        description "The colleague taking the task: full name or licence number."
+      end
+
+      run fn input, %{actor: actor} ->
+        TaskDesk.delegate(input.arguments.record_id, input.arguments.to, actor)
       end
     end
   end
@@ -66,8 +100,8 @@ defmodule ClinicDemo.Visits.HumanTask do
       authorize_if always()
     end
 
-    policy action(:a2ui_complete) do
-      description "Anyone acting may try; the engine refuses non-candidates."
+    policy action([:claim_task, :complete_task, :delegate_task]) do
+      description "Anyone acting may try; TaskDesk refuses whoever the task is not for."
       authorize_if actor_present()
     end
   end

@@ -56,15 +56,6 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
   test "a card's button reaches the renderer: Check in checks the visit in", %{conn: conn} do
     staff = %{id: "00000000-0000-0000-0000-0000000000b1", role: :veterinarian}
 
-    for row <- [
-          %{lane_key: "intake", label: "Booked", position: 1, accent: "neutral"},
-          %{lane_key: "low", label: "Low — routine", position: 2, accent: "green"}
-        ] do
-      ClinicDemo.Scheduling.BoardLane
-      |> Ash.Changeset.for_create(:create, row)
-      |> Ash.create!(authorize?: false)
-    end
-
     {:ok, vet} =
       ClinicDemo.Scheduling.hire_clinician(
         %{

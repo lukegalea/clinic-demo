@@ -17,25 +17,7 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
 
   @staff %{id: "00000000-0000-0000-0000-0000000000ee", role: :veterinarian}
 
-  # The board's lanes are seeded data (the board's shape changes with the
-  # clinic's process, not with its data), so a migrated-not-seeded test
-  # database has none and the sectioned table expands to nothing. Same rows,
-  # same keys as the seeds.
   setup do
-    for row <- [
-          %{lane_key: "intake", label: "Booked", position: 1, accent: "neutral"},
-          %{lane_key: "low", label: "Low — routine", position: 2, accent: "green"},
-          %{lane_key: "medium", label: "Medium — soon", position: 3, accent: "amber"},
-          %{lane_key: "high", label: "High — urgent & emergency", position: 4, accent: "red"},
-          %{lane_key: "in_visit", label: "In visit", position: 5, accent: "violet"},
-          %{lane_key: "discharged", label: "Discharged", position: 6, accent: "blue"},
-          %{lane_key: "closed", label: "Closed", position: 7, accent: "neutral"}
-        ] do
-      ClinicDemo.Scheduling.BoardLane
-      |> Ash.Changeset.for_create(:create, row)
-      |> Ash.create!(authorize?: false)
-    end
-
     {:ok, vet} =
       Scheduling.hire_clinician(
         %{
@@ -159,7 +141,11 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
     pre = AsOfSurface.build(BoardUI, actor: nil, as_of: DateTime.add(booked_at, -60))
     id = appointment.id
 
-    assert lane_records(pre) != nil
+    # Every lane, on a database nobody seeded: the lanes are board_lane's
+    # declared values, not rows.
+    assert lane_records(pre) |> Map.keys() |> Enum.sort() ==
+             Enum.sort(~w(board_intake board_low board_medium board_high
+                          board_in_visit board_discharged board_closed))
 
     assert Enum.all?(lane_records(pre), fn {_lane, records} ->
              not Enum.any?(records, &match?(%{"id" => ^id}, &1))

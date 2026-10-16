@@ -61,41 +61,11 @@ Published:
   #{length(mapping_versions)} value-event mappings active
 """)
 
-# The board's lanes, before any bookings: the process stages cards move
-# through, matched by Appointment.board_lane. Idempotent by key so reseeding
-# never duplicates or reorders them behind the seeds' back.
 require Ash.Query
-
-lane_rows = [
-  %{lane_key: "intake", label: "Booked", position: 1, accent: "neutral"},
-  %{lane_key: "low", label: "Low — routine", position: 2, accent: "green"},
-  %{lane_key: "medium", label: "Medium — soon", position: 3, accent: "amber"},
-  %{lane_key: "high", label: "High — urgent & emergency", position: 4, accent: "red"},
-  %{lane_key: "in_visit", label: "In visit", position: 5, accent: "violet"},
-  %{lane_key: "discharged", label: "Discharged", position: 6, accent: "blue"},
-  %{lane_key: "closed", label: "Closed", position: 7, accent: "neutral"}
-]
-
-for row <- lane_rows do
-  ClinicDemo.Scheduling.BoardLane
-  |> Ash.Query.filter(lane_key == ^row.lane_key)
-  |> Ash.read_one!(authorize?: false)
-  |> case do
-    nil ->
-      ClinicDemo.Scheduling.BoardLane
-      |> Ash.Changeset.for_create(:create, row)
-      |> Ash.create!(authorize?: false)
-
-    lane ->
-      lane
-      |> Ash.Changeset.for_update(:update, row)
-      |> Ash.update!(authorize?: false)
-  end
-end
 
 # ── Idempotency helpers ────────────────────────────────────────────────────
 #
-# Everything below the lanes is lookup-or-create keyed on a natural value
+# Everything below is lookup-or-create keyed on a natural value
 # (a license, an owner email, patient + reason), so re-running the seeds
 # against a populated dev database updates what exists instead of crashing
 # on a unique index or piling up duplicates.

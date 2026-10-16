@@ -80,23 +80,28 @@ config :ash,
     AshEvents.Projections.ApplyOpsChange
   ]
 
-# ash_a2ui: this app rides the framework defaults. Experience v2 is the
-# default since 5d4326b and stays. The component catalog is back at its
-# `:basic` default: the admin_v1 cell was enabled and verified end to end
-# (45b088a's builder fix works — plain tables rendered hydrated
-# ash-admin-data-grids and record panels, and the full probe passed
-# everywhere except the Board), BUT enabling it exposed a residual
-# framework bug: under :admin_v1 the Board's SECTIONED table is dropped
-# from the emission entirely — the surface bootstrap carries only an empty
-# entityPage + status banner (4 components total, the sectioned table's
-# promised byte-equal basic-v2 fallback missing from the wire), so the
-# clinic's main surface renders blank. That is the
-# `admin_core_table?` fallback path failing, not a host error; evidence in
-# this file's history and the lane report. Re-enable `catalog :admin_v1`
-# when sectioned-table fallbacks land on the wire upstream.
+# ash_a2ui: every surface composes through the experience layer (there is
+# no experience version to pin since ash_a2ui a3c1763). The component
+# catalog stays at its `:basic` default. f777ede turned admin_v1 off
+# because the admin composition dropped the board's sectioned table;
+# ash_a2ui #16 fixed that, and admin_v1 was re-tried against a3c1763 with
+# the visual suite. It broke three things this app depends on:
+#
+#   * prompt row actions (Record weight, Complete, Cancel) invoke straight
+#     away with no prompt to collect their values, so they fail with
+#     "Validation failed";
+#   * the read-only View panel (recordPanel) has no way to close it;
+#   * the dataGrid shows every row action on every row, ignoring
+#     visible_when (Check in on completed visits), and on the schedule the
+#     action column runs off the right edge.
+#
+# Re-enable `catalog: :admin_v1` when those land upstream.
 #
 # Reference links (the schedule's patient and clinician columns) resolve to
-# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them.
+# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them. They
+# no longer need admin_v1: since ash_a2ui 25c6b8f the basic catalog draws a
+# to-one link as a button whenever the LiveRenderer can navigate, which
+# ScheduleLive's :open_surface callback provides.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,

@@ -44,9 +44,5 @@ defmodule ClinicDemo.Scheduling do
       define :list_appointment_types, action: :read
       define :get_appointment_type, action: :read, get_by: [:id]
     end
-
-    resource ClinicDemo.Scheduling.BoardLane do
-      define :list_board_lanes, action: :read
-    end
   end
 end

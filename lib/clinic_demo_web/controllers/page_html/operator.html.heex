@@ -11,7 +11,7 @@
 
 <%!-- Operations index: every operational surface as a first-class link,
       above the prose sections — the hub used to bury /operator/rules,
-      /operator/tasks and the diagram tools inside content cards, which
+      the task board and the diagram tools inside content cards, which
       read exactly like the links were missing. One row each: where, and
       why you'd go. --%>
 <%!-- CLIN-5: the grid duplicated the cards in the sections below, so it
@@ -36,11 +36,10 @@
           approve, activate, compile.
         </p>
       </.card>
-      <.card accent="yellow" href="/operator/tasks">
+      <.card accent="yellow" href="/worklist">
         <h3 class="font-heading">Tasks</h3>
         <p class="text-sm text-foreground/70">
-          The engine's task inbox for the acting clinician — claim, complete,
-          delegate.
+          The acting clinician's task board — claim, complete, delegate.
         </p>
       </.card>
       <.card accent="yellow" href="/operator/processes/appointment_visit/designer">
@@ -207,18 +206,11 @@
     <span class={section_chip <> " bg-orange"} aria-hidden="true" />Work
   </h2>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <.card accent="orange" href="/operator/tasks">
-      <h3 class="font-heading">My tasks</h3>
-      <p class="text-sm text-foreground/70">
-        The engine's own inbox for the acting clinician — claim, complete,
-        delegate.
-      </p>
-    </.card>
     <.card accent="orange" href="/worklist">
       <h3 class="font-heading">Worklist</h3>
       <p class="text-sm text-foreground/70">
-        Every open task in one board, completed through the engine so the
-        token advances.
+        The acting clinician's tasks as a board, Open and Claimed — claim,
+        complete, delegate, all through the engine so the token advances.
       </p>
     </.card>
     <.card accent="orange" href="/visits">

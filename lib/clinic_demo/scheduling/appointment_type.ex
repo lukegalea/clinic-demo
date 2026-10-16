@@ -2,8 +2,8 @@ defmodule ClinicDemo.Scheduling.AppointmentType do
   @moduledoc """
   The clinic's price list: what a kind of visit costs and how long it takes.
 
-  A small seeded catalogue (`FinanceSeeds` lookup-or-creates by name, the way
-  `BoardLane` is seeded), deliberately not temporal: a type's row is the
+  A small seeded catalogue (`FinanceSeeds` lookup-or-creates by name),
+  deliberately not temporal: a type's row is the
   catalogue's *present* answer, and the charge a completed visit recognizes
   snapshots the amount at completion (`Finance.Charge.amount`) rather than
   pointing at a moving number. Revenue history therefore survives repricing
