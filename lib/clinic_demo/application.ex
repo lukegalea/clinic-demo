@@ -25,12 +25,13 @@ defmodule ClinicDemo.Application do
         # Who-else-is-here for the a2ui surfaces (avatar stack in the
         # surface header). Rides the PubSub above; each host supervises its
         # own presence module per AshA2ui.Presence's wiring contract.
-        ClinicDemoWeb.A2uiPresence,
-        # Start a worker by calling: ClinicDemo.Worker.start_link(arg)
-        # {ClinicDemo.Worker, arg},
-        # Start to serve requests, typically the last entry
-        ClinicDemoWeb.Endpoint
-      ] ++ tidewave()
+        ClinicDemoWeb.A2uiPresence
+      ] ++
+        value_drainer() ++
+        [
+          # Start to serve requests, typically the last entry
+          ClinicDemoWeb.Endpoint
+        ] ++ tidewave()
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
@@ -44,7 +45,10 @@ defmodule ClinicDemo.Application do
   #   * every resource wrapped with `AshEvents.Events` — the writers whose
   #     action names appear in the audit log's `action` column;
   #   * the value-ledger declarations — `:clinic` (the projection's region)
-  #     and `:clinic_core` (the mapping source) are their literals.
+  #     and `:clinic_core` (the mapping source) are their literals;
+  #   * the ledger's default event `resource`, `:"bizev.event"`, which only
+  #     the package's StampEvent change carries (ash_discrete_business_events
+  #     #12). The drainer reads the ledger before this VM has written to it.
   defp atom_carrier_modules do
     [
       ClinicDemo.Scheduling.Appointment,
@@ -54,8 +58,18 @@ defmodule ClinicDemo.Application do
       ClinicDemo.Decisions.Evaluation,
       ClinicDemo.Judgments.Fact,
       ClinicDemo.Judgments.Observation,
-      ClinicDemo.BusinessEvents.Declarations
+      ClinicDemo.BusinessEvents.Declarations,
+      AshDiscreteBusinessEvents.Ledger.Changes.StampEvent
     ]
+  end
+
+  # Folds new ledger events into the value projection as they land, so
+  # /revenue follows the board live. Off in test, where the suite drains
+  # explicitly inside its sandbox.
+  defp value_drainer do
+    if Application.get_env(:clinic_demo, :value_drainer, true),
+      do: [ClinicDemo.BusinessEvents.ValueDrainer],
+      else: []
   end
 
   # The MCP supervisor behind the endpoint's Tidewave plug — it owns the ETS

@@ -54,18 +54,6 @@
     "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
   },
   {
-    "law": "21",
-    "file": "lib/clinic_demo_web/components/core_components.ex",
-    "text": "|> assign_new(:name, fn -> if assigns.multiple, do: field.name <> \"[]\", else: field.name end)",
-    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
-  },
-  {
-    "law": "21",
-    "file": "lib/clinic_demo_web/components/core_components.ex",
-    "text": "|> assign_new(:value, fn -> field.value end)",
-    "reason": "Standing disposition (usage-rules.md, Iron laws): Phoenix-generated function component, where assign_new defaults an attribute the caller omitted. The law is about LiveView mount; the detector cannot tell the two apart."
-  },
-  {
     "law": "11",
     "file": "lib/clinic_demo_web/live/revenue_live.ex",
     "text": "def handle_event(\"scrub\", %{\"offset\" => raw}, socket) do",

@@ -190,4 +190,38 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
     still_mid = AsOfSurface.build(BoardUI, actor: nil, as_of: hours_ago(2) |> DateTime.add(1800))
     assert record_lanes_for(still_mid, appointment.id) == ["/records/board_low"]
   end
+
+  test "parse reads the picker's zone-less datetime-local value as UTC" do
+    assert AsOfSurface.parse("2026-10-15T08:00") == {:ok, ~U[2026-10-15 08:00:00Z]}
+    assert AsOfSurface.parse("2026-10-15T08:00:30") == {:ok, ~U[2026-10-15 08:00:30Z]}
+    assert AsOfSurface.parse("2026-10-15T08:00:00Z") == {:ok, ~U[2026-10-15 08:00:00Z]}
+    assert AsOfSurface.parse("2026-10-15") == :error
+  end
+
+  test "a past day's board holds that day's visits: the window follows the instant", %{
+    vet: vet,
+    patient: patient
+  } do
+    # A visit three days back, booked two days before its slot. The board
+    # windows to the read instant's day and the next, so reading the morning
+    # of the slot must show it. Windowed on the wall clock instead, the read
+    # lands on today and tomorrow, where this visit never was.
+    slot = DateTime.new!(Date.add(Date.utc_today(), -3), ~T[15:00:00], "Etc/UTC")
+
+    {:ok, appointment} =
+      Scheduling.book_appointment(
+        %{
+          patient_id: patient.id,
+          clinician_id: vet.id,
+          scheduled_at: slot,
+          reason: "Past day window",
+          severity: 1
+        },
+        actor: @staff,
+        as_of: DateTime.add(slot, -2, :day)
+      )
+
+    morning_of = AsOfSurface.build(BoardUI, actor: nil, as_of: DateTime.add(slot, -6 * 3600))
+    assert record_lanes_for(morning_of, appointment.id) != []
+  end
 end

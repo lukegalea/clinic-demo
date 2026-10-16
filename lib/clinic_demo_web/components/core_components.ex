@@ -418,8 +418,14 @@ defmodule ClinicDemoWeb.CoreComponents do
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
     |> assign(:errors, Enum.map(errors, &translate_error(&1)))
-    |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
-    |> assign_new(:value, fn -> field.value end)
+    # Assigned outright: :name and :value default to nil, so their keys
+    # always exist and a fill-if-absent default never fires. That rendered
+    # every field input without a name. An explicit caller value still wins.
+    |> assign(
+      :name,
+      assigns.name || if(assigns.multiple, do: field.name <> "[]", else: field.name)
+    )
+    |> assign(:value, if(is_nil(assigns.value), do: field.value, else: assigns.value))
     |> input()
   end
 

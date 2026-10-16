@@ -49,6 +49,10 @@ config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
 # this flag per-test and restores it on exit.
 config :clinic_demo, :gate, enabled?: false
 
+# The suite drains the value projection explicitly; a background drainer
+# would read outside the SQL sandbox.
+config :clinic_demo, :value_drainer, false
+
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 

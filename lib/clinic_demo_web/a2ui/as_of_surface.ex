@@ -91,7 +91,8 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurface do
       _not_a_full_iso8601 ->
         # datetime-local posts "YYYY-MM-DDTHH:MM[:SS]" without a zone; the
         # app's convention (the agent clock, the surfaces' stamps) is UTC.
-        with [date, time] <-
+        # Regex.run/2 returns the full match first, then the captures.
+        with [_match, date, time] <-
                Regex.run(~r/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)$/, value),
              {:ok, day} <- Date.from_iso8601(date),
              {:ok, time_of_day} <- to_time(time) do
@@ -116,17 +117,17 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurface do
         []
 
       {:ok, scope} ->
+        # The instant goes in at for_read, not after it. for_read runs the
+        # action's preparations on the spot, and the board's day window
+        # (ScheduledFromReadInstant) reads `query.as_of` to pick its day;
+        # set later, the preparation saw nil and windowed on the wall clock,
+        # so every past day read as an empty board. for_read stores it as
+        # shared context, so the loads thread it too. Handing it to
+        # Ash.read!/2 instead would be silently dropped.
         table.resource
-        |> Ash.Query.for_read(table.read_action)
+        |> Ash.Query.for_read(table.read_action, %{}, as_of: as_of)
         |> ContextRunner.apply_scope(scope)
         |> Ash.Query.load(table.loads)
-        # The instant rides the QUERY (Ash.Query.as_of/2 — shared context,
-        # so the loads thread it too). The read-OPTIONS form exists in the
-        # schema but is consumed only where the for_read pipeline runs it;
-        # handing it to Ash.read!/2 here would be silently dropped, and a
-        # time-travel surface that silently reads now is the one bug this
-        # module must never ship.
-        |> Ash.Query.as_of(as_of)
         |> Ash.read!(read_opts(view, opts))
     end
   end
