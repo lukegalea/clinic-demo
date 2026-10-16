@@ -195,6 +195,22 @@ jobs:
           IRON_LAWS_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
         run: scripts/iron-laws.sh
 
+  # AGENTS.md's generated block must be what `mix usage_rules.sync` writes
+  # from the mix.exs config and the locked deps, so a dep bump or a config
+  # change without a resync fails here. See scripts/usage-rules-check.sh.
+  usage-rules:
+    name: mix usage_rules.sync --check
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: dev
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # dev, because usage_rules and ash_agent_tools are dev-only deps.
+      - uses: ./.github/actions/setup-elixir
+        with:
+          mix-env: dev
+      - run: scripts/usage-rules-check.sh
+
   format:
     name: mix format --check-formatted
     runs-on: ubuntu-latest

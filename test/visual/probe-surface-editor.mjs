@@ -16,11 +16,13 @@ await page.goto(`${BASE}/operator/surfaces`, { waitUntil: "networkidle" });
 
 // 1. browse: one card per declared surface, h1 ours
 step("browse: h1 Surface editor", await page.locator("h1:text-is('Surface editor')").count() === 1);
-step("browse: PatientUI card listed", (await page.content()).includes("PatientUI"));
+step("browse: ProcessUI card listed", (await page.content()).includes("ProcessUI"));
 
-// 2. import: pick the patients surface
-await page.click("button[phx-value-module='ClinicDemoWeb.A2ui.PatientUI']");
-await page.waitForSelector("text=imported from ClinicDemoWeb.A2ui.PatientUI");
+// 2. import: pick the processes surface. Not PatientUI: its master/detail
+// (a context plus a related table over Appointment) is outside the dynamic
+// spec vocabulary, so that import does not resolve.
+await page.click("button[phx-value-module='ClinicDemoWeb.A2ui.ProcessUI']");
+await page.waitForSelector("text=imported from ClinicDemoWeb.A2ui.ProcessUI");
 step("import: editor opened", true);
 
 // 3. rejections visible — every declared demo surface carries some

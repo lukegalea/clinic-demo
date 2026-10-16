@@ -12,6 +12,12 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
   `ClinicDemo.Visits.VisitFacade`, so the click completes the visit's
   `CheckIn` work item through the engine and the token performs the
   transition — same path as the board and the worklist.
+
+  The patient and clinician columns are reference links (`link :patient`,
+  `link :clinician`): each row carries `_links` to the record, pruned per
+  actor by the authorized relationship load, and `ClinicDemoWeb.A2ui.Links`
+  maps them to the Patients and Clinicians surfaces, opened with that
+  record selected.
   """
 
   use AshA2ui.Standalone
@@ -121,10 +127,12 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
 
     field :patient_label do
       label "Patient"
+      link :patient
     end
 
     field :clinician_label do
       label "Clinician"
+      link :clinician
     end
 
     field :scheduled_at do

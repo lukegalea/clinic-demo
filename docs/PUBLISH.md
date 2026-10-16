@@ -104,7 +104,8 @@ mix setup && mix precommit && bin/ash-agent describe ClinicDemo.Scheduling.Appoi
 (`libxml2`), and Elixir 1.20 or newer on OTP 27 reachable (`mix` on PATH or `ELIXIR_BIN_DIR`
 set — both `bin/ash-agent` and `bin/serena-mcp` prepend it themselves).
 `mix precommit` is compile-with-warnings-as-errors, unused-deps check,
-format, and the test suite; `bin/ash-agent describe` then proves the
+format, the iron-laws judge, the AGENTS.md usage-rules drift check, and the
+test suite; `bin/ash-agent describe` then proves the
 introspection surface answers on a stranger's machine. Expected at the end:
 `"name": "complete"` and `"accept": []` in the JSON, exit 0.
 

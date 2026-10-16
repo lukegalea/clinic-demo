@@ -94,12 +94,16 @@ config :ash,
 # `admin_core_table?` fallback path failing, not a host error; evidence in
 # this file's history and the lane report. Re-enable `catalog :admin_v1`
 # when sectioned-table fallbacks land on the wire upstream.
+#
+# Reference links (the schedule's patient and clinician columns) resolve to
+# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,
     label: :full_name,
     filter: [active: true]
-  ]
+  ],
+  link_resolver: ClinicDemoWeb.A2ui.Links
 
 # The process engine's three host seams. `ash_bpmn` never guesses any of them:
 # a diagram with a business rule task will not even compile without a decision

@@ -128,15 +128,19 @@ no separate seed step for the suite. The calibration/eval corpus
 must pass unchanged — infrastructure lanes may not touch it.
 
 <!-- usage-rules-start -->
-<!-- usage-rules-header -->
-# Usage Rules
+<!-- phoenix:ecto-start -->
+## phoenix:ecto usage
+## Ecto Guidelines
 
-**IMPORTANT**: Consult these usage rules early and often when working with the packages listed below.
-Before attempting to use any of these packages or to discover if you should use them, review their
-usage rules to understand the correct patterns, conventions, and best practices.
-<!-- usage-rules-header-end -->
+- **Always** preload Ecto associations in queries when they'll be accessed in templates, ie a message that needs to reference the `message.user.email`
+- Remember `import Ecto.Query` and other supporting modules when you write `seeds.exs`
+- `Ecto.Schema` fields always use the `:string` type, even for `:text`, columns, ie: `field :name, :string`
+- `Ecto.Changeset.validate_number/2` **DOES NOT SUPPORT the `:allow_nil` option**. By default, Ecto validations only run if a change for the given field exists and the change value is not nil, so such as option is never needed
+- You **must** use `Ecto.Changeset.get_field(changeset, :field)` to access changeset fields
+- Fields which are set programmatically, such as `user_id`, must not be listed in `cast` calls or similar for security purposes. Instead they must be explicitly set when creating the struct
+- **Always** invoke `mix ecto.gen.migration migration_name_using_underscores` when generating migration files, so the correct timestamp and conventions are applied
 
-
+<!-- phoenix:ecto-end -->
 <!-- phoenix:elixir-start -->
 ## phoenix:elixir usage
 ## Elixir guidelines
@@ -196,41 +200,6 @@ usage rules to understand the correct patterns, conventions, and best practices.
 
 
 <!-- phoenix:elixir-end -->
-
-<!-- phoenix:phoenix-start -->
-## phoenix:phoenix usage
-## Phoenix guidelines
-
-- Remember Phoenix router `scope` blocks include an optional alias which is prefixed for all routes within the scope. **Always** be mindful of this when creating routes within a scope to avoid duplicate module prefixes.
-
-- You **never** need to create your own `alias` for route definitions! The `scope` provides the alias, ie:
-
-      scope "/admin", AppWeb.Admin do
-        pipe_through :browser
-
-        live "/users", UserLive, :index
-      end
-
-  the UserLive route would point to the `AppWeb.Admin.UserLive` module
-
-- `Phoenix.View` no longer is needed or included with Phoenix, don't use it
-
-<!-- phoenix:phoenix-end -->
-
-<!-- phoenix:ecto-start -->
-## phoenix:ecto usage
-## Ecto Guidelines
-
-- **Always** preload Ecto associations in queries when they'll be accessed in templates, ie a message that needs to reference the `message.user.email`
-- Remember `import Ecto.Query` and other supporting modules when you write `seeds.exs`
-- `Ecto.Schema` fields always use the `:string` type, even for `:text`, columns, ie: `field :name, :string`
-- `Ecto.Changeset.validate_number/2` **DOES NOT SUPPORT the `:allow_nil` option**. By default, Ecto validations only run if a change for the given field exists and the change value is not nil, so such as option is never needed
-- You **must** use `Ecto.Changeset.get_field(changeset, :field)` to access changeset fields
-- Fields which are set programmatically, such as `user_id`, must not be listed in `cast` calls or similar for security purposes. Instead they must be explicitly set when creating the struct
-- **Always** invoke `mix ecto.gen.migration migration_name_using_underscores` when generating migration files, so the correct timestamp and conventions are applied
-
-<!-- phoenix:ecto-end -->
-
 <!-- phoenix:html-start -->
 ## phoenix:html usage
 ## Phoenix HTML guidelines
@@ -311,7 +280,6 @@ usage rules to understand the correct patterns, conventions, and best practices.
       </div>
 
 <!-- phoenix:html-end -->
-
 <!-- phoenix:liveview-start -->
 ## phoenix:liveview usage
 ## Phoenix LiveView guidelines
@@ -547,19 +515,137 @@ And **never** do this:
 - **Never** use `<.form let={f} ...>` in the template, instead **always use `<.form for={@form} ...>`**, then drive all form references from the form assign as in `@form[:field]`. The UI should **always** be driven by a `to_form/2` assigned in the LiveView module that is derived from a changeset
 
 <!-- phoenix:liveview-end -->
+<!-- phoenix:phoenix-start -->
+## phoenix:phoenix usage
+## Phoenix guidelines
 
+- Remember Phoenix router `scope` blocks include an optional alias which is prefixed for all routes within the scope. **Always** be mindful of this when creating routes within a scope to avoid duplicate module prefixes.
+
+- You **never** need to create your own `alias` for route definitions! The `scope` provides the alias, ie:
+
+      scope "/admin", AppWeb.Admin do
+        pipe_through :browser
+
+        live "/users", UserLive, :index
+      end
+
+  the UserLive route would point to the `AppWeb.Admin.UserLive` module
+
+- `Phoenix.View` no longer is needed or included with Phoenix, don't use it
+
+<!-- phoenix:phoenix-end -->
 <!-- ash-start -->
 ## ash usage
 _A declarative, extensible framework for building Elixir applications._
 
 [ash usage rules](deps/ash/usage-rules.md)
 <!-- ash-end -->
-<!-- ash_postgres-start -->
-## ash_postgres usage
-_The PostgreSQL data layer for Ash Framework_
+<!-- ash:actions-start -->
+## ash:actions usage
+[ash:actions usage rules](deps/ash/usage-rules/actions.md)
+<!-- ash:actions-end -->
+<!-- ash:aggregates-start -->
+## ash:aggregates usage
+[ash:aggregates usage rules](deps/ash/usage-rules/aggregates.md)
+<!-- ash:aggregates-end -->
+<!-- ash:authorization-start -->
+## ash:authorization usage
+[ash:authorization usage rules](deps/ash/usage-rules/authorization.md)
+<!-- ash:authorization-end -->
+<!-- ash:calculations-start -->
+## ash:calculations usage
+[ash:calculations usage rules](deps/ash/usage-rules/calculations.md)
+<!-- ash:calculations-end -->
+<!-- ash:code_interfaces-start -->
+## ash:code_interfaces usage
+[ash:code_interfaces usage rules](deps/ash/usage-rules/code_interfaces.md)
+<!-- ash:code_interfaces-end -->
+<!-- ash:code_structure-start -->
+## ash:code_structure usage
+[ash:code_structure usage rules](deps/ash/usage-rules/code_structure.md)
+<!-- ash:code_structure-end -->
+<!-- ash:data_layers-start -->
+## ash:data_layers usage
+[ash:data_layers usage rules](deps/ash/usage-rules/data_layers.md)
+<!-- ash:data_layers-end -->
+<!-- ash:exist_expressions-start -->
+## ash:exist_expressions usage
+[ash:exist_expressions usage rules](deps/ash/usage-rules/exist_expressions.md)
+<!-- ash:exist_expressions-end -->
+<!-- ash:generating_code-start -->
+## ash:generating_code usage
+[ash:generating_code usage rules](deps/ash/usage-rules/generating_code.md)
+<!-- ash:generating_code-end -->
+<!-- ash:migrations-start -->
+## ash:migrations usage
+[ash:migrations usage rules](deps/ash/usage-rules/migrations.md)
+<!-- ash:migrations-end -->
+<!-- ash:query_filter-start -->
+## ash:query_filter usage
+[ash:query_filter usage rules](deps/ash/usage-rules/query_filter.md)
+<!-- ash:query_filter-end -->
+<!-- ash:querying_data-start -->
+## ash:querying_data usage
+[ash:querying_data usage rules](deps/ash/usage-rules/querying_data.md)
+<!-- ash:querying_data-end -->
+<!-- ash:relationships-start -->
+## ash:relationships usage
+[ash:relationships usage rules](deps/ash/usage-rules/relationships.md)
+<!-- ash:relationships-end -->
+<!-- ash:temporal-start -->
+## ash:temporal usage
+[ash:temporal usage rules](deps/ash/usage-rules/temporal.md)
+<!-- ash:temporal-end -->
+<!-- ash:testing-start -->
+## ash:testing usage
+[ash:testing usage rules](deps/ash/usage-rules/testing.md)
+<!-- ash:testing-end -->
+<!-- ash_a2ui-start -->
+## ash_a2ui usage
+_An Ash extension that generates A2UI (Agent to UI) v0.9.1 payloads from Ash resources._
 
-[ash_postgres usage rules](deps/ash_postgres/usage-rules.md)
-<!-- ash_postgres-end -->
+[ash_a2ui usage rules](deps/ash_a2ui/usage-rules.md)
+<!-- ash_a2ui-end -->
+<!-- ash_a2ui:actions-start -->
+## ash_a2ui:actions usage
+[ash_a2ui:actions usage rules](deps/ash_a2ui/usage-rules/actions.md)
+<!-- ash_a2ui:actions-end -->
+<!-- ash_a2ui:ag-ui-start -->
+## ash_a2ui:ag-ui usage
+[ash_a2ui:ag-ui usage rules](deps/ash_a2ui/usage-rules/ag-ui.md)
+<!-- ash_a2ui:ag-ui-end -->
+<!-- ash_a2ui:contexts-start -->
+## ash_a2ui:contexts usage
+[ash_a2ui:contexts usage rules](deps/ash_a2ui/usage-rules/contexts.md)
+<!-- ash_a2ui:contexts-end -->
+<!-- ash_a2ui:dynamic-start -->
+## ash_a2ui:dynamic usage
+[ash_a2ui:dynamic usage rules](deps/ash_a2ui/usage-rules/dynamic.md)
+<!-- ash_a2ui:dynamic-end -->
+<!-- ash_a2ui:layout-start -->
+## ash_a2ui:layout usage
+[ash_a2ui:layout usage rules](deps/ash_a2ui/usage-rules/layout.md)
+<!-- ash_a2ui:layout-end -->
+<!-- ash_a2ui:liveview-start -->
+## ash_a2ui:liveview usage
+[ash_a2ui:liveview usage rules](deps/ash_a2ui/usage-rules/liveview.md)
+<!-- ash_a2ui:liveview-end -->
+<!-- ash_a2ui:queries-start -->
+## ash_a2ui:queries usage
+[ash_a2ui:queries usage rules](deps/ash_a2ui/usage-rules/queries.md)
+<!-- ash_a2ui:queries-end -->
+<!-- ash_a2ui:relationships-start -->
+## ash_a2ui:relationships usage
+[ash_a2ui:relationships usage rules](deps/ash_a2ui/usage-rules/relationships.md)
+<!-- ash_a2ui:relationships-end -->
+<!-- ash_a2ui:reports-start -->
+## ash_a2ui:reports usage
+[ash_a2ui:reports usage rules](deps/ash_a2ui/usage-rules/reports.md)
+<!-- ash_a2ui:reports-end -->
+<!-- ash_a2ui:zero-jank-start -->
+## ash_a2ui:zero-jank usage
+[ash_a2ui:zero-jank usage rules](deps/ash_a2ui/usage-rules/zero-jank.md)
+<!-- ash_a2ui:zero-jank-end -->
 <!-- ash_agent_tools-start -->
 ## ash_agent_tools usage
 _Read-only Ash introspection for AI agents: describe resources and actions,
@@ -568,23 +654,16 @@ tasks plus usage rules, so agents compose the tools themselves._
 
 [ash_agent_tools usage rules](deps/ash_agent_tools/usage-rules.md)
 <!-- ash_agent_tools-end -->
-<!-- usage_rules-start -->
-## usage_rules usage
-_A dev tool for Elixir projects to gather LLM usage rules from dependencies_
-
-[usage_rules usage rules](deps/usage_rules/usage-rules.md)
-<!-- usage_rules-end -->
 <!-- ash_agent_tools:iron-laws-start -->
 ## ash_agent_tools:iron-laws usage
 [ash_agent_tools:iron-laws usage rules](deps/ash_agent_tools/usage-rules/iron-laws.md)
 <!-- ash_agent_tools:iron-laws-end -->
-<!-- ash_decisions-start -->
-## ash_decisions usage
-_DMN decisions as versioned Ash resources: a DMN document compiled and verified into an
-immutable snapshot, evaluated by a native FEEL engine, with a dmn-js designer._
+<!-- ash_ai-start -->
+## ash_ai usage
+_Integrated LLM features for your Ash application._
 
-[ash_decisions usage rules](deps/ash_decisions/usage-rules.md)
-<!-- ash_decisions-end -->
+[ash_ai usage rules](deps/ash_ai/usage-rules.md)
+<!-- ash_ai-end -->
 <!-- ash_bpmn-start -->
 ## ash_bpmn usage
 _BPMN-designed, Ash-executed business processes: an embedded bpmn-js designer, a
@@ -593,4 +672,101 @@ interpreter over Postgres and Oban._
 
 [ash_bpmn usage rules](deps/ash_bpmn/usage-rules.md)
 <!-- ash_bpmn-end -->
+<!-- ash_compliance-start -->
+## ash_compliance usage
+_The compliance control plane and data plane on Ash: OSCAL-flavored catalogs,
+profiles and waivers compiled into immutable AshRules bundles, with findings
+projected from an event log and append-only evaluations as the auditor
+truth._
+
+[ash_compliance usage rules](deps/ash_compliance/usage-rules.md)
+<!-- ash_compliance-end -->
+<!-- ash_decisions-start -->
+## ash_decisions usage
+_DMN decisions as versioned Ash resources: a DMN document compiled and verified into an
+immutable snapshot, evaluated by a native FEEL engine, with a dmn-js designer._
+
+[ash_decisions usage rules](deps/ash_decisions/usage-rules.md)
+<!-- ash_decisions-end -->
+<!-- ash_discrete_business_events-start -->
+## ash_discrete_business_events usage
+_The canonical discrete business-event ledger for Ash: SourceRecord raw
+landing with temporal version history, a dedicated chained event ledger
+with commit-order sequences, and mappings-as-data — the land → map →
+ledger boundary external SaaS history enters the platform through._
+
+[ash_discrete_business_events usage rules](deps/ash_discrete_business_events/usage-rules.md)
+<!-- ash_discrete_business_events-end -->
+<!-- ash_events-start -->
+## ash_events usage
+_The extension for tracking changes to your resources via a centralized event log, with replay functionality._
+
+[ash_events usage rules](deps/ash_events/usage-rules.md)
+<!-- ash_events-end -->
+<!-- ash_judgments-start -->
+## ash_judgments usage
+_The System One judgment substrate for Ash: declared, typed, calibrated
+questions over any subject resource, a provenance-carrying judgment ledger,
+and the bridges that turn recorded judgments into DMN inputs, rule facts and
+process signals. Transport is upstream `ash_ai` evaluate over ReqLLM — this
+package ships no HTTP client, provider or answer types._
+
+[ash_judgments usage rules](deps/ash_judgments/usage-rules.md)
+<!-- ash_judgments-end -->
+<!-- ash_postgres-start -->
+## ash_postgres usage
+_The PostgreSQL data layer for Ash Framework_
+
+[ash_postgres usage rules](deps/ash_postgres/usage-rules.md)
+<!-- ash_postgres-end -->
+<!-- ash_postgres:advanced_features-start -->
+## ash_postgres:advanced_features usage
+[ash_postgres:advanced_features usage rules](deps/ash_postgres/usage-rules/advanced_features.md)
+<!-- ash_postgres:advanced_features-end -->
+<!-- ash_postgres:best_practices-start -->
+## ash_postgres:best_practices usage
+[ash_postgres:best_practices usage rules](deps/ash_postgres/usage-rules/best_practices.md)
+<!-- ash_postgres:best_practices-end -->
+<!-- ash_postgres:check_constraints-start -->
+## ash_postgres:check_constraints usage
+[ash_postgres:check_constraints usage rules](deps/ash_postgres/usage-rules/check_constraints.md)
+<!-- ash_postgres:check_constraints-end -->
+<!-- ash_postgres:configuration-start -->
+## ash_postgres:configuration usage
+[ash_postgres:configuration usage rules](deps/ash_postgres/usage-rules/configuration.md)
+<!-- ash_postgres:configuration-end -->
+<!-- ash_postgres:custom_indexes-start -->
+## ash_postgres:custom_indexes usage
+[ash_postgres:custom_indexes usage rules](deps/ash_postgres/usage-rules/custom_indexes.md)
+<!-- ash_postgres:custom_indexes-end -->
+<!-- ash_postgres:custom_sql_statements-start -->
+## ash_postgres:custom_sql_statements usage
+[ash_postgres:custom_sql_statements usage rules](deps/ash_postgres/usage-rules/custom_sql_statements.md)
+<!-- ash_postgres:custom_sql_statements-end -->
+<!-- ash_postgres:foreign_keys-start -->
+## ash_postgres:foreign_keys usage
+[ash_postgres:foreign_keys usage rules](deps/ash_postgres/usage-rules/foreign_keys.md)
+<!-- ash_postgres:foreign_keys-end -->
+<!-- ash_postgres:migrations-start -->
+## ash_postgres:migrations usage
+[ash_postgres:migrations usage rules](deps/ash_postgres/usage-rules/migrations.md)
+<!-- ash_postgres:migrations-end -->
+<!-- ash_postgres:multitenancy-start -->
+## ash_postgres:multitenancy usage
+[ash_postgres:multitenancy usage rules](deps/ash_postgres/usage-rules/multitenancy.md)
+<!-- ash_postgres:multitenancy-end -->
+<!-- usage_rules-start -->
+## usage_rules usage
+_A config-driven dev tool for Elixir projects to manage AGENTS.md files and agent skills from dependencies_
+
+[usage_rules usage rules](deps/usage_rules/usage-rules.md)
+<!-- usage_rules-end -->
+<!-- usage_rules:elixir-start -->
+## usage_rules:elixir usage
+[usage_rules:elixir usage rules](deps/usage_rules/usage-rules/elixir.md)
+<!-- usage_rules:elixir-end -->
+<!-- usage_rules:otp-start -->
+## usage_rules:otp usage
+[usage_rules:otp usage rules](deps/usage_rules/usage-rules/otp.md)
+<!-- usage_rules:otp-end -->
 <!-- usage-rules-end -->
