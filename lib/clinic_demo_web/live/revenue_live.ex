@@ -32,6 +32,7 @@ defmodule ClinicDemoWeb.RevenueLive do
 
   alias ClinicDemo.Finance
   alias ClinicDemo.Finance.Forecast
+  alias ClinicDemoWeb.A2ui.AsOfSurface
   alias ClinicDemoWeb.A2ui.SurfaceChrome
 
   @surface_id "clinic_revenue"
@@ -44,7 +45,9 @@ defmodule ClinicDemoWeb.RevenueLive do
   @padding_left 8
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
+    as_of = as_of_from_params(params)
+
     socket =
       socket
       |> assign(:today, Date.utc_today())
@@ -56,9 +59,52 @@ defmodule ClinicDemoWeb.RevenueLive do
         line_height: @line_height,
         padding_left: @padding_left
       )
-      |> load_revenue()
+      # The picker's form: param-only (no changeset behind it) — the change
+      # event is what matters, the input's value follows @as_of.
+      |> Phoenix.Component.assign(:time_travel_form, to_form(%{}, as: :time_travel))
+      |> Phoenix.Component.assign(:as_of, as_of)
+      |> load_revenue(as_of)
 
     {:ok, SurfaceChrome.mount_presence(socket, @surface_id)}
+  end
+
+  # Scrubbing is live navigation: every `?as_of=` re-runs the reads pinned
+  # to the instant (iron law #01 — the data loads here, mount keeps only
+  # chrome). An absent or unparseable param is the present — the board's
+  # `?as_of=` convention, shared grammar.
+  @impl true
+  def handle_params(params, _uri, socket) do
+    as_of = as_of_from_params(params)
+
+    if as_of == socket.assigns.as_of do
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> Phoenix.Component.assign(:as_of, as_of)
+       |> load_revenue(as_of)}
+    end
+  end
+
+  @impl true
+  def handle_event("set-as-of", %{"time_travel" => %{"as_of" => raw}}, socket)
+      when is_binary(raw) do
+    case String.trim(raw) do
+      "" ->
+        # An emptied picker reads as "back to the present".
+        {:noreply, push_patch(socket, to: ~p"/revenue")}
+
+      trimmed ->
+        case AsOfSurface.parse(trimmed) do
+          {:ok, as_of} ->
+            {:noreply, push_patch(socket, to: ~p"/revenue?as_of=#{DateTime.to_iso8601(as_of)}")}
+
+          :error ->
+            # Unparseable input leaves the URL — and therefore the page —
+            # where it is.
+            {:noreply, socket}
+        end
+    end
   end
 
   @impl true
@@ -71,6 +117,71 @@ defmodule ClinicDemoWeb.RevenueLive do
           What completed visits have recognized, and what the schedule says is coming. All times UTC.
         </p>
       </header>
+
+      <section
+        aria-label="Revenue time travel"
+        class={[
+          "rounded-base border-2 border-border shadow-shadow transition-colors duration-300",
+          if(@as_of, do: "bg-violet", else: "bg-secondary-background")
+        ]}
+      >
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+          <.form
+            for={@time_travel_form}
+            id="revenue-as-of-form"
+            phx-change="set-as-of"
+            class="flex flex-wrap items-center gap-x-2 gap-y-1 [&>div]:mb-0"
+          >
+            <label for="revenue-as-of" class="text-sm font-heading">
+              View revenue as of
+            </label>
+            <.input
+              type="datetime-local"
+              field={@time_travel_form[:as_of]}
+              id="revenue-as-of"
+              value={as_of_input_value(@as_of)}
+              class="h-9 w-56 rounded-base border-2 border-border bg-secondary-background px-2.5 text-sm font-base shadow-shadow transition-all hover:shadow-lift focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black"
+            />
+          </.form>
+          <nav aria-label="Preset instants" class="flex flex-wrap items-center gap-1.5">
+            <.link
+              :for={{label, instant, id} <- revenue_presets()}
+              patch={revenue_patch(instant)}
+              data-testid={"revenue-preset-#{id}"}
+              title={preset_title(instant)}
+              aria-current={if(instant == @as_of, do: "true", else: nil)}
+              class={[
+                "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-base border-2 border-border px-2.5 text-xs font-heading shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press",
+                if(instant == @as_of,
+                  do: "bg-main text-main-foreground",
+                  else: "bg-secondary-background text-foreground"
+                )
+              ]}
+            >
+              <.icon :if={is_nil(instant)} name="hero-arrow-uturn-left" class="size-3.5" />
+              {label}
+            </.link>
+          </nav>
+          <span
+            :if={is_nil(@as_of)}
+            data-testid="revenue-live-indicator"
+            role="status"
+            class="tt-status-chip ml-auto inline-flex items-center gap-1.5 rounded-base border-2 border-border bg-green px-2.5 py-1 text-xs font-heading text-foreground"
+          >
+            <span class="size-2 rounded-full bg-foreground"></span> Live now
+          </span>
+          <span
+            :if={@as_of}
+            data-testid="revenue-as-of-indicator"
+            role="status"
+            class="tt-status-chip ml-auto inline-flex items-center gap-1.5 rounded-base border-2 border-border bg-black px-2.5 py-1 text-xs font-base text-white"
+          >
+            <.icon name="hero-clock" class="size-3.5 shrink-0" /> Viewing as of
+            <span class="font-heading tabular-nums">{as_of_label(@as_of)}</span>
+            · read-only
+          </span>
+        </div>
+      </section>
 
       <section aria-label="Headline numbers" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <.kpi
@@ -292,28 +403,29 @@ defmodule ClinicDemoWeb.RevenueLive do
 
   # --- data --------------------------------------------------------------------
 
-  # One pass over the three reads the page is: the money as of now, the
-  # history's outcomes, and the forward window. Demo scale — the whole
+  # One pass over the three reads the page is: the money as of the cursor,
+  # the history's outcomes, and the forward window. Demo scale — the whole
   # book once per mount, like the Day view.
   #
-  # BD-3's source swap: the month chart, the money KPIs and the rates
-  # table read the VALUE PROJECTION (the ledger's fold, as of now) —
-  # same layout, same numbers, one derivation shown (the equivalence
-  # gate in `BusinessEventsProjectionTest` pins the projection to the
-  # charges it mirrors). The forecast keeps reading the live schedule;
-  # it is a claim about the future, not about history.
-  defp load_revenue(socket) do
-    months = Finance.value_by_month(months: 7)
+  # BD-4's grammar: `as_of` is nil at rest — every read below takes its
+  # exact pre-scrubber path (the at-rest page is today's page, numbers and
+  # SQL) — and pinned to the instant while traveling. The month chart, the
+  # money KPIs and the rates table read the VALUE PROJECTION as of the
+  # cursor; the forecast re-anchors at the cursor's date over the schedule
+  # as it read there (the retro-forecast — a past view of the future).
+  defp load_revenue(socket, as_of) do
+    months = Finance.value_by_month(months: 7, as_of: as_of)
 
-    outcomes = Finance.projected_outcomes()
+    outcomes = Finance.projected_outcomes(as_of: as_of)
     rates = Forecast.build_rates(outcomes)
 
     type_names =
       ClinicDemo.Scheduling.list_appointment_types!(authorize?: false)
       |> Map.new(&{&1.id, &1.name})
 
-    scheduled = Finance.scheduled_with_prices(4)
-    weeks = Forecast.weekly(scheduled, rates, Date.utc_today())
+    cursor_date = cursor_date(as_of)
+    scheduled = Finance.scheduled_with_prices(4, as_of: as_of)
+    weeks = Forecast.weekly(scheduled, rates, cursor_date)
 
     %{month: _, total: month_to_date, count: month_count} = List.last(months)
 
@@ -336,6 +448,64 @@ defmodule ClinicDemoWeb.RevenueLive do
     |> assign(:forecast_total, forecast_total)
     |> assign(:rate_table, Forecast.rate_table(rates, type_names))
   end
+
+  # The forecast's anchor: today when live, the cursor's date when
+  # traveling (a past view of the future, anchored where the viewer
+  # stands).
+  defp cursor_date(nil), do: Date.utc_today()
+  defp cursor_date(%DateTime{} = as_of), do: DateTime.to_date(as_of)
+
+  # ── the time-travel grammar (the board's, shared) ────────────────────────
+
+  # The quick jumps: past-only on this instrument — the future half is
+  # BD-6's (the scenario overlay). Each chip carries its exact instant in
+  # the `?as_of=` param (the URL stays the source of truth); "Now" is the
+  # reset: no param at all.
+  defp revenue_presets(now \\ DateTime.utc_now()) do
+    [
+      {"Now", nil, "now"},
+      {"1 mo ago", months_ago(now, 1), "1mo-ago"},
+      {"3 mo ago", months_ago(now, 3), "3mo-ago"},
+      {"6 mo ago", months_ago(now, 6), "6mo-ago"}
+    ]
+  end
+
+  defp months_ago(now, months) do
+    now
+    |> DateTime.add(-months * 30 * 24 * 3600, :second)
+    |> DateTime.truncate(:second)
+  end
+
+  defp revenue_patch(nil), do: ~p"/revenue"
+
+  defp revenue_patch(%DateTime{} = instant) do
+    ~p"/revenue?as_of=#{DateTime.to_iso8601(instant)}"
+  end
+
+  defp preset_title(nil), do: "Back to the live page"
+
+  defp preset_title(%DateTime{} = instant), do: as_of_label(instant)
+
+  # The indicator's copy: the app's all-times-UTC convention, stated once,
+  # quietly, inside the timestamp itself.
+  defp as_of_label(%DateTime{} = as_of), do: Calendar.strftime(as_of, "%Y-%m-%d %H:%M UTC")
+
+  # The picker's value: `datetime-local` wants a zoneless local string; the
+  # app's convention (the board's picker, the same grammar) is UTC.
+  defp as_of_input_value(nil), do: nil
+
+  defp as_of_input_value(%DateTime{} = as_of) do
+    Calendar.strftime(as_of, "%Y-%m-%dT%H:%M")
+  end
+
+  defp as_of_from_params(%{"as_of" => raw}) when is_binary(raw) do
+    case AsOfSurface.parse(raw) do
+      {:ok, as_of} -> as_of
+      :error -> nil
+    end
+  end
+
+  defp as_of_from_params(_params), do: nil
 
   # --- helpers -------------------------------------------------------------------
 
