@@ -23,20 +23,23 @@ defmodule ClinicDemoWeb.A2ui.SurfaceEditorLiveTest do
     end
   end
 
-  test "importing a surface lands in the editor with the spec resolved", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/operator/surfaces")
+  # PatientUI and ClinicianUI are master/detail (a context entity plus a
+  # related appointments table with its own resource and reference links);
+  # the dynamic spec carries all of that since ash_a2ui 25c6b8f, so they
+  # import and resolve like the flat ProcessUI.
+  for module <-
+        ~w(ClinicDemoWeb.A2ui.ProcessUI ClinicDemoWeb.A2ui.PatientUI ClinicDemoWeb.A2ui.ClinicianUI) do
+    test "importing #{module} lands in the editor with the spec resolved", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/operator/surfaces")
 
-    # ProcessUI, not PatientUI: the dynamic spec vocabulary has no `context`
-    # entity and no per-table `resource`, so a master/detail surface (Patients,
-    # Clinicians) imports without its related table's resource and does not
-    # resolve. That is an ash_a2ui Dynamic gap, not this editor's.
-    html = render_click(view, "import", %{"module" => "ClinicDemoWeb.A2ui.ProcessUI"})
+      html = render_click(view, "import", %{"module" => unquote(module)})
 
-    # The editor over the imported spec — resource, honest rejections (if the
-    # declared surface has any), and the resolved preview.
-    assert html =~ "imported from ClinicDemoWeb.A2ui.ProcessUI"
-    assert html =~ "Spec"
-    assert html =~ "Preview — resolves"
+      # The editor over the imported spec — resource, honest rejections (if
+      # the declared surface has any), and the resolved preview.
+      assert html =~ "imported from #{unquote(module)}"
+      assert html =~ "Spec"
+      assert html =~ "Preview — resolves"
+    end
   end
 
   test "the operator hub links the editor from the Operations index", %{conn: conn} do
