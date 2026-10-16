@@ -200,25 +200,28 @@ defmodule ClinicDemo.Scheduling.Appointment do
       """
     end
 
-    # The board's lane key: the one dimension the kanban cards sort by. It
-    # reads the same state the process engine moves (status + triage
-    # urgency), so a lane move IS a state transition — never a parallel
-    # tracking field that can drift from the engine.
+    # The board's lane: the one dimension the kanban cards sort by. It reads
+    # the same state the process engine moves (status + triage urgency), so a
+    # lane move IS a state transition — never a parallel tracking field that
+    # can drift from the engine. An atom with `one_of`, so the lanes are this
+    # constraint's values: the board enumerates them with no lane table to
+    # seed (`ClinicDemoWeb.A2ui.BoardUI`'s source-less sections).
     calculate :board_lane,
-              :string,
+              :atom,
               expr(
                 cond do
-                  status == :checked_in -> "in_visit"
-                  status == :completed -> "discharged"
-                  status in [:cancelled, :no_show] -> "closed"
-                  status == :scheduled and is_nil(triage_urgency) -> "intake"
-                  status == :scheduled and triage_urgency == :routine -> "low"
-                  status == :scheduled and triage_urgency == :soon -> "medium"
-                  status == :scheduled and triage_urgency in [:urgent, :emergency] -> "high"
-                  true -> "closed"
+                  status == :checked_in -> :in_visit
+                  status == :completed -> :discharged
+                  status in [:cancelled, :no_show] -> :closed
+                  status == :scheduled and is_nil(triage_urgency) -> :intake
+                  status == :scheduled and triage_urgency == :routine -> :low
+                  status == :scheduled and triage_urgency == :soon -> :medium
+                  status == :scheduled and triage_urgency in [:urgent, :emergency] -> :high
+                  true -> :closed
                 end
               ) do
       public? true
+      constraints one_of: [:intake, :low, :medium, :high, :in_visit, :discharged, :closed]
     end
   end
 
