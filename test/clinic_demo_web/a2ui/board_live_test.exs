@@ -39,4 +39,35 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
     assert html =~ "View the board as of"
     refute html =~ "Viewing as of"
   end
+
+  test "the picker patches the instant: the payload a browser posts", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    # form/3 only accepts keys that exist as named inputs in the DOM, so a
+    # nameless picker fails here instead of crashing the LiveView in use.
+    view
+    |> form("#time-travel-form", %{"time_travel" => %{"as_of" => "2026-10-15T08:00"}})
+    |> render_change()
+
+    assert_patch(view, "/?as_of=2026-10-15T08%3A00%3A00Z")
+    assert render(view) =~ "Viewing as of"
+  end
+
+  test "a patched instant rebuilds the surface: delete first, then create", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+    render_async(view)
+
+    as_of = DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
+    render_patch(view, ~p"/?as_of=#{DateTime.to_iso8601(as_of)}")
+    render_async(view)
+
+    # The client already holds clinic_board; a bare createSurface for it is
+    # rejected and the old cards stay on screen.
+    assert_push_event(view, "a2ui:messages", %{
+      messages: [
+        %{"deleteSurface" => %{"surfaceId" => "clinic_board"}},
+        %{"createSurface" => %{"surfaceId" => "clinic_board"}} | _rest
+      ]
+    })
+  end
 end

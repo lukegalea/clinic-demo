@@ -217,10 +217,22 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
        |> Phoenix.Component.assign(:as_of, as_of)
        |> assign_as_of_emptiness(as_of)
        |> start_async(:ash_a2ui_surface, fn ->
-         config.surface_fn.(config.ui, actor: actor, tenant: tenant)
+         config.ui
+         |> config.surface_fn.(actor: actor, tenant: tenant)
+         |> as_rebuild()
        end)}
     end
   end
+
+  # A rebuild, not a bootstrap: the client already holds this surface, and
+  # the A2UI message processor rejects a createSurface for a live id
+  # ("Surface clinic_board already exists"), dropping the batch and leaving
+  # the old cards on screen. Deleting it first lets the new build render.
+  defp as_rebuild([%{"createSurface" => %{"surfaceId" => id}} = create | _] = messages) do
+    [%{"version" => create["version"], "deleteSurface" => %{"surfaceId" => id}} | messages]
+  end
+
+  defp as_rebuild(messages), do: messages
 
   @impl true
   def handle_event("set-as-of", %{"time_travel" => %{"as_of" => raw}}, socket)
