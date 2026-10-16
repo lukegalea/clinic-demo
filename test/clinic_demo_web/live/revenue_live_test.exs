@@ -201,17 +201,16 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
       iso = DateTime.to_iso8601(instant)
 
       assert html = render_patch(view, "?as_of=#{iso}")
-      assert html =~ ~s(data-testid="revenue-as-of-indicator")
-      assert html =~ "Viewing as of"
-      assert html =~ "read-only"
+      assert html =~ ~s(data-testid="rev-status-chip")
+      assert html =~ "Viewing #{Calendar.strftime(instant, "%b %-d %Y")} — history"
 
       # The sampled instant's own numbers, money and count.
       assert html =~ expected_total
       assert html =~ expected_count
 
-      # The time-travel card wears the traveling fill (violet) while a
-      # live page wears the quiet one.
-      assert html =~ "View revenue as of"
+      # The scrubber card wears the traveling fill (violet) while a live
+      # page wears the quiet one.
+      assert html =~ "bg-violet"
     end
 
     # The live chip's instant-classification: a write that the scrub says
@@ -237,8 +236,8 @@ defmodule ClinicDemoWeb.RevenueLiveTest do
 
     {:ok, _view, html} = live(conn, "/revenue?as_of=#{DateTime.to_iso8601(mid_history)}")
 
-    assert html =~ ~s(data-testid="revenue-as-of-indicator")
-    assert html =~ "read-only"
+    assert html =~ ~s(data-testid="rev-status-chip")
+    assert html =~ "history"
     assert html =~ "$120"
     refute html =~ "$240"
   end

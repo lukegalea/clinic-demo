@@ -95,3 +95,15 @@
     animation: none !important;
   }
 }
+
+/* ---- The revenue scrubber's future hatch --------------------------------
+ * The provisional texture for the scrubber's future zone (BD-6): a
+ * currentColor-driven diagonal hatch, so `text-cyan/30` on the element
+ * tints the stripes cyan without a second color token. Decoration only. */
+.bg-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    currentColor 0 2px,
+    transparent 2px 8px
+  );
+}

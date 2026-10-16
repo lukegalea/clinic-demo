@@ -67,14 +67,14 @@
   },
   {
     "law": "11",
-    "file": "lib/clinic_demo_web/live/a2ui_live.ex",
-    "text": "def handle_event(\"set-as-of\", %{\"time_travel\" => %{\"as_of\" => raw}}, socket)",
-    "reason": "The handler performs no Ash call: it parses the posted instant and push_patches it onto the URL (absent/unparseable leaves it). The authorization story lives in what the patch triggers \u2014 handle_params rebuilds the surface through AsOfSurface, whose reads go through the Appointment read action's policies, and whose row actions are stripped (a view of the past is not an operating surface), so there is no write path reachable from the historical board at all."
+    "file": "lib/clinic_demo_web/live/revenue_live.ex",
+    "text": "def handle_event(\"scrub\", %{\"rev_scrubber\" => %{\"offset\" => raw}}, socket) do",
+    "reason": "The handler performs no Ash call: it clamps the posted day offset and push_patches the canonical day-granular ?as_of= onto the URL (the run rides along). The authorization story lives in what the patch triggers \u2014 handle_params re-runs the reads through the value projection's and the schedule's read actions with their policies, the page carries no action affordances while traveling, and simulated numbers render only under their badges. Same shape and ruling as the board's baselined time-travel handler."
   },
   {
     "law": "11",
-    "file": "lib/clinic_demo_web/live/revenue_live.ex",
+    "file": "lib/clinic_demo_web/live/a2ui_live.ex",
     "text": "def handle_event(\"set-as-of\", %{\"time_travel\" => %{\"as_of\" => raw}}, socket)",
-    "reason": "The handler performs no Ash call: it parses the posted instant and push_patches it onto the URL (absent/unparseable leaves it). The authorization story lives in what the patch triggers \u2014 handle_params re-runs the reads through the value projection and the schedule's read actions with their policies, and the page carries no action affordances at all (a scrubbed view of the past is read-only by construction), so there is no write path to authorize. Same shape and ruling as the board's baselined set-as-of handler, which this control reuses."
+    "reason": "The board's time-travel handler performs no Ash call: it parses the posted instant and push_patches it onto the URL. The authorization story lives in what the patch triggers \u2014 handle_params rebuilds the surface through AsOfSurface, whose reads go through the Appointment read action's policies, and whose row actions are stripped (a view of the past is not an operating surface)."
   }
 ]
