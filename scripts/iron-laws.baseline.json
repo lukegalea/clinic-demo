@@ -68,7 +68,7 @@
   {
     "law": "11",
     "file": "lib/clinic_demo_web/live/revenue_live.ex",
-    "text": "def handle_event(\"scrub\", %{\"rev_scrubber\" => %{\"offset\" => raw}}, socket) do",
+    "text": "def handle_event(\"scrub\", %{\"offset\" => raw}, socket) do",
     "reason": "The handler performs no Ash call: it clamps the posted day offset and push_patches the canonical day-granular ?as_of= onto the URL (the run rides along). The authorization story lives in what the patch triggers \u2014 handle_params re-runs the reads through the value projection's and the schedule's read actions with their policies, the page carries no action affordances while traveling, and simulated numbers render only under their badges. Same shape and ruling as the board's baselined time-travel handler."
   },
   {
