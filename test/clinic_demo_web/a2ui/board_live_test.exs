@@ -53,6 +53,76 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
     assert render(view) =~ "Viewing as of"
   end
 
+  test "a card's button reaches the renderer: Check in checks the visit in", %{conn: conn} do
+    staff = %{id: "00000000-0000-0000-0000-0000000000b1", role: :veterinarian}
+
+    for row <- [
+          %{lane_key: "intake", label: "Booked", position: 1, accent: "neutral"},
+          %{lane_key: "low", label: "Low — routine", position: 2, accent: "green"}
+        ] do
+      ClinicDemo.Scheduling.BoardLane
+      |> Ash.Changeset.for_create(:create, row)
+      |> Ash.create!(authorize?: false)
+    end
+
+    {:ok, vet} =
+      ClinicDemo.Scheduling.hire_clinician(
+        %{
+          full_name: "Dr. Button Test",
+          role: :veterinarian,
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
+        },
+        actor: staff
+      )
+
+    {:ok, patient} =
+      ClinicDemo.Scheduling.register_patient(
+        %{
+          name: "Button Test Animal",
+          species: :dog,
+          owner_email: "button-#{System.unique_integer([:positive])}@example.com"
+        },
+        actor: staff
+      )
+
+    # Severity 1 on an adult dog triages routine: the card sits in board_low.
+    appointment =
+      ClinicDemo.Scheduling.book_appointment!(
+        %{
+          patient_id: patient.id,
+          clinician_id: vet.id,
+          scheduled_at: DateTime.add(DateTime.utc_now(), 2, :hour),
+          reason: "Button test",
+          severity: 1
+        },
+        actor: staff
+      )
+
+    {:ok, view, _html} =
+      conn
+      |> init_test_session(%{AshA2ui.Actor.session_key() => vet.id})
+      |> live(~p"/")
+
+    render_async(view)
+
+    # The envelope the browser sends for the card's Check in button.
+    render_hook(view, "a2ui:action", %{
+      "version" => "v0.9.1",
+      "action" => %{
+        "name" => "invoke",
+        "surfaceId" => "clinic_board",
+        "sourceComponentId" => "row_action_board_low_check_in_button",
+        "context" => %{
+          "action" => "check_in",
+          "component" => "board_low",
+          "recordId" => appointment.id
+        }
+      }
+    })
+
+    assert ClinicDemo.Scheduling.get_appointment!(appointment.id).status == :checked_in
+  end
+
   test "a patched instant rebuilds the surface: delete first, then create", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/")
     render_async(view)

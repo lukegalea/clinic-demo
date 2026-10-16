@@ -255,6 +255,12 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
     end
   end
 
+  # Everything else belongs to the renderer: row actions ("a2ui:action"),
+  # function responses, surface opens. The renderer's handle_event/3 is
+  # overridable, so defining set-as-of above replaced it outright; without
+  # this clause every board button crashed the LiveView.
+  def handle_event(event, params, socket), do: super(event, params, socket)
+
   # The empty-state read: one containment read pinned to the instant — the
   # same query shape AsOfSurface's lane reads run (for_read → as_of → read)
   # — so the host chrome can say "nothing existed yet" instead of rendering
