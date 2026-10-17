@@ -7,16 +7,23 @@ defmodule ClinicDemoWeb.A2ui.WorklistUI do
   The lanes are the values of the task's `status` (an atom with `one_of`),
   narrowed to the two a person acts on. The read is `:worklist`, the
   candidacy read: open tasks the actor is a candidate for and claimed tasks
-  the actor holds, so with nobody acting the board is empty.
+  the actor holds, so with nobody acting the board is empty. It narrows with
+  a filter, so the lane counts and the pager total are the actor's too.
 
   Each move is a generic action on `ClinicDemo.Visits.HumanTask`, run as the
-  actor through `ClinicDemo.Visits.TaskDesk`:
+  actor through `ClinicDemo.Visits.TaskDesk`; the engine decides who may
+  make it:
 
-    * **Claim task** (open cards): the engine checks candidacy.
-    * **Complete task** (open or claimed): a prompt for the outcome and an
-      optional comment. Completing an open task claims it on the way.
-    * **Delegate task** (claimed cards): a prompt naming the colleague, by
-      full name or licence number. Only the holder may hand it on.
+    * **Claim task** (open cards): a candidate takes the task.
+    * **Complete task** (open or claimed): a prompt picking the outcome and
+      an optional comment. There is one action per step (`:complete_check_in`,
+      `:complete_consult`, `:complete_lab_results`), each visible on its own
+      step's cards, so the picker offers only what that step declares; the
+      card shows the same list, and TaskDesk refuses any other. Completing
+      an open task claims it on the way.
+    * **Delegate task** (claimed cards): a prompt picking the colleague from
+      the clinicians. Only the holder may hand it on, and only to another of
+      the task's candidates.
 
   Every move refreshes the `:board` template key, so the card changing
   lane, or leaving the board, is the success feedback.
@@ -35,12 +42,8 @@ defmodule ClinicDemoWeb.A2ui.WorklistUI do
     record_label("task")
     spec_version "0.9.1"
 
-    # Soonest due first, 25 cards a lane. The query is also what makes the
-    # initial render read as the actor: ash_a2ui a3c1763 builds a query-less
-    # table's read without the actor and hands it only to Ash.read!, so the
-    # :worklist preparation would see nobody acting. The query path builds
-    # the read with the actor. It declares no search, presets or filters, so
-    # the lanes show no query controls.
+    # Soonest due first, 25 cards a lane. It declares no search, presets or
+    # filters, so the lanes show no query controls.
     query :default do
       sortable [:due_at]
       default_sort due_at: :asc
@@ -49,18 +52,24 @@ defmodule ClinicDemoWeb.A2ui.WorklistUI do
 
     component :table, :board do
       display :board
-      fields [:name, :node_id, :status, :due_at]
+      fields [:name, :node_id, :status, :due_at, :outcome_choices]
       read_action :worklist
       query :default
 
       row_layout do
         title :name
         badge :status
-        meta [:node_id, :due_at]
+        meta [:node_id, :due_at, :outcome_choices]
         columns 2
       end
 
-      row_actions [:claim_task, :complete_task, :delegate_task]
+      row_actions [
+        :claim_task,
+        :complete_check_in,
+        :complete_consult,
+        :complete_lab_results,
+        :delegate_task
+      ]
 
       sections do
         scope_by :status
@@ -74,15 +83,34 @@ defmodule ClinicDemoWeb.A2ui.WorklistUI do
       refreshes [:board]
     end
 
-    action :complete_task do
+    # One Complete per step, each shown only on its own step's cards, so the
+    # outcome picker lists what that step declares.
+    action :complete_check_in do
+      label "Complete task"
       prompt_fields [:outcome, :comment]
       prompt_title "Complete task"
-      visible_when status: [:open, :claimed]
+      visible_when status: [:open, :claimed], node_id: "CheckIn"
+      refreshes [:board]
+    end
+
+    action :complete_consult do
+      label "Complete task"
+      prompt_fields [:outcome, :comment]
+      prompt_title "Complete task"
+      visible_when status: [:open, :claimed], node_id: "Consult"
+      refreshes [:board]
+    end
+
+    action :complete_lab_results do
+      label "Complete task"
+      prompt_fields [:outcome, :comment]
+      prompt_title "Complete task"
+      visible_when status: [:open, :claimed], node_id: "AwaitLabResults"
       refreshes [:board]
     end
 
     action :delegate_task do
-      prompt_fields [:to]
+      prompt_fields [:delegate_id]
       prompt_title "Delegate task"
       visible_when status: :claimed
       refreshes [:board]
@@ -94,6 +122,16 @@ defmodule ClinicDemoWeb.A2ui.WorklistUI do
 
     field :due_at do
       label "Due"
+    end
+
+    field :outcome_choices do
+      label "Outcomes"
+    end
+
+    field :delegate_id do
+      label "Colleague"
+      relationship :assignee
+      option_label :full_name
     end
   end
 end

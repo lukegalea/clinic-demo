@@ -3,129 +3,111 @@ defmodule ClinicDemo.Visits.TaskDesk do
   The worklist's three moves on a human task, made as the acting clinician:
   claim it, complete it, hand it to a colleague.
 
-  `ClinicDemo.Visits.HumanTask`'s `:claim_task`, `:complete_task` and
-  `:delegate_task` generic actions call these, and the worklist board
-  (`ClinicDemoWeb.A2ui.WorklistUI`) offers those actions as card buttons.
-  Every move runs through the engine (`AshBpmn.claim_task/2`,
-  `complete_task/2`, `delegate_task/2`) so the event log records who did
-  what, and a completion routes the visit's token onwards.
+  `ClinicDemo.Visits.HumanTask`'s generic actions call these: `:claim_task`,
+  `:delegate_task`, and the completions (`:complete_task` and its per-step
+  forms). The worklist board (`ClinicDemoWeb.A2ui.WorklistUI`) offers them
+  as card buttons.
+  Each one reads the task as the actor and calls the engine
+  (`AshBpmn.claim_task/2`, `complete_task/2`, `delegate_task/2`), which
+  decides who may act: a candidate claims or completes an open task, only
+  the holder completes or delegates a claimed one, and the delegate must be
+  one of the task's candidates. The event log records the actor as the
+  person who acted, and a completion routes the visit's token onwards.
 
-  The engine checks candidacy on an explicit claim and nowhere else, so this
-  module makes the rest of the checks:
+  What this module adds is the clinic's own part:
 
-    * an **open** task may be claimed or completed only by one of its
-      candidates (completing it records the implicit claim);
-    * a **claimed** task may be completed or delegated only by the
-      clinician holding it;
-    * a task is delegated to an active clinician other than the holder.
-
-  A refusal is an `Ash.Error.Forbidden`, so the surface shows the usual "not
-  authorized" line without saying whose task it is.
+    * the outcome must be one the task's step declares (its `:outcomes`).
+      The engine records whatever outcome it is given, and the visit's
+      gateways route an outcome they do not name down their default flow,
+      so "written up" on a check-in would mark the animal a no-show;
+    * the delegate is an active clinician other than the actor;
+    * the engine's refusals become errors the surface can show. Not being a
+      candidate or the holder is an `Ash.Error.Forbidden` (the usual "not
+      authorized" line, without saying whose task it is); a delegate who is
+      not a candidate is an error on the picker.
   """
-
-  require Ash.Query
 
   alias Ash.Error.Changes.InvalidArgument
   alias Ash.Error.Forbidden
   alias ClinicDemo.Scheduling.Clinician
-  alias ClinicDemo.Visits.{HumanTask, TaskCandidate}
+  alias ClinicDemo.Visits.Calculations.OutcomeChoices
+  alias ClinicDemo.Visits.HumanTask
 
-  @doc "Claims an open task for the actor. The engine checks candidacy."
+  @doc "Claims an open task for the actor."
   @spec claim(Ecto.UUID.t(), map) :: {:ok, struct} | {:error, term}
   def claim(task_id, actor) do
-    with {:ok, task} <- fetch(task_id),
-         :ok <- may_take(task, actor) do
-      AshBpmn.claim_task(task, actor: actor)
+    with {:ok, task} <- fetch(task_id, actor) do
+      task |> AshBpmn.claim_task(actor: actor) |> refusals()
     end
   end
 
   @doc """
-  Completes a task with an outcome, as the actor. An open task is claimed on
-  the way, which the engine records.
+  Completes a task with one of its step's outcomes, as the actor. An open
+  task is claimed on the way, which the engine records.
   """
   @spec complete(Ecto.UUID.t(), atom, String.t() | nil, map) :: {:ok, struct} | {:error, term}
   def complete(task_id, outcome, comment, actor) do
-    with {:ok, task} <- fetch(task_id),
-         :ok <- may_complete(task, actor) do
-      AshBpmn.complete_task(task, outcome: outcome, comment: comment, actor: actor)
+    with {:ok, task} <- fetch(task_id, actor, [:outcomes]),
+         :ok <- declared(task, outcome) do
+      task
+      |> AshBpmn.complete_task(outcome: outcome, comment: comment, actor: actor)
+      |> refusals()
     end
   end
 
-  @doc """
-  Hands a claimed task from the actor to the active clinician named by
-  `to` (full name or licence number, case-insensitive).
-  """
-  @spec delegate(Ecto.UUID.t(), String.t(), map) :: {:ok, struct} | {:error, term}
-  def delegate(task_id, to, actor) do
-    with {:ok, task} <- fetch(task_id),
-         :ok <- holds(task, actor),
-         {:ok, colleague} <- colleague(to, actor) do
-      AshBpmn.delegate_task(task,
-        to_principal: %{type: :user, id: colleague.id},
-        actor: actor
-      )
+  @doc "Hands a claimed task from the actor to the clinician `delegate_id`."
+  @spec delegate(Ecto.UUID.t(), Ecto.UUID.t(), map) :: {:ok, struct} | {:error, term}
+  def delegate(task_id, delegate_id, actor) do
+    with {:ok, task} <- fetch(task_id, actor),
+         {:ok, colleague} <- colleague(delegate_id, actor) do
+      task
+      |> AshBpmn.delegate_task(to_principal: %{type: :user, id: colleague.id}, actor: actor)
+      |> refusals()
     end
   end
 
-  defp fetch(task_id) do
-    case Ash.get(HumanTask, task_id, authorize?: false) do
+  defp fetch(task_id, actor, load \\ []) do
+    case Ash.get(HumanTask, task_id, actor: actor, load: load) do
       {:ok, task} -> {:ok, task}
       {:error, _not_found} -> forbidden()
     end
   end
 
-  defp may_complete(%{status: :open} = task, actor), do: may_take(task, actor)
-  defp may_complete(%{status: :claimed} = task, actor), do: holds(task, actor)
-  defp may_complete(_task, _actor), do: forbidden()
+  # A standalone approval has no declared outcomes (`nil`); none run here,
+  # but such a task would take whatever the picker offers.
+  defp declared(%{outcomes: nil}, _outcome), do: :ok
 
-  defp may_take(%{status: :open, id: task_id}, %{id: actor_id}) do
-    candidate? =
-      TaskCandidate
-      |> Ash.Query.filter(
-        task_id == ^task_id and principal_type == :user and principal_id == ^actor_id
+  defp declared(%{outcomes: outcomes}, outcome) do
+    if to_string(outcome) in outcomes do
+      :ok
+    else
+      invalid(
+        :outcome,
+        "is not an outcome of this step; choose #{OutcomeChoices.phrase(outcomes)}"
       )
-      |> Ash.exists?(authorize?: false)
-
-    if candidate?, do: :ok, else: forbidden()
-  end
-
-  defp may_take(_task, _actor), do: forbidden()
-
-  defp holds(%{status: :claimed, assignee_id: holder}, %{id: holder}) when not is_nil(holder),
-    do: :ok
-
-  defp holds(_task, _actor), do: forbidden()
-
-  defp colleague(to, actor) do
-    wanted = to |> to_string() |> String.trim() |> String.downcase()
-
-    matches =
-      Clinician
-      |> Ash.Query.filter(active == true)
-      |> Ash.read!(authorize?: false)
-      |> Enum.filter(fn clinician ->
-        wanted != "" and
-          (String.downcase(clinician.full_name) == wanted or
-             String.downcase(clinician.license_number || "") == wanted)
-      end)
-
-    case matches do
-      [%{id: id}] when id == actor.id ->
-        invalid("you already hold this task")
-
-      [colleague] ->
-        {:ok, colleague}
-
-      [] ->
-        invalid("no active clinician has that name or licence number")
-
-      [_ | _] ->
-        invalid("more than one clinician has that name; use the licence number")
     end
   end
 
+  defp colleague(delegate_id, %{id: actor_id}) when delegate_id == actor_id,
+    do: invalid(:delegate_id, "is you; choose a colleague")
+
+  defp colleague(delegate_id, actor) do
+    case Ash.get(Clinician, delegate_id, actor: actor) do
+      {:ok, %{active: true} = colleague} -> {:ok, colleague}
+      _inactive_or_missing -> invalid(:delegate_id, "is not an active clinician")
+    end
+  end
+
+  # The engine refuses with an ArgumentError whose text names task and
+  # principal ids, which is for logs, not for the person at the board.
+  defp refusals({:error, %ArgumentError{message: "the delegate " <> _}}),
+    do: invalid(:delegate_id, "is not one of this task's candidates")
+
+  defp refusals({:error, %ArgumentError{}}), do: forbidden()
+  defp refusals(result), do: result
+
   defp forbidden, do: {:error, Forbidden.exception([])}
 
-  defp invalid(message),
-    do: {:error, InvalidArgument.exception(field: :to, message: message)}
+  defp invalid(field, message),
+    do: {:error, InvalidArgument.exception(field: field, message: message)}
 end

@@ -82,33 +82,32 @@ config :ash,
 
 # ash_a2ui: every surface composes through the experience layer (there is
 # no experience version to pin since ash_a2ui a3c1763). The component
-# catalog stays at its `:basic` default. f777ede turned admin_v1 off
-# because the admin composition dropped the board's sectioned table;
-# ash_a2ui #16 fixed that, and admin_v1 was re-tried against a3c1763 with
-# the visual suite. It broke three things this app depends on:
+# catalog is admin_v1: tables render as the admin dataGrid, record panels
+# as the admin recordPanel. f777ede and then the a3c1763 re-try turned it
+# off for four breakages, all fixed upstream and re-checked here in the
+# running app against ash_a2ui 85ca0b3:
 #
-#   * prompt row actions (Record weight, Complete, Cancel) invoke straight
-#     away with no prompt to collect their values, so they fail with
-#     "Validation failed";
-#   * the read-only View panel (recordPanel) has no way to close it;
-#   * the dataGrid shows every row action on every row, ignoring
-#     visible_when (Check in on completed visits), and on the schedule the
-#     action column runs off the right edge.
+#   * the board's sectioned table was dropped (ash_a2ui #16);
+#   * prompt row actions (Record weight, Complete, Cancel) invoked with no
+#     values; the dataGrid now opens a dialog for them (#22);
+#   * the read-only View panel could not be closed; it has Cancel (#22);
+#   * every row showed every row action, ignoring visible_when, and the
+#     schedule's action column ran off the right edge; rows now carry only
+#     their own actions, wrapped inside the cell (#22).
 #
-# Re-enable `catalog: :admin_v1` when those land upstream.
+# Boards (the clinic board, the worklist) keep the basic catalog's board
+# layout under admin_v1.
 #
 # Reference links (the schedule's patient and clinician columns) resolve to
-# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them. They
-# no longer need admin_v1: since ash_a2ui 25c6b8f the basic catalog draws a
-# to-one link as a button whenever the LiveRenderer can navigate, which
-# ScheduleLive's :open_surface callback provides.
+# surface keys through ClinicDemoWeb.A2ui.Links, which also opens them.
 config :ash_a2ui,
   actor: [
     resource: ClinicDemo.Scheduling.Clinician,
     label: :full_name,
     filter: [active: true]
   ],
-  link_resolver: ClinicDemoWeb.A2ui.Links
+  link_resolver: ClinicDemoWeb.A2ui.Links,
+  catalog: :admin_v1
 
 # The process engine's three host seams. `ash_bpmn` never guesses any of them:
 # a diagram with a business rule task will not even compile without a decision

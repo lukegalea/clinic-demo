@@ -66,6 +66,13 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
         actor: staff
       )
 
+    # CheckIn's candidates are the active nurses, written when the visit is
+    # booked; the engine refuses a check-in by anyone else.
+    {:ok, nurse} =
+      ClinicDemo.Scheduling.hire_clinician(%{full_name: "Button Nurse", role: :nurse},
+        actor: staff
+      )
+
     {:ok, patient} =
       ClinicDemo.Scheduling.register_patient(
         %{
@@ -91,7 +98,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
 
     {:ok, view, _html} =
       conn
-      |> init_test_session(%{AshA2ui.Actor.session_key() => vet.id})
+      |> init_test_session(%{AshA2ui.Actor.session_key() => nurse.id})
       |> live(~p"/")
 
     render_async(view)
