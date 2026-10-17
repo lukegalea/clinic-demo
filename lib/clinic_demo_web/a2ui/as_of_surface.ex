@@ -12,12 +12,13 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurface do
     * **The reads are pinned to the instant.** Every appointment read runs
       with `as_of:`, which the temporal data layer turns into period
       containment — one version per appointment, the one valid at T. The
-      lanes are the `board_lane` calculation's declared values (the
-      sections have no source, so expanding them reads nothing and has no
-      instant to pin), and each expanded lane's `board_lane == <lane>`
-      filter evaluates against the historical row's status and triage
-      urgency, so cards land in the lane they were in at T with no second
-      implementation of the lane logic.
+      cells are the `board_lane` calculation's declared stages crossed with
+      the `triage_category` calculation's declared rows (the sections have
+      no source, so expanding them reads nothing and has no instant to
+      pin), and each cell's `board_lane == <stage>` and
+      `triage_category == <row>` filters evaluate against the historical
+      row's status and triage urgency, so cards land in the cell they were
+      in at T with no second implementation of the board logic.
 
     * **The surface is view-only.** A view of the past is not an operating
       surface: an action clicked on a historical card would run against the

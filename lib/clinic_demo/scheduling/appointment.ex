@@ -200,28 +200,43 @@ defmodule ClinicDemo.Scheduling.Appointment do
       """
     end
 
-    # The board's lane: the one dimension the kanban cards sort by. It reads
-    # the same state the process engine moves (status + triage urgency), so a
-    # lane move IS a state transition — never a parallel tracking field that
-    # can drift from the engine. An atom with `one_of`, so the lanes are this
+    # The board's stage: where the visit is in its process. It reads the same
+    # state the process engine moves (status), so a stage move IS a state
+    # transition — never a parallel tracking field that can drift from the
+    # engine. An atom with `one_of`, so the board's columns are this
     # constraint's values: the board enumerates them with no lane table to
-    # seed (`ClinicDemoWeb.A2ui.BoardUI`'s source-less sections).
+    # seed (`ClinicDemoWeb.A2ui.BoardUI`'s source-less sections). How urgent a
+    # waiting visit is no longer rides the stage: it is the board's second
+    # axis, `triage_category` below.
     calculate :board_lane,
               :atom,
               expr(
                 cond do
+                  status == :scheduled -> :booked
                   status == :checked_in -> :in_visit
                   status == :completed -> :discharged
-                  status in [:cancelled, :no_show] -> :closed
-                  status == :scheduled and is_nil(triage_urgency) -> :intake
-                  status == :scheduled and triage_urgency == :routine -> :low
-                  status == :scheduled and triage_urgency == :soon -> :medium
-                  status == :scheduled and triage_urgency in [:urgent, :emergency] -> :high
                   true -> :closed
                 end
               ) do
       public? true
-      constraints one_of: [:intake, :low, :medium, :high, :in_visit, :discharged, :closed]
+      constraints one_of: [:booked, :in_visit, :discharged, :closed]
+    end
+
+    # The board's swimlane: the triage decision's answer, with "not triaged
+    # yet" as a value of its own. `triage_urgency` is nil until the visit
+    # process has asked the decision, and a swimlane over a nilable
+    # attribute drops those visits off the board altogether, so the nil
+    # becomes `:untriaged` here and gets its own row.
+    calculate :triage_category,
+              :atom,
+              expr(if is_nil(triage_urgency), do: :untriaged, else: triage_urgency) do
+      public? true
+      constraints one_of: [:emergency, :urgent, :soon, :routine, :untriaged]
+
+      description """
+      The triage decision's answer (`triage_urgency`), or `:untriaged` when
+      the visit process has not asked it yet.
+      """
     end
   end
 
@@ -460,6 +475,11 @@ defmodule ClinicDemo.Scheduling.Appointment do
       change {ComplianceGuard, transition_to: :cancelled}
       change set_attribute(:cancellation_reason, arg(:reason))
       change transition_state(:cancelled)
+
+      # The visit process has no cancellation path, so the cancel stops it
+      # through the engine: its open CheckIn or Consult task leaves the
+      # worklist with it. See `ClinicDemo.Scheduling.Changes.CancelVisitProcess`.
+      change ClinicDemo.Scheduling.Changes.CancelVisitProcess
 
       # The story's loss, on the ledger (BPSim BD-2). See
       # `ClinicDemo.Scheduling.Changes.PublishVisitOutcome`.

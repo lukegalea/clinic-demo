@@ -83,7 +83,8 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
         actor: staff
       )
 
-    # Severity 1 on an adult dog triages routine: the card sits in board_low.
+    # Severity 1 on an adult dog triages routine: the card sits in the
+    # Booked stage's routine row, board_booked__routine.
     appointment =
       ClinicDemo.Scheduling.book_appointment!(
         %{
@@ -109,16 +110,57 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
       "action" => %{
         "name" => "invoke",
         "surfaceId" => "clinic_board",
-        "sourceComponentId" => "row_action_board_low_check_in_button",
+        "sourceComponentId" => "row_action_board_booked__routine_check_in_button",
         "context" => %{
           "action" => "check_in",
-          "component" => "board_low",
+          "component" => "board_booked__routine",
           "recordId" => appointment.id
         }
       }
     })
 
     assert ClinicDemo.Scheduling.get_appointment!(appointment.id).status == :checked_in
+
+    # The card moved one stage along its own row: from Booked to In visit,
+    # still routine.
+    assert cells_holding(appointment.id) == ["board_in_visit__routine"]
+  end
+
+  test "the board is stages by triage rows, each row in its tone" do
+    model = board_model()
+
+    cells =
+      for row <- ~w(emergency urgent soon routine untriaged),
+          stage <- ~w(booked in_visit discharged closed),
+          do: "board_#{stage}__#{row}"
+
+    assert model["records"] |> Map.keys() |> Enum.sort() == Enum.sort(cells)
+
+    assert Map.take(model, Enum.map(~w(emergency urgent soon routine untriaged), &tone_key/1)) ==
+             %{
+               tone_key("emergency") => "danger",
+               tone_key("urgent") => "warning",
+               tone_key("soon") => "info",
+               tone_key("routine") => "success",
+               tone_key("untriaged") => "neutral"
+             }
+  end
+
+  defp tone_key(row), do: "_swimlane_tone_board__#{row}"
+
+  defp board_model do
+    ClinicDemoWeb.A2ui.BoardUI
+    |> AshA2ui.Info.build_surface(actor: nil)
+    |> Enum.find_value(fn
+      %{"updateDataModel" => %{"path" => "/", "value" => value}} -> value
+      _other -> nil
+    end)
+  end
+
+  defp cells_holding(appointment_id) do
+    for {cell, records} <- board_model()["records"],
+        Enum.any?(records, &match?(%{"id" => ^appointment_id}, &1)),
+        do: cell
   end
 
   test "a patched instant rebuilds the surface: delete first, then create", %{conn: conn} do
