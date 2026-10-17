@@ -110,8 +110,8 @@ custom classes must fully style the input
 This repository has no devenv of its own. On the development host it borrows
 the shared `ash_enterprise` devenv (Postgres + toolchain), which runs
 **PostgreSQL 18** (Phase 0 baseline; the repo's `min_pg_version/0` is 18 and
-CI's service images are `postgres:18-alpine` in lockstep). The test config
-reads `DB_USER`, `DB_PASSWORD`, `DB_HOST`/`PGHOST` and `PGPORT`, defaulting to
+CI's service images are `postgres:18-alpine` in lockstep). The dev and test
+configs read `DB_USER`, `DB_PASSWORD`, `DB_HOST`/`PGHOST` and `PGPORT`, defaulting to
 the README's `localhost:5432` `postgres`/`postgres`; the devenv's `enterShell`
 exports the real `PGPORT` (it shifts with machine state — 5436 at time of
 writing), so always run the suite through the devenv shell rather than
