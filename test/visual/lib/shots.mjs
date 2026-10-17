@@ -61,6 +61,17 @@ export async function prepareForScreenshot(page) {
       if (el.textContent.trim() === "") el.remove();
     });
   }
+  // ash_a2ui boards scroll their lanes inside the board (`.board-lanes` is
+  // overflow-x: auto), so a full-page capture would hold only the lanes
+  // that fit the viewport. Unscrolled, the page widens to the whole board
+  // and the baseline covers every lane, as it did before the lanes scrolled.
+  const lanes = page.locator(".board-lanes");
+  const laneCount = await lanes.count();
+  for (let i = 0; i < laneCount; i++) {
+    await lanes.nth(i).evaluate((el) => {
+      el.style.overflowX = "visible";
+    });
+  }
   await page.evaluate(() => window.__sanitizeVolatileText());
 }
 

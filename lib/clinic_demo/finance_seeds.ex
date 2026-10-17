@@ -583,7 +583,7 @@ defmodule ClinicDemo.FinanceSeeds do
       Scheduling.check_in_appointment!(open, actor: @staff)
       open = Scheduling.get_appointment!(appointment.id)
       Scheduling.complete_appointment!(open, notes, actor: @staff)
-      close_tasks(appointment.id)
+      close_tasks(appointment)
     end
 
     bump(stats, :completed)
@@ -625,7 +625,7 @@ defmodule ClinicDemo.FinanceSeeds do
     open = Scheduling.get_appointment!(appointment.id)
 
     if open.status == :scheduled do
-      close_task(appointment.id, "CheckIn", :no_show)
+      close_task(appointment.id, "CheckIn", :no_show, front_desk_id())
     end
 
     bump(stats, :no_show)
@@ -679,19 +679,26 @@ defmodule ClinicDemo.FinanceSeeds do
   # (written up); the engine advances the token through discharge. Tasks
   # are read open-or-claimed only — completed task reads are not safe to
   # load (the usage rules' rule 20).
-  defp close_tasks(appointment_id) do
-    close_task(appointment_id, "CheckIn", :arrived)
-    close_task(appointment_id, "Consult", :written_up)
+  #
+  # Each is closed by one of its candidates, as the engine requires: a nurse
+  # at the front desk, then the booked clinician. A refusal stops the seed
+  # rather than leaving a completed visit whose work items are still open.
+  defp close_tasks(appointment) do
+    close_task(appointment.id, "CheckIn", :arrived, front_desk_id())
+    close_task(appointment.id, "Consult", :written_up, appointment.clinician_id)
   end
 
-  defp close_task(appointment_id, node_id, outcome) do
+  defp close_task(appointment_id, node_id, outcome, actor_id) do
     case find_open_task(appointment_id, node_id) do
       nil ->
         # The work item already moved (a resumed visit) — nothing to close.
         :ok
 
       task ->
-        AshBpmn.complete_task(task, outcome: outcome, actor: %{id: task_actor(node_id)})
+        {:ok, _completed} =
+          AshBpmn.complete_task(task, outcome: outcome, actor: %{id: actor_id})
+
+        :ok
     end
   end
 
@@ -705,9 +712,6 @@ defmodule ClinicDemo.FinanceSeeds do
         appointment_id
     end)
   end
-
-  defp task_actor("CheckIn"), do: front_desk_id()
-  defp task_actor(_consult), do: @staff.id
 
   defp front_desk_id do
     Scheduling.list_clinicians!(authorize?: false)
