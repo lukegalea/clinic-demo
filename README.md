@@ -342,10 +342,11 @@ mix phx.server      # http://localhost:4000
 mix test            # 100 tests, all green
 ```
 
-`mix setup` publishes the two rule documents, then seeds three clinicians,
-three patients and three appointments. Booking each one starts a visit
-process, and the seeds walk two of them along, so the database ends up with an
-instance parked on the lab wait rather than three rows in the same state:
+`mix setup` publishes the two rule documents, then seeds six clinicians (two
+per role), three patients and three appointments. Booking each one starts a
+visit process, and the seeds walk two of them along, so the database ends up
+with an instance parked on the lab wait rather than three rows in the same
+state:
 
 ```
 Published:
@@ -353,7 +354,7 @@ Published:
   appointment_visit v1 (published)
 
 Seeded:
-  3 clinicians
+  6 clinicians
   3 patients
   3 appointments
   3 visit instances

@@ -713,8 +713,15 @@ defmodule ClinicDemo.FinanceSeeds do
     end)
   end
 
+  # The longest-serving active nurse, so the same one every run. A task's
+  # candidates are written when it is created, so a task left open by an
+  # older seed lists only the nurses hired then; the first-hired nurse is a
+  # candidate on all of them, a later hire is not.
   defp front_desk_id do
-    Scheduling.list_clinicians!(authorize?: false)
+    Scheduling.list_clinicians!(
+      authorize?: false,
+      query: [sort: [inserted_at: :asc, full_name: :asc]]
+    )
     |> Enum.find(&(&1.role == :nurse and &1.active))
     |> case do
       nil -> @staff.id

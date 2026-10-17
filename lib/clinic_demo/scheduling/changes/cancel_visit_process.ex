@@ -12,9 +12,16 @@ defmodule ClinicDemo.Scheduling.Changes.CancelVisitProcess do
   So `:cancel` stops the process through the engine, `AshBpmn.cancel_instance/2`:
   every live token killed, every open or claimed task cancelled, the task
   timers defused, and an `:instance_cancelled` event written. It runs
-  `after_action`, inside the cancel's transaction, so a cancelled visit and
-  its stopped process commit together or not at all, and a failure to stop
-  the process fails the cancel.
+  `after_action`, inside the cancel's transaction, so the cancelled visit's
+  row and its stopped process's rows commit together or not at all, and a
+  failure to stop the process fails the cancel.
+
+  The flight view's live updates are not part of that. `cancel_instance/2`
+  runs outside an engine step, so the engine sends its "token killed"
+  broadcasts at once rather than after commit: if a later change in the same
+  `:cancel` fails and the transaction rolls back, flight viewers have already
+  been told the tokens died. A reload shows the truth. The fix belongs in
+  ash_bpmn (run `cancel_instance/2` as a locked step).
 
   An appointment with no running instance (its process already ended, or a
   back-dated cancel in the seeded history whose present re-assert finds the
@@ -39,7 +46,7 @@ defmodule ClinicDemo.Scheduling.Changes.CancelVisitProcess do
   def change(changeset, _opts, context) do
     Ash.Changeset.after_action(changeset, fn _changeset, appointment ->
       appointment
-      |> running_instances()
+      |> running_instances(context.actor)
       |> Enum.reduce_while({:ok, appointment}, &cancel(&1, &2, context.actor))
     end)
   end
@@ -60,10 +67,10 @@ defmodule ClinicDemo.Scheduling.Changes.CancelVisitProcess do
 
   # Booking starts exactly one instance per appointment; read the running
   # ones by subject (an indexed read) rather than assuming the count.
-  defp running_instances(appointment) do
+  defp running_instances(appointment, actor) do
     Instance
-    |> Ash.Query.for_read(:read)
+    |> Ash.Query.for_read(:read, %{}, actor: actor)
     |> Ash.Query.filter(subject_id == ^appointment.id and status == :running)
-    |> Ash.read!(authorize?: false)
+    |> Ash.read!()
   end
 end
