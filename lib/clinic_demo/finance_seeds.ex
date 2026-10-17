@@ -20,15 +20,33 @@ defmodule ClinicDemo.FinanceSeeds do
       left `:scheduled` — the forecast's positive side: real future visits
       with catalogue prices, awaiting their outcomes.
 
-  Three properties worth naming:
+  Four properties worth naming:
 
   **Deterministic.** Every visit's draws — patient, clinician, type, slot,
   outcome — come from a `:rand` stream seeded per visit from `(day, index)`
-  alone, never from a shared stream's position. A conditional draw anywhere
+  (the board's day: a fixed label in place of the date) alone, never from a shared stream's position. A conditional draw anywhere
   (a reseeded patient's weigh-in, a resumed visit's shortened walk) cannot
   shift the sequence for anything after it, so the same run-day rebuilds
   the same world byte for byte — which is what makes the /revenue
   screenshots comparable and the demo repeatable.
+
+  **The board's day is the same every day.** The board reads the read
+  instant's day and the next (`ScheduledFromReadInstant`), and of this
+  module's days only one ever lands in it: tomorrow, the first day of the
+  live window (today itself is neither history nor window — the main seeds'
+  story owns it). A day keyed on its calendar date draws its volume and its
+  visits from that date — a weekday ~7–16 visits, a weekend ~2–7, different
+  patients and reasons every date — so the board changed shape with the day
+  the seed ran. Tomorrow therefore draws from a fixed coordinate instead
+  (`:board_day_visits` visits, streams keyed on the visit's index alone):
+  the same patients, types, reasons and slot times whatever the weekday.
+  Every other day keeps its date-keyed draws.
+
+  The two kinds of draw meet when a re-run lands on a later day (the
+  window has slid, and yesterday's tomorrow is a history day now, or
+  yesterday's day-after is tomorrow). A day already holding finance
+  visits is walked with whichever draw booked them, so a top-up resumes
+  what is on file instead of stacking a second set beside it.
 
   **Idempotent.** Everything is lookup-or-create keyed on a natural value
   (the catalogue by name, patients by owner email, a visit by its patient
@@ -64,7 +82,11 @@ defmodule ClinicDemo.FinanceSeeds do
     weeks_back: 26,
     weeks_ahead: 3,
     weekday_per_day: 14,
-    weekend_per_day: 5
+    weekend_per_day: 5,
+    # Tomorrow's visits, whatever the weekday: 7 is the one volume both a
+    # weekday (7–16) and a weekend (2–7) draw can land on, so the board's
+    # booked lane stays a size the date-keyed days already showed.
+    board_day_visits: 7
   ]
 
   # The catalogue, with the weights the type mix draws from. Prices are the
@@ -217,6 +239,12 @@ defmodule ClinicDemo.FinanceSeeds do
     * `:weeks_ahead` — how wide the live window is (default 3).
     * `:weekday_per_day` / `:weekend_per_day` — average visits per day;
       each day draws a volume around its average, not a flat count.
+    * `:board_day_visits` — how many visits tomorrow (the board's booked
+      day) gets, drawn from the weekday-independent stream (default 7).
+    * `:today` — the day the run treats as today (default
+      `Date.utc_today/0`). The live window is booked at wall-now, so a
+      `:today` in the past would book past slots and be refused; tests pass
+      a future day (with `weeks_back: 0`) to seed as if on another weekday.
 
   Returns a stats map (booked/skipped appointments, outcomes walked).
   """
@@ -227,19 +255,24 @@ defmodule ClinicDemo.FinanceSeeds do
     patients = seed_patients()
     clinicians = seed_roster()
 
+    today = opts[:today] || Date.utc_today()
+    existing = load_existing()
+
     ctx = %{
       types: types,
       patients: patients,
       clinicians: clinicians,
-      existing: load_existing(),
-      base: Keyword.take(opts, [:weekday_per_day, :weekend_per_day])
+      existing: existing,
+      on_file_by_day: on_file_by_day(existing, patients),
+      board_day: Date.add(today, 1),
+      base: Keyword.take(opts, [:weekday_per_day, :weekend_per_day, :board_day_visits])
     }
 
     history_days =
-      for offset <- (opts[:weeks_back] * 7)..1//-1, do: Date.add(Date.utc_today(), -offset)
+      for offset <- (opts[:weeks_back] * 7)..1//-1, do: Date.add(today, -offset)
 
     future_days =
-      for offset <- 1..(opts[:weeks_ahead] * 7), do: Date.add(Date.utc_today(), offset)
+      for offset <- 1..(opts[:weeks_ahead] * 7)//1, do: Date.add(today, offset)
 
     {_ctx, stats} =
       Enum.reduce(history_days, {ctx, blank_stats()}, fn day, {ctx, stats} ->
@@ -366,31 +399,78 @@ defmodule ClinicDemo.FinanceSeeds do
   # --- the day walk --------------------------------------------------------------------
 
   defp walk_day(day, stats, ctx, mode) do
+    stream = day_stream(day, ctx)
+
+    Enum.reduce(1..volume(day, stream, ctx)//1, {ctx, stats}, fn index, {ctx, stats} ->
+      walk_visit(day, stream, index, ctx, stats, mode)
+    end)
+  end
+
+  # Which draw a day's visits come from: the board's day draws the
+  # weekday-independent `:board_day` stream, every other day its own date
+  # (see the moduledoc). Unless the day already holds finance visits — a
+  # re-run on a later day, the window slid — in which case the day keeps
+  # whichever draw booked them, the one that re-finds the most of what is on
+  # file (a tie, an empty day included, goes to the preferred draw).
+  defp day_stream(day, ctx) do
+    preferred = if day == ctx.board_day, do: :board_day, else: {:date, day}
+    other = if preferred == :board_day, do: {:date, day}, else: :board_day
+
+    case Map.get(ctx.on_file_by_day, day) do
+      nil ->
+        preferred
+
+      on_file ->
+        Enum.max_by([preferred, other], fn stream ->
+          stream
+          |> planned_keys(day, ctx)
+          |> MapSet.intersection(on_file)
+          |> MapSet.size()
+        end)
+    end
+  end
+
+  defp volume(_day, :board_day, ctx), do: ctx.base[:board_day_visits]
+
+  defp volume(day, {:date, day}, ctx) do
     base =
       if Date.day_of_week(day) in 1..5,
         do: ctx.base[:weekday_per_day],
         else: ctx.base[:weekend_per_day]
 
-    count = day_volume(day, base)
-
-    Enum.reduce(1..count, {ctx, stats}, fn index, {ctx, stats} ->
-      walk_visit(day, index, ctx, stats, mode)
-    end)
+    day_volume(day, base)
   end
 
-  defp walk_visit(day, index, ctx, stats, mode) do
-    # The visit's own stream: seeded from the day and the visit's position
-    # in it, and from nothing else. A re-run (or a resume) draws the same
-    # patient, slot and type again, which is exactly what the lookup-or-
-    # create contract needs — the existence check keys on what was drawn,
-    # so it must be the drawing that is stable, not the stream position.
-    :rand.seed(:exsss, visit_seed(day, index))
+  # The `{patient_id, slot}` keys a stream books on `day` — the same draws
+  # walk_visit makes, without the writes.
+  defp planned_keys(stream, day, ctx) do
+    for index <- 1..volume(day, stream, ctx)//1, into: MapSet.new() do
+      {patient, _clinician, _type, slot} = draw_visit(day, stream, index, ctx)
+      {patient.id, slot}
+    end
+  end
+
+  # The visit's own stream: seeded from the day's stream and the visit's
+  # position in it, and from nothing else. A re-run (or a resume) draws the
+  # same patient, slot and type again, which is exactly what the lookup-or-
+  # create contract needs — the existence check keys on what was drawn, so
+  # it must be the drawing that is stable, not the stream position. The
+  # stream is left positioned for the visit's remaining draws (booking,
+  # outcome, notes).
+  defp draw_visit(day, stream, index, ctx) do
+    :rand.seed(:exsss, visit_seed(stream, index))
 
     patient = Enum.fetch!(ctx.patients, ranged(1, length(ctx.patients)) - 1)
     clinician = pick_clinician(ctx.clinicians)
     {_entry, type} = weighted_pick(ctx.types, fn {entry, _type} -> entry.weight end)
 
     slot = DateTime.new!(day, slot_time(), "Etc/UTC")
+
+    {patient, clinician, type, slot}
+  end
+
+  defp walk_visit(day, stream, index, ctx, stats, mode) do
+    {patient, clinician, type, slot} = draw_visit(day, stream, index, ctx)
 
     case Map.get(ctx.existing, {patient.id, slot}) do
       nil ->
@@ -640,13 +720,18 @@ defmodule ClinicDemo.FinanceSeeds do
 
   # --- draws -------------------------------------------------------------------------------
 
-  # A visit's own seed state, derived from the day and the visit's position
-  # alone. Three integers, off a hash of the coordinates: stable across
-  # runs and processes, and independent of how many draws any other visit
-  # happened to make.
-  defp visit_seed(day, index) do
+  # A visit's own seed state, derived from the day's stream and the visit's
+  # position alone. Three integers, off a hash of the coordinates: stable
+  # across runs and processes, and independent of how many draws any other
+  # visit happened to make. A date-keyed day hashes its ISO date; the
+  # board's day hashes a fixed label, which is what keeps it the same on
+  # every run date.
+  defp visit_seed({:date, day}, index), do: seed_of(Date.to_iso8601(day), index)
+  defp visit_seed(:board_day, index), do: seed_of("board-day", index)
+
+  defp seed_of(coordinate, index) do
     <<a::32, b::32, c::32, _::binary>> =
-      :erlang.md5(:erlang.term_to_binary({Date.to_iso8601(day), index, "clinic-demo-finance"}))
+      :erlang.md5(:erlang.term_to_binary({coordinate, index, "clinic-demo-finance"}))
 
     {a, b, c}
   end
@@ -655,7 +740,7 @@ defmodule ClinicDemo.FinanceSeeds do
   # not depend on how many visits the previous day made): core plus jitter
   # reads as busy days and slow days, not a metronome.
   defp day_volume(day, base) do
-    :rand.seed(:exsss, visit_seed(day, 0))
+    :rand.seed(:exsss, visit_seed({:date, day}, 0))
     core = div(base, 2)
     jitter = ranged(0, base - core + 2)
     max(1, core + jitter)
@@ -717,6 +802,19 @@ defmodule ClinicDemo.FinanceSeeds do
     Map.update!(ctx, :existing, fn existing ->
       Map.put(existing, {patient_id, slot}, appointment)
     end)
+  end
+
+  # The finance visits already on file, grouped by the day they are on — the
+  # evidence `day_stream/2` reads to tell which draw booked a day. Only the
+  # finance bench counts: the main seeds' story books its own patients.
+  defp on_file_by_day(existing, patients) do
+    bench = MapSet.new(patients, & &1.id)
+
+    existing
+    |> Map.keys()
+    |> Enum.filter(fn {patient_id, _slot} -> MapSet.member?(bench, patient_id) end)
+    |> Enum.group_by(fn {_patient_id, slot} -> DateTime.to_date(slot) end)
+    |> Map.new(fn {day, keys} -> {day, MapSet.new(keys)} end)
   end
 
   defp blank_stats, do: %{booked: 0, skipped: 0, completed: 0, cancelled: 0, no_show: 0}
