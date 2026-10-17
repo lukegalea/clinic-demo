@@ -83,7 +83,8 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
         actor: staff
       )
 
-    # Severity 1 on an adult dog triages routine: the card sits in board_low.
+    # Severity 1 on an adult dog triages routine: the card sits in the
+    # Booked stage's routine row, board_booked__routine.
     appointment =
       ClinicDemo.Scheduling.book_appointment!(
         %{
@@ -103,22 +104,97 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
 
     render_async(view)
 
+    # Drop what the connected mount pushed, so what is left after the click
+    # is what the action pushed.
+    _initial = drain_pushed_messages(view)
+
     # The envelope the browser sends for the card's Check in button.
     render_hook(view, "a2ui:action", %{
       "version" => "v0.9.1",
       "action" => %{
         "name" => "invoke",
         "surfaceId" => "clinic_board",
-        "sourceComponentId" => "row_action_board_low_check_in_button",
+        "sourceComponentId" => "row_action_board_booked__routine_check_in_button",
         "context" => %{
           "action" => "check_in",
-          "component" => "board_low",
+          "component" => "board_booked__routine",
           "recordId" => appointment.id
         }
       }
     })
 
     assert ClinicDemo.Scheduling.get_appointment!(appointment.id).status == :checked_in
+
+    # The card moved one stage along its own row: from Booked to In visit,
+    # still routine.
+    assert cells_holding(appointment.id) == ["board_in_visit__routine"]
+
+    # And the open board was told so: the action's refresh rewrote every
+    # cell, with the card under its new cell and gone from its old one.
+    pushed = view |> drain_pushed_messages() |> records_updates()
+
+    assert pushed |> Map.keys() |> Enum.sort() == Enum.sort(board_cells())
+    assert holds?(pushed["board_in_visit__routine"], appointment.id)
+    refute holds?(pushed["board_booked__routine"], appointment.id)
+  end
+
+  test "the board is stages by triage rows, each row in its tone" do
+    model = board_model()
+
+    assert model["records"] |> Map.keys() |> Enum.sort() == Enum.sort(board_cells())
+
+    assert Map.take(model, Enum.map(~w(emergency urgent soon routine untriaged), &tone_key/1)) ==
+             %{
+               tone_key("emergency") => "danger",
+               tone_key("urgent") => "warning",
+               tone_key("soon") => "info",
+               tone_key("routine") => "success",
+               tone_key("untriaged") => "neutral"
+             }
+  end
+
+  defp tone_key(row), do: "_swimlane_tone_board__#{row}"
+
+  defp board_cells do
+    for row <- ~w(emergency urgent soon routine untriaged),
+        stage <- ~w(booked in_visit discharged closed),
+        do: "board_#{stage}__#{row}"
+  end
+
+  # Every "a2ui:messages" push already in the test's mailbox, in order. The
+  # LiveView process sends them before it replies, so after a render_* call
+  # they have all arrived.
+  defp drain_pushed_messages(%{proxy: {ref, _topic, _pid}} = view) do
+    receive do
+      {^ref, {:push_event, "a2ui:messages", %{messages: messages}}} ->
+        messages ++ drain_pushed_messages(view)
+    after
+      0 -> []
+    end
+  end
+
+  # The last records rewrite pushed for each cell, by cell name.
+  defp records_updates(messages) do
+    for %{"updateDataModel" => %{"path" => "/records/" <> cell, "value" => rows}} <- messages,
+        into: %{},
+        do: {cell, rows}
+  end
+
+  defp holds?(rows, id) when is_list(rows), do: Enum.any?(rows, &match?(%{"id" => ^id}, &1))
+
+  defp board_model do
+    ClinicDemoWeb.A2ui.BoardUI
+    |> AshA2ui.Info.build_surface(actor: nil)
+    |> Enum.find_value(fn
+      %{"updateDataModel" => %{"path" => "/", "value" => value}} -> value
+      _other -> nil
+    end)
+  end
+
+  defp cells_holding(appointment_id) do
+    for {cell, records} <- board_model()["records"],
+        Enum.any?(records, &match?(%{"id" => ^appointment_id}, &1)),
+        do: cell
   end
 
   test "a patched instant rebuilds the surface: delete first, then create", %{conn: conn} do

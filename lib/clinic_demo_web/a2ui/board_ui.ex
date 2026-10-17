@@ -1,16 +1,38 @@
 defmodule ClinicDemoWeb.A2ui.BoardUI do
   @moduledoc """
-  The clinic board: the process as lanes, one card column per stage.
+  The clinic board: the process as stage columns, split into rows by triage.
 
-  A `display :board` table: the lanes are the values of the appointment's
-  `board_lane` calculation (an atom with `one_of`), so the board's shape is
-  declared next to the lane logic rather than seeded into a table. Each
-  lane is an expanded table reading appointments whose `board_lane` equals
-  that value, and a lane move IS a state transition: the same row actions
-  as the schedule (check in, complete, discharge), each refreshing the
-  `:board` template key — every lane — so a card landing in its new lane
-  is the action's success feedback. There is no drag-and-drop by design:
-  the resource's own actions keep the state machine's rules.
+  A `display :board` table with two axes, both declared on the appointment
+  rather than seeded into a table:
+
+    * **Stages** (the columns, side by side): the values of the
+      appointment's `board_lane` calculation — booked, in visit,
+      discharged, closed — which reads the visit's status.
+    * **Triage** (the rows, `swimlanes_by`): the values of its
+      `triage_category` calculation, the triage decision's answer
+      (`triage_urgency`: emergency, urgent, soon, routine), plus
+      `:untriaged` for a visit the process has not triaged yet, listed
+      last. Each row is painted in its tone, from danger for an emergency
+      down to success for a routine visit, and neutral for untriaged.
+
+  Why `triage_urgency` and not `severity`: severity is what the owner said
+  on the phone (1 to 5), one of the triage decision's three inputs beside
+  the animal's age band and species. What a clinician means by how severe
+  a case is, is the decision's answer — a severity-3 rabbit is an
+  emergency, a severity-3 adult dog is urgent — so the rows follow the
+  answer, and the card still shows the reported severity.
+
+  Each (row, stage) cell is an expanded table reading appointments whose
+  `board_lane` and `triage_category` both match: 5 rows x 4 stages = 20
+  cells, one read each per render and per refresh (the board declares no
+  `query`, so a cell has no page or count read of its own), inside the
+  default `limit` of 50.
+
+  A stage move IS a state transition: the same row actions as the schedule
+  (check in, complete, discharge), each refreshing the `:board` template
+  key — every cell — so a card landing in the next stage of its row is the
+  action's success feedback. There is no drag-and-drop by design: the
+  resource's own actions keep the state machine's rules.
 
   Check in and no-show are `via`-delegated to
   `ClinicDemo.Visits.VisitFacade`: the click completes the visit's
@@ -81,19 +103,32 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
       # offers the moves its state allows.
       row_actions [:check_in, :complete, :mark_no_show, :cancel, :discharge]
 
-      # Source-less: the lanes are board_lane's `one_of` values, in the
-      # order the clinic reads its day, headed in the clinic's words.
+      # Source-less: the stage columns are board_lane's `one_of` values, in
+      # the order a visit moves through them, and the rows are
+      # triage_category's, most urgent first and untriaged last.
       sections do
         scope_by :board_lane
-        values [:intake, :low, :medium, :high, :in_visit, :discharged, :closed]
+        values [:booked, :in_visit, :discharged, :closed]
 
-        labels intake: "Booked",
-               low: "Low — routine",
-               medium: "Medium — soon",
-               high: "High — urgent & emergency",
+        labels booked: "Booked",
                in_visit: "In visit",
                discharged: "Discharged",
                closed: "Closed"
+
+        swimlanes_by :triage_category
+        swimlane_values [:emergency, :urgent, :soon, :routine, :untriaged]
+
+        swimlane_labels emergency: "Emergency",
+                        urgent: "Urgent",
+                        soon: "Soon",
+                        routine: "Routine",
+                        untriaged: "Not yet triaged"
+
+        swimlane_tones emergency: :danger,
+                       urgent: :warning,
+                       soon: :info,
+                       routine: :success,
+                       untriaged: :neutral
       end
     end
 
