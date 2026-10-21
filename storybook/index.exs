@@ -4,5 +4,6 @@
 # section. `open: true` starts the section expanded. Story files
 # (`*.story.exs`) are discovered automatically from their folder.
 [
-  components: [label: "Components", open: true]
+  components: [label: "Components", open: true],
+  atlas: [label: "Atlas (POC)", open: true]
 ]

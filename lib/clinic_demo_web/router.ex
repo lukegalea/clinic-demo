@@ -81,6 +81,13 @@ defmodule ClinicDemoWeb.Router do
       live "/worklist", A2ui.WorklistLive
       live "/visits", A2ui.VisitsLive
       live "/patients", A2ui.PatientsLive
+      # Atlas POC lab (form fields, HEEx vs form-associated Lit).
+      live "/atlas-lab", AtlasLabLive
+      # Atlas POC: CLM 2.0, HEEx shells around declared surfaces.
+      live "/contracts", Clm.ContractsHubLive
+      live "/contracts/:id", Clm.ContractLive
+      # SPIKE: the same surface rendered by HEEx on the server (read-only).
+      live "/spike/heex/contracts/:id", Spike.HeexSurfaceLive
       live "/clinicians", A2ui.CliniciansLive
       live "/processes", A2ui.ProcessesLive
       live "/decisions", A2ui.DecisionTablesLive

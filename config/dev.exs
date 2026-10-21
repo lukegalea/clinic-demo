@@ -72,7 +72,7 @@ config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
 # set, with a known fallback so `mix phx.server` stays a one-liner. The
 # password it protects is a demo, in either environment.
 config :clinic_demo, :gate,
-  enabled?: true,
+  enabled?: System.get_env("DEMO_GATE_ENABLED", "true") == "true",
   password: System.get_env("DEMO_GATE_PASSWORD") || "clinic"
 
 # Do not include metadata nor timestamps in development logs

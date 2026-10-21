@@ -52,6 +52,12 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
     {"Revenue", "/revenue", "clinic_revenue"}
   ]
 
+  # Atlas POC pages: no presence tracking, so no topic.
+  @poc_entries [
+    {"Contracts", "/contracts", nil},
+    {"Atlas lab", "/atlas-lab", nil}
+  ]
+
   @presence_events ["presence_state", "presence_diff"]
 
   @impl true
@@ -68,7 +74,8 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
      assign(socket,
        actor_id: actor_id,
        current_path: session["current_path"] || "",
-       snapshot: snapshot(actor_id)
+       snapshot: snapshot(actor_id),
+       poc_entries: @poc_entries
      )}
   end
 
@@ -83,7 +90,12 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <nav class="flex flex-wrap gap-1.5" aria-label="Main" data-testid="nav-presence">
+    <nav
+      class="flex md:flex-col gap-0.5 p-2 overflow-x-auto"
+      aria-label="Main"
+      data-testid="nav-presence"
+    >
+      <span class={group_class()}>Clinic</span>
       <.nav_pill :for={entry <- @snapshot} entry={entry} current_path={@current_path} />
       <%!-- /operator is a plain controller page, not a LiveView, so there
            is nothing to navigate to — this one stays a full load. --%>
@@ -94,6 +106,12 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
       >
         Operator
       </a>
+      <span class={group_class()}>Contracts (POC)</span>
+      <.nav_pill
+        :for={{label, path, _} <- @poc_entries}
+        entry={%{label: label, path: path, others: []}}
+        current_path={@current_path}
+      />
     </nav>
     """
   end
@@ -124,11 +142,11 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
       |> assign(overflow: max(0, length(assigns.others) - 3))
 
     ~H"""
-    <span :if={@others != []} class="ml-1 inline-flex items-center">
+    <span :if={@others != []} class="ms-auto inline-flex items-center">
       <span
         :for={{p, i} <- Enum.with_index(@visible)}
         class={
-          "inline-flex size-5 items-center justify-center rounded-full border-2 border-border bg-secondary-background text-[9px] font-bold leading-none text-foreground" <>
+          "inline-flex size-5 items-center justify-center rounded-full border-2 border-(--atlas-bg-surface) bg-(--atlas-bg-neutral) text-[9px] font-semibold leading-none text-(--atlas-text-primary)" <>
             if(i > 0, do: " -ml-1.5", else: "")
         }
         title={"#{p.label} is on #{@label}"}
@@ -138,7 +156,7 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
       </span>
       <span
         :if={@overflow > 0}
-        class="-ml-1.5 inline-flex size-5 items-center justify-center rounded-full border-2 border-border bg-yellow text-[9px] font-bold leading-none text-foreground"
+        class="-ml-1.5 inline-flex size-5 items-center justify-center rounded-full border-2 border-(--atlas-bg-surface) bg-(--atlas-bg-warning-subtle) text-[9px] font-semibold leading-none text-(--atlas-text-primary)"
         aria-label={"#{@overflow} more on #{@label}"}
       >
         +{@overflow}
@@ -148,14 +166,16 @@ defmodule ClinicDemoWeb.A2ui.NavPresenceLive do
   end
 
   # The nav pill classes, unchanged from the design lane's root layout.
+  # Atlas sidebar items. The current page is marked by aria-current (set by
+  # PresenceBar.nav_current_attrs/2), so the styling keys off that.
   defp pill_class do
-    "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-border bg-secondary-background px-4 text-sm font-base text-foreground shadow-shadow ring-offset-white transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-lift active:translate-x-0.5 active:translate-y-0.5 active:shadow-press"
+    "flex shrink-0 items-center gap-2 h-9 px-3 whitespace-nowrap rounded-(--atlas-radius-lg) text-sm text-(--atlas-text-secondary) hover:bg-(--atlas-bg-surface-sunken) hover:text-(--atlas-text-primary) focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-(--atlas-border-focus) aria-[current=page]:bg-(--atlas-bg-brand-subtle) aria-[current=page]:text-(--atlas-text-brand) aria-[current=page]:font-medium"
   end
 
-  # The nav-wide snapshot: every nav surface topic, others only. A key is
-  # the actor's stable id, so the caller's own row (tracked by whichever
-  # surface LiveView they are on) is filtered out; nil (anonymous) matches
-  # nothing and sees everyone.
+  defp group_class do
+    "hidden md:block px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-(--atlas-text-tertiary)"
+  end
+
   defp snapshot(actor_id) do
     Enum.map(@entries, fn {label, path, surface_id} ->
       others =

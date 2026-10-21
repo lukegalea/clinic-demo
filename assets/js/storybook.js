@@ -14,6 +14,11 @@
  * entries here (e.g. the app's canvas hook) rather than letting stories
  * reach into app.js.
  */
+// Atlas POC: the Lit elements (<atlas-tag>, <atlas-text-field>), so stories
+// can show a HEEx twin next to the element it mirrors.
+import {defineAtlasElements} from "./atlas/elements.js"
+defineAtlasElements()
+
 window.storybook = {
   Hooks: [],
   Params: [],

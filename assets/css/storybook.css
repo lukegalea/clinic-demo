@@ -14,9 +14,12 @@
    diffable line-for-line. */
 @import "../../deps/ash_a2ui/priv/js/ash_a2ui_theme.css";
 @import "./neobrutalism.css";
+/* Atlas POC tokens: same position as in app.css. */
+@import "./atlas.css";
 @source "../css";
 @source "../js";
 @source "../../lib/clinic_demo_web";
+@source "../../lib/atlas";
 /* Story files carry classes in slots/attributes (the palette story demos
    textures); without scanning them the storybook build would drop every
    class only a story uses — the storybook would lie by omission. */

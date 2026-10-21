@@ -18,6 +18,8 @@
 // To load it, simply add a second `<link>` to your `root.html.heex` file.
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
+import {markSurfaceTimeline} from "./atlas/timing.js"
+markSurfaceTimeline()
 import "phoenix_html"
 // Establish Phoenix Socket and LiveView configuration.
 import {Socket} from "phoenix"
@@ -47,6 +49,11 @@ import {NbScroller} from "./hooks/nb_scroller.js"
 import {AshA2uiCombobox} from "./hooks/ash_a2ui_combobox.js"
 import {DayCalendar, DaySheet} from "./hooks/day_view.js"
 import {defineNbComponents} from "../../deps/ash_a2ui/priv/js/nb_components.js"
+import {withAtlas} from "./atlas/catalog.js"
+import {defineAtlasElements} from "./atlas/elements.js"
+import {clearPlaceholders} from "./atlas/placeholder.js"
+// Demo for the team: the smallest useful Lit component (/atlas-lab).
+import "./demo/hello_badge.js"
 import "./canvas/ash_canvas_graph.js"
 import {AshBpmnDesigner, AshBpmnViewer} from "../../deps/ash_bpmn/priv/js/ash_bpmn_designer.js"
 import {AshDecisionsEditor} from "../../deps/ash_decisions/priv/js/ash_decisions_editor.js"
@@ -61,16 +68,29 @@ const a2uiCatalog = createAshA2uiCatalog({
   lit: {html, css, nothing},
 })
 
+// Atlas POC: the same catalog, with component types swapped for Atlas
+// elements (Button today). Same catalog id, same wire format.
+// `?atlas=off` keeps the stock catalog, for A/B comparison during the POC.
+const atlasOn = new URLSearchParams(window.location.search).get("atlas") !== "off"
+const atlasCatalog = atlasOn
+  ? withAtlas(a2uiCatalog, {Catalog, A2uiLitElement, lit: {html, css, nothing}})
+  : a2uiCatalog
+
 const adminCatalog = createAshAdminCatalog({
   Catalog,
   // The admin catalog extends whatever basic catalog it is handed — give it
   // the merged one so its pickers keep the select/combobox upgrades.
-  basicCatalog: a2uiCatalog,
+  basicCatalog: atlasCatalog,
   A2uiLitElement,
   A2uiController,
   z,
   lit: {html, css, nothing},
 })
+
+// Atlas POC: the admin catalog gets the same treatment (its ChoicePicker).
+const atlasAdminCatalog = atlasOn
+  ? withAtlas(adminCatalog, {Catalog, A2uiLitElement, lit: {html, css, nothing}})
+  : adminCatalog
 
 // Without a markdown renderer every Text on every surface collapses to one
 // unstyled span, and v1.0's heading-as-markdown has no variant to fall back
@@ -78,7 +98,7 @@ const adminCatalog = createAshAdminCatalog({
 // DOMPurify — these values come from the database, not a trusted author.
 configureAshA2ui({
   MessageProcessor,
-  catalogs: [a2uiCatalog, adminCatalog],
+  catalogs: [atlasCatalog, atlasAdminCatalog],
   markdown: {ContextProvider, context: Context.markdown, render: renderMarkdown},
 })
 
@@ -88,6 +108,8 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 // to any other bundle that defines them. Must run before mount so the
 // Day view's elements upgrade in the first patch.
 defineNbComponents()
+defineAtlasElements()
+clearPlaceholders()
 
 // The flight view's diagram hook (/flight): a deliberately thin delegate —
 // the mermaid bundle is megabytes and must stay off every other page, so the

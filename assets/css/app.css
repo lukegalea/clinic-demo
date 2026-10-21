@@ -39,9 +39,20 @@
    so our mapping wins; shared with storybook.css so both builds stay in
    lockstep. */
 @import "./neobrutalism.css";
+/* Atlas POC: generated from priv/atlas/*.json by `mix atlas.tokens.build`.
+   Imported last, so its bridge overrides both the A2UI theme and the
+   neobrutalism raw variables. */
+@import "./atlas.css";
+
+/* Atlas POC: while the server-rendered placeholder (Atlas.Surface.container)
+   is up, the hook's own bootstrap skeleton would flash over it for a few ms. */
+#ash-a2ui-surface:has(> [data-atlas-placeholder]) > [data-ash-a2ui-skeleton] {
+  display: none;
+}
 @source "../css";
 @source "../js";
 @source "../../lib/clinic_demo_web";
+@source "../../lib/atlas";
 /* Required for Tailwind to automatically pick up changes in colocated CSS files in dev */
 @source "../../_build/dev/phoenix-colocated/clinic_demo/*/";
 /* ash_bpmn and ash_decisions ship whole LiveViews with Tailwind classes baked

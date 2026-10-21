@@ -31,6 +31,9 @@ defmodule ClinicDemoWeb.A2ui.Links do
   @impl AshA2ui.LinkResolver
   def surface_for({:resource, Patient}, _context), do: "patients"
   def surface_for({:resource, Clinician}, _context), do: "clinicians"
+  def surface_for({:resource, ClinicDemo.Clm.Contract}, _context), do: "contract"
+  # The hub's `link {:contract, :id}`: the contract page, by surface key.
+  def surface_for({:surface, "contract"}, _context), do: "contract"
   def surface_for(_target, _context), do: nil
 
   @doc """
@@ -42,6 +45,9 @@ defmodule ClinicDemoWeb.A2ui.Links do
 
   def target_path("clinicians", id) when is_binary(id),
     do: ~p"/clinicians?#{[ctx: [clinician: id]]}"
+
+  # The contract page takes its contract from the path, not a context param.
+  def target_path("contract", id) when is_binary(id), do: ~p"/contracts/#{id}"
 
   def target_path(_surface, _id), do: nil
 

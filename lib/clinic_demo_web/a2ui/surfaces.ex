@@ -140,6 +140,19 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       description:
         "The emergency board: appointments the triage decision table has routed as " <>
           "emergencies, promoted from an agent-composed surface spec."
+    },
+    # Atlas POC: CLM 2.0, a different domain on the same machinery.
+    %{
+      name: "contracts",
+      label: "Contracts",
+      ui: A2ui.ContractsHubUI,
+      path: "/contracts",
+      blurb: "Vendor contracts, by expiry: search, filter, open one to check it.",
+      description:
+        "The contracts hub (contract management): every vendor contract with its " <>
+          "properties, services, status (active, expiring soon, expired), notice deadline, " <>
+          "expiry date and whether its AI-extracted details are verified, with search and " <>
+          "filters. Each contract opens its own page."
     }
   ]
 
@@ -308,7 +321,13 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
       "process" => ClinicDemo.Visits.Process,
       "visit_instance" => ClinicDemo.Visits.Instance,
       "human_task" => ClinicDemo.Visits.HumanTask,
-      "task_candidate" => ClinicDemo.Visits.TaskCandidate
+      "task_candidate" => ClinicDemo.Visits.TaskCandidate,
+      # Atlas POC: CLM 2.0. Invented fixtures only; no customer contract data.
+      "contract" => ClinicDemo.Clm.Contract,
+      "contract_line" => ClinicDemo.Clm.ContractLine,
+      "extracted_value" => ClinicDemo.Clm.ExtractedValue,
+      "scheduled_work" => ClinicDemo.Clm.ScheduledWork,
+      "contract_document" => ClinicDemo.Clm.ContractDocument
     })
   end
 end
