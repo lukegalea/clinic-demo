@@ -113,7 +113,7 @@ defmodule ClinicDemo.Planning.FourEyesTest do
                :proposed
     end
 
-    test "a rejection by either approver rejects the candidate and withdraws the other task" do
+    test "a rejection by either approver rejects the candidate and the engine cancels the other task" do
       w = setup_week()
 
       assert {:ok, rejected} =
@@ -123,8 +123,28 @@ defmodule ClinicDemo.Planning.FourEyesTest do
 
       tasks = FourEyes.tasks(w.candidate.id)
       assert tasks["HeadVetSignoff"].outcome == "rejected"
-      assert tasks["ManagerSignoff"].status == :completed
-      assert tasks["ManagerSignoff"].outcome == "withdrawn"
+      # Engine-native withdraw: the process is cancelled, so the sibling task
+      # is cancelled by the engine (not completed-withdrawn by the planner).
+      assert tasks["ManagerSignoff"].status == :cancelled
+      assert tasks["ManagerSignoff"].outcome == nil
+
+      # The engine cancelled the process: exactly one instance, status
+      # :cancelled, and no open or claimed sign-off work left behind.
+      instance_ids = tasks |> Map.values() |> Enum.map(& &1.instance_id) |> Enum.uniq()
+      assert length(instance_ids) == 1
+
+      require Ash.Query
+
+      refute Enum.any?(
+               ClinicDemo.Visits.HumanTask
+               |> Ash.Query.filter(
+                 instance_id == ^hd(instance_ids) and status in [:open, :claimed]
+               )
+               |> Ash.read!(authorize?: false)
+             )
+
+      assert %{status: :cancelled} =
+               Ash.get!(ClinicDemo.Visits.Instance, hd(instance_ids), authorize?: false)
 
       assert Scheduling.list_shifts!(authorize?: false) == []
     end

@@ -334,7 +334,7 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
 
       # Its sign-off tasks are closed, not left on a worklist.
       tasks = ClinicDemo.Planning.FourEyes.tasks(first.id)
-      assert Enum.all?(tasks, fn {_node, task} -> task.status == :completed end)
+      assert Enum.all?(tasks, fn {_node, task} -> task.status == :cancelled end)
     end
   end
 end
