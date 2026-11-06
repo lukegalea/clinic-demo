@@ -50,6 +50,32 @@ defmodule ClinicDemo.Scheduling.AppointmentType do
       constraints min: 5, max: 240
     end
 
+    attribute :mobile_capable, :boolean do
+      description """
+      Whether this kind of visit can be done at a client's address. A mobile-visit
+      plan refuses a request for a type that is not (the plan is `needs_input`,
+      naming the request), rather than driving somewhere to do what cannot be done
+      there.
+      """
+
+      allow_nil? false
+      public? true
+      default false
+    end
+
+    attribute :mobile_equipment, {:array, :string} do
+      description """
+      What the veterinarian must carry for this visit away from the clinic
+      (e.g. `"vaccine_cooler"`), compared with `Clinician.mobile_kit`. Empty when
+      nothing special is needed.
+      """
+
+      allow_nil? false
+      public? true
+      default []
+      constraints items: [min_length: 1, max_length: 40, trim?: true]
+    end
+
     timestamps()
   end
 
@@ -58,7 +84,14 @@ defmodule ClinicDemo.Scheduling.AppointmentType do
   end
 
   actions do
-    default_accept [:name, :base_price, :default_duration_minutes]
+    default_accept [
+      :name,
+      :base_price,
+      :default_duration_minutes,
+      :mobile_capable,
+      :mobile_equipment
+    ]
+
     defaults [:read, :destroy, create: :*, update: :*]
   end
 end

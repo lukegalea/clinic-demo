@@ -1,7 +1,8 @@
 defmodule ClinicDemo.Planning.Checks.AppliedByCandidate do
   @moduledoc """
-  Gates every write to `Shift` and `Assignment`: it passes only while
-  `ClinicDemo.Planning.Changes.ApplyCandidate` is writing a candidate's plan.
+  Gates every write to `Shift`, `Assignment` and `VisitRequest.schedule`: it passes
+  only while `ClinicDemo.Planning.Changes.ApplyCandidate` is writing a candidate's
+  plan.
 
   Caller-supplied options are **not trusted**: a `context:` passed to `place_shift`
   proves nothing. The apply change sets a process-local marker
@@ -29,7 +30,8 @@ defmodule ClinicDemo.Planning.Checks.AppliedByCandidate do
 
   @doc """
   Runs `fun` with the apply marker set for `candidate_id`, and clears it after,
-  whatever happens. Only the apply change calls this.
+  whatever happens. Only the apply change calls this. `cancel_ids` are the ids of
+  the existing rows the apply's diff may update (cancels; requests it schedules).
   """
   @spec with_marker(Ecto.UUID.t(), MapSet.t(), (-> result)) :: result when result: term()
   def with_marker(candidate_id, %MapSet{} = cancel_ids, fun) do

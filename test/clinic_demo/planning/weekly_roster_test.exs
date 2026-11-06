@@ -212,7 +212,7 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
       {:ok, resolved} = Planning.Run.resolve_binding(run)
       assert resolved.backend_profile_hash == live.backend_profile_hash
 
-      assert Binding |> Ash.read!(authorize?: false) |> hd() |> Map.fetch!(:backend_profile_hash) ==
+      assert Ash.get!(Binding, live.id, authorize?: false).backend_profile_hash ==
                String.duplicate("e", 64)
     end
   end

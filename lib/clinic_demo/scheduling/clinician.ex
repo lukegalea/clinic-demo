@@ -48,6 +48,19 @@ defmodule ClinicDemo.Scheduling.Clinician do
       constraints one_of: [:clinic_manager, :head_vet]
     end
 
+    attribute :mobile_kit, {:array, :string} do
+      description """
+      What the clinician's vehicle carries on a mobile visit (e.g. `"vaccine_cooler"`).
+      A visit whose appointment type needs equipment that is not in the kit cannot be
+      planned for this clinician.
+      """
+
+      allow_nil? false
+      public? true
+      default []
+      constraints items: [min_length: 1, max_length: 40, trim?: true]
+    end
+
     attribute :active, :boolean do
       description "Inactive clinicians keep their history but take no new bookings."
       allow_nil? false
@@ -93,7 +106,7 @@ defmodule ClinicDemo.Scheduling.Clinician do
     create :create do
       description "Add a clinician to the roster."
       primary? true
-      accept [:full_name, :role, :license_number, :leadership]
+      accept [:full_name, :role, :license_number, :leadership, :mobile_kit]
 
       validate present(:license_number) do
         where attribute_equals(:role, :veterinarian)

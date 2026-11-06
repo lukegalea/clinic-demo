@@ -42,6 +42,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
       reference :patient, on_delete: :delete
       reference :clinician, on_delete: :restrict
       reference :appointment_type, on_delete: :restrict
+      reference :service_location, on_delete: :restrict
     end
   end
 
@@ -67,6 +68,21 @@ defmodule ClinicDemo.Scheduling.Appointment do
       allow_nil? false
       public? true
       constraints min_length: 3, max_length: 200, trim?: true
+    end
+
+    attribute :location_mode, :atom do
+      description """
+      Where the visit happens: `:in_clinic` (the default, and what every visit was
+      before mobile visits), `:mobile` (the veterinarian drives to a
+      `service_location`) or `:telehealth` (a call; no place, no travel, but the
+      clinician's time is spent). A mobile visit names its service location; the
+      other two never do.
+      """
+
+      allow_nil? false
+      public? true
+      default :in_clinic
+      constraints one_of: [:in_clinic, :mobile, :telehealth]
     end
 
     attribute :status, :atom do
@@ -145,6 +161,14 @@ defmodule ClinicDemo.Scheduling.Appointment do
     # a visit booked without a type simply recognizes no charge.
     belongs_to :appointment_type, ClinicDemo.Scheduling.AppointmentType do
       description "The price-list entry this visit is, if it has one."
+      public? true
+      temporal_keys {:valid_at, nil}
+    end
+
+    # Where a mobile visit happens. Nil for in-clinic and telehealth visits (the
+    # clinic is where the day starts, not a per-visit destination).
+    belongs_to :service_location, ClinicDemo.Scheduling.ServiceLocation do
+      description "The place the veterinarian drives to, for a mobile visit."
       public? true
       temporal_keys {:valid_at, nil}
     end
@@ -322,7 +346,7 @@ defmodule ClinicDemo.Scheduling.Appointment do
     create :book do
       description "Put a new appointment on the schedule."
 
-      accept [:scheduled_at, :duration_minutes, :reason, :severity]
+      accept [:scheduled_at, :duration_minutes, :reason, :severity, :location_mode]
 
       argument :patient_id, :uuid do
         description "An existing patient. Exactly one of this and :patient."
@@ -380,6 +404,16 @@ defmodule ClinicDemo.Scheduling.Appointment do
       # never fires, rather than trying to append a null pointer.
       change manage_relationship(:appointment_type_id, :appointment_type, type: :append),
         where: [present(:appointment_type_id)]
+
+      argument :service_location_id, :uuid do
+        description "Where a mobile visit happens. Required for :mobile, refused otherwise."
+        allow_nil? true
+      end
+
+      change manage_relationship(:service_location_id, :service_location, type: :append),
+        where: [present(:service_location_id)]
+
+      validate {ClinicDemo.Scheduling.Validations.LocationMatchesMode, []}
 
       # The value event (BPSim BD-2) — emitted BEFORE the process starts.
       # The design's sketch had it after `StartVisitProcess`; the fold
