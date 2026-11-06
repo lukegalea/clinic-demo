@@ -713,6 +713,21 @@ package ships no HTTP client, provider or answer types._
 
 [ash_judgments usage rules](deps/ash_judgments/usage-rules.md)
 <!-- ash_judgments-end -->
+<!-- ash_open_lineage-start -->
+## ash_open_lineage usage
+_Emits OpenLineage spec 2-0-2 RunEvents from Ash: a Spark extension +
+Ash.Notifier that emits a COMPLETE event for each successful create, update or destroy,
+and a small public API for non-Ash jobs. Facets carry structural names only — never actor, tenant or
+data values._
+
+[ash_open_lineage usage rules](deps/ash_open_lineage/usage-rules.md)
+<!-- ash_open_lineage-end -->
+<!-- ash_planning-start -->
+## ash_planning usage
+_A constraint-solving proposal kernel for Ash: backends, IR, validators, resource fragments._
+
+[ash_planning usage rules](deps/ash_planning/usage-rules.md)
+<!-- ash_planning-end -->
 <!-- ash_postgres-start -->
 ## ash_postgres usage
 _The PostgreSQL data layer for Ash Framework_

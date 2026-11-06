@@ -29,8 +29,9 @@ defmodule ClinicDemo.MixProject do
   # rewrites that block from it and drops any package it does not list, and
   # scripts/usage-rules-check.sh (CI and precommit) fails when the committed
   # file and a fresh sync disagree. The sync only sees top-level deps, so
-  # transitive ones (ash_rules, ash_events_projections, ash_open_lineage)
-  # cannot be listed here without declaring them.
+  # transitive ones (ash_rules, ash_events_projections) cannot be listed here
+  # without declaring them. ash_open_lineage was one until the planning kernel
+  # needed its snapshot contract pinned: it is declared below now, so it syncs.
   #
   # Phoenix's rules are inlined: short, and relevant to every web change. The
   # Ash family is linked rather than inlined (same trade as ash_enterprise: a
@@ -179,6 +180,21 @@ defmodule ClinicDemo.MixProject do
       # The process engine's jobs. `oban_testing: :inline` means this demo never
       # starts a queue, but the shim still expects the modules to be loadable.
       {:oban, "~> 2.0"},
+
+      # The planning kernel (weekly staffing roster): a constraint-solving
+      # proposal kernel. Solverl is its optional MiniZinc adapter, declared
+      # here because the clinic uses it. ash_open_lineage is pinned to the
+      # snapshot value contract (CanonicalJSON + digest) the kernel's
+      # snapshots are built on; ash_compliance pulls it transitively, so the
+      # first-party pin overrides.
+      {:ash_planning, github: "lukegalea/ash_planning"},
+      # Solverl starts erlexec with the app; config/runtime.exs makes sure $SHELL is set
+      # for it (erlexec refuses to start without one).
+      {:solverl, "~> 1.1"},
+      {:ash_open_lineage,
+       github: "lukegalea/ash_open_lineage",
+       ref: "205d072f00d0308e0e950bcab43b2fda1cb461d7",
+       override: true},
 
       # The tool under demonstration. Dev-only and `runtime: false`: it is a
       # read-only introspection layer for agents, never part of the running

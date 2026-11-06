@@ -67,6 +67,23 @@ defmodule ClinicDemo.Visits.TaskDesk do
     end
   end
 
+  @doc """
+  Closes a task as the roster planner, with an outcome the process declares
+  (the `withdrawn` outcome of the roster approval). Not a worklist move: no
+  candidacy check, because the planner is a system actor, and only for the
+  planner's own actor.
+  """
+  @spec complete_as_planner(Ecto.UUID.t(), atom, map) :: {:ok, struct} | {:error, term}
+  def complete_as_planner(task_id, outcome, planner) do
+    if ClinicDemo.Planning.Machinery.machinery?(planner) do
+      with {:ok, task} <- fetch(task_id) do
+        AshBpmn.complete_task(task, outcome: outcome, actor: planner)
+      end
+    else
+      forbidden()
+    end
+  end
+
   defp fetch(task_id) do
     case Ash.get(HumanTask, task_id, authorize?: false) do
       {:ok, task} -> {:ok, task}

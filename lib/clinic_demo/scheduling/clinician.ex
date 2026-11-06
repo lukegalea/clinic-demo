@@ -37,6 +37,17 @@ defmodule ClinicDemo.Scheduling.Clinician do
       constraints match: ~r/^[A-Z]{2}-\d{6}$/
     end
 
+    attribute :leadership, :atom do
+      description """
+      A position of authority beyond the clinical role: the clinic manager or the
+      head vet. Roster candidates are approved by one of each (four eyes); nil
+      for everybody else.
+      """
+
+      public? true
+      constraints one_of: [:clinic_manager, :head_vet]
+    end
+
     attribute :active, :boolean do
       description "Inactive clinicians keep their history but take no new bookings."
       allow_nil? false
@@ -82,7 +93,7 @@ defmodule ClinicDemo.Scheduling.Clinician do
     create :create do
       description "Add a clinician to the roster."
       primary? true
-      accept [:full_name, :role, :license_number]
+      accept [:full_name, :role, :license_number, :leadership]
 
       validate present(:license_number) do
         where attribute_equals(:role, :veterinarian)

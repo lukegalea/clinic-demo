@@ -181,6 +181,47 @@ chains into tooling rather than into a human's eyeball.
 23. **`mix precommit` before you claim you are done.** Compile with warnings as
     errors, unused deps, format, test.
 
+### Planning (the weekly staffing roster)
+
+24. **Planning proposes; two people commit.** `ClinicDemo.Planning` reads the week
+    and a backend proposes shifts and appointment assignments as `Candidate`
+    rows. A candidate is inert. It becomes `Scheduling.Shift` / `Assignment` rows
+    only through `Candidate.apply`, which the clinic manager AND the head vet
+    (two different clinicians, the `candidate_four_eyes` process's two human tasks)
+    must both have signed (`Planning.FourEyes.sign/3`; the policy
+    `Checks.FourEyesSignedOff` refuses everything else). The solver never mutates
+    an `Appointment`: bookings are the demand it covers.
+25. **`Shift` and `Assignment` have no direct create.** Their `:place` and
+    `:cancel` are authorized only while an approved, fully signed candidate is
+    being applied (`Checks.AppliedByCandidate`). Do not add another way in; a
+    context key alone is not authority, the check re-verifies the candidate.
+26. **Read the week `as_of` the knowledge cutoff, and recheck before apply.**
+    `Appointment` and `Availability` are temporal: pin them with
+    `Ash.Query.as_of/2` (the read-action option form silently reads *now*). The
+    apply recheck rebuilds the snapshot's inputs; any difference is drift and
+    ends the candidate `:rejected` and `:stale`.
+27. **The decision is pinned, not latest.** `staffing.policy` is evaluated at the
+    version and hash the binding pinned (`StaffingPolicy.fetch_definition/3`),
+    unlike `appointment.triage`, because a plan must replay against the rule it
+    was made with. A new version is a new `Binding` (`Planning.Install`).
+28. **Two verdicts, written independently.** The MiniZinc checker
+    (`priv/planning/weekly_roster.mzc.mzn`) and `Planning.RosterValidator` must
+    both say `correct` for a candidate to be approvable. The validator reads the
+    domain-level problem (instants, minutes, role names) and shares nothing with
+    `Planning.Lowering` (the slot grid, role codes, indices). Keep it that way:
+    do not call the lowering from the validator, the explainer or the tests'
+    expectations of them.
+29. **Model, checker and validator are content-hashed artifacts.** Editing
+    `weekly_roster.mzn`, its checker or the validator changes the hashes baked in
+    at compile time (`Planning.Models.WeeklyRoster`); run
+    `mix run priv/planning/seed_weekly_roster.exs` (or `Planning.Install.install!/0`)
+    to publish the new `ModelVersion` and rebind. Never edit a published version.
+30. **Simulated is simulated.** A candidate is evaluated on the BIZEV twin with
+    `Planning.WeeklyRoster.simulate/2` (`Scenarios.generate!/1` with the five-field
+    identity `(candidate_id, snapshot_digest, model_hash, random_stream_id,
+    replication_id)`); results are labelled `simulated?: true`, and the real ledger
+    and projection are never written. Fixtures are synthetic.
+
 ## Layout
 
 ```
@@ -188,8 +229,12 @@ lib/clinic_demo/
   scheduling/            the domain: patients, clinicians, appointments
   decisions/             DMN definitions, the evidence trail, the BPMN bridge
   visits/                the six BPMN resources and the three host callbacks
-  rules.ex               publishes both documents from priv/, in order
+  planning/              the weekly roster: reader, lowering, snapshot builder,
+                         solve runner, check pipeline, independent validator,
+                         four-eyes approval, apply (ash_planning fragments)
+  rules.ex               publishes the rule documents from priv/, in order
 priv/
-  decisions/*.dmn        the triage table
-  processes/*.bpmn       the visit process
+  decisions/*.dmn        the triage table; staffing.policy (the roster's parameters)
+  processes/*.bpmn       the visit process; candidate_four_eyes (the roster approval)
+  planning/              weekly_roster.mzn + checker (synthetic MiniZinc) and the seed
 ```

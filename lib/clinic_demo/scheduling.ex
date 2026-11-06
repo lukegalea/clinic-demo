@@ -4,6 +4,9 @@ defmodule ClinicDemo.Scheduling do
 
   Three resources — a patient (the animal), a clinician, and the appointment
   that joins them — plus the code interface the rest of the application calls.
+  The weekly roster adds four more: `Availability` (temporal), `ShiftTemplate`,
+  and the two resources a roster candidate creates when a person applies it,
+  `Shift` and `Assignment`.
 
   Every function below is generated from an action on a resource. That is the
   point of the demo: the contract an agent needs to call this code is already
@@ -43,6 +46,32 @@ defmodule ClinicDemo.Scheduling do
     resource ClinicDemo.Scheduling.AppointmentType do
       define :list_appointment_types, action: :read
       define :get_appointment_type, action: :read, get_by: [:id]
+    end
+
+    resource ClinicDemo.Scheduling.Availability do
+      define :declare_availability, action: :declare
+      define :list_availabilities, action: :read
+      define :revise_availability, action: :revise
+    end
+
+    resource ClinicDemo.Scheduling.ShiftTemplate do
+      define :define_shift_template, action: :define
+      define :list_shift_templates, action: :read
+      define :retire_shift_template, action: :retire
+    end
+
+    # Shifts and assignments are written only by applying a roster candidate
+    # (`ClinicDemo.Planning.Checks.AppliedByCandidate` gates both).
+    resource ClinicDemo.Scheduling.Shift do
+      define :place_shift, action: :place
+      define :list_shifts, action: :read
+      define :cancel_shift, action: :cancel
+    end
+
+    resource ClinicDemo.Scheduling.Assignment do
+      define :place_assignment, action: :place
+      define :list_assignments, action: :read
+      define :cancel_assignment, action: :cancel
     end
   end
 end
