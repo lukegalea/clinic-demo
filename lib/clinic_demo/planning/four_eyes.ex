@@ -12,8 +12,9 @@ defmodule ClinicDemo.Planning.FourEyes do
   Assignment. When both tasks are `approved` by two different clinicians, `sign/3`
   runs `Candidate.approve` and `Candidate.apply` **as the second approver**, whose
   `apply` writes the schedule in one transaction. If either approver `rejected`,
-  the candidate is rejected and the other task is closed `withdrawn` by the
-  planner, so no orphan task is left on a worklist.
+  the candidate is rejected and the instance is cancelled through the engine
+  (`AshBpmn.cancel_instance/2`), which kills the other approver's parked token and
+  cancels their task (status `:cancelled`), so no orphan task is left on a worklist.
 
   Authority lives in the policies, not here: `approve` and `apply` are refused
   unless `signers/1` is complete and the actor is one of the signers
@@ -109,7 +110,7 @@ defmodule ClinicDemo.Planning.FourEyes do
   # ── settlement ─────────────────────────────────────────────────────────────
 
   defp settle(candidate, :rejected, actor) do
-    withdraw_remaining(candidate.id)
+    cancel(candidate.id)
     Planning.reject_candidate(candidate, %{}, actor: actor)
   end
 
@@ -127,23 +128,20 @@ defmodule ClinicDemo.Planning.FourEyes do
 
   # The other approver's task, if still open, is closed by the planner so it does
   # not linger on a worklist after the candidate is rejected.
-  defp withdraw_remaining(candidate_id), do: withdraw(candidate_id)
-
   @doc """
-  Closes the candidate's still-open sign-off tasks as `withdrawn`, by the planner:
-  used when a candidate is rejected or superseded, so no task is left on a
-  worklist for a plan nobody will apply.
+  Cancels the candidate's approval instance through the engine: live tokens die and
+  open sign-off tasks become `:cancelled`. Used when a candidate is rejected or
+  superseded, so no task is left on a worklist for a plan nobody will apply. A
+  no-op when there is no running instance.
   """
-  @spec withdraw(Ecto.UUID.t()) :: :ok
-  def withdraw(candidate_id) do
-    planner = Machinery.actor()
-
-    for {_node, %{status: status} = task} <- tasks(candidate_id),
-        status in [:open, :claimed] do
-      TaskDesk.complete_as_planner(task.id, :withdrawn, planner)
-    end
-
-    :ok
+  @spec cancel(Ecto.UUID.t()) :: :ok
+  def cancel(candidate_id) do
+    Instance
+    |> Ash.Query.filter(
+      subject_id == ^candidate_id and subject_type == ^@subject_type and status == :running
+    )
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&AshBpmn.cancel_instance!/1)
   end
 
   # ── guards ─────────────────────────────────────────────────────────────────

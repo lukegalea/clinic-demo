@@ -165,7 +165,7 @@ defmodule ClinicDemo.Planning.WeeklyRoster do
       |> Ash.read!(actor: Machinery.actor())
       |> Enum.filter(&(&1.run.stats["week_start"] == week))
       |> Enum.each(fn candidate ->
-        FourEyes.withdraw(candidate.id)
+        FourEyes.cancel(candidate.id)
         Planning.supersede_candidate!(candidate, %{}, actor: Machinery.actor())
       end)
     end
