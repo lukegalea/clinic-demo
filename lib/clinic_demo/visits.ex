@@ -44,7 +44,7 @@ defmodule ClinicDemo.Visits do
       define :list_worklist, action: :worklist
       define :claim_task, action: :claim_task, args: [:record_id]
       define :complete_task, action: :complete_task, args: [:record_id, :outcome]
-      define :delegate_task, action: :delegate_task, args: [:record_id, :to]
+      define :delegate_task, action: :delegate_task, args: [:record_id, :delegate_id]
     end
 
     resource ClinicDemo.Visits.TaskCandidate

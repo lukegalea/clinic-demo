@@ -122,6 +122,19 @@ defmodule ClinicDemo.Visits.VisitFacadeTest do
     refute open_check_in_task(appointment)
   end
 
+  test "only a CheckIn candidate checks a visit in; anyone else is not authorized" do
+    %{vet: vet} = roster()
+    %{appointment: appointment} = book_with_weight(vet, true)
+
+    # The booked vet is no nurse: the engine refuses, and the surface gets a
+    # plain Forbidden rather than the engine's id-bearing ArgumentError.
+    assert {:error, %Ash.Error.Forbidden{}} =
+             VisitFacade.check_in_task(via_ctx(appointment, :check_in, vet), "board")
+
+    assert open_check_in_task(appointment).status == :open
+    assert Scheduling.get_appointment!(appointment.id).status == :scheduled
+  end
+
   test "compliance still guards: a weightless patient's via check_in is refused" do
     %{vet: vet, nurse: nurse} = roster()
     %{appointment: appointment} = book_with_weight(vet, false)

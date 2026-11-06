@@ -111,6 +111,11 @@ defmodule ClinicDemoWeb.FlightLiveTest do
     vet: vet,
     patient: patient
   } do
+    # CheckIn's candidates are the active nurses at booking; the engine
+    # refuses a completion by anyone else.
+    {:ok, nurse} =
+      Scheduling.hire_clinician(%{full_name: "Flight Nurse", role: :nurse}, actor: @staff)
+
     appointment = book(patient, vet)
     Scheduling.record_weight!(patient, Decimal.new("5.0"), actor: @staff)
 
@@ -124,7 +129,7 @@ defmodule ClinicDemoWeb.FlightLiveTest do
     # broadcasts the movement the flight view is watching for.
     {:ok, _appointment} =
       VisitFacade.check_in_task(
-        %{record: appointment, action: :check_in, actor: @staff},
+        %{record: appointment, action: :check_in, actor: nurse},
         "flight test"
       )
 

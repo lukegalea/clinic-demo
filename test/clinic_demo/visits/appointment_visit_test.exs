@@ -85,6 +85,15 @@ defmodule ClinicDemo.Visits.AppointmentVisitTest do
     |> Ash.read_one!()
   end
 
+  defp open_tasks(appointment) do
+    instance = instance_for(appointment)
+
+    HumanTask
+    |> Ash.Query.for_read(:read)
+    |> Ash.Query.filter(instance_id == ^instance.id and status in [:open, :claimed])
+    |> Ash.read!()
+  end
+
   defp nodes_visited(appointment) do
     instance = instance_for(appointment)
 
@@ -262,6 +271,41 @@ defmodule ClinicDemo.Visits.AppointmentVisitTest do
       assert reload(appointment).status == :no_show
       assert instance_for(appointment).outcome == "no_show"
       refute reload(appointment).discharged_at
+    end
+  end
+
+  describe "the cancellation path" do
+    test "cancelling a booked visit stops its process and closes its CheckIn" do
+      %{vet: vet} = roster()
+      appointment = book(vet, [])
+      assert [%{node_id: "CheckIn"}] = open_tasks(appointment)
+
+      {:ok, _} = Scheduling.cancel_appointment(appointment, "Owner rebooked", actor: @staff)
+
+      assert reload(appointment).status == :cancelled
+      assert instance_for(appointment).status == :cancelled
+      assert open_tasks(appointment) == []
+    end
+
+    test "cancelling a checked-in visit closes the Consult waiting on the vet" do
+      %{vet: vet, nurse: nurse} = roster()
+      appointment = book(vet, [])
+
+      {:ok, _} =
+        AshBpmn.complete_task(task_at(appointment, "CheckIn"),
+          outcome: :arrived,
+          actor: %{id: nurse.id}
+        )
+
+      assert [%{node_id: "Consult"}] = open_tasks(appointment)
+
+      {:ok, _} =
+        Scheduling.cancel_appointment(reload(appointment), "Owner took the animal home",
+          actor: @staff
+        )
+
+      assert instance_for(appointment).status == :cancelled
+      assert open_tasks(appointment) == []
     end
   end
 

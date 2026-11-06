@@ -141,15 +141,24 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
     pre = AsOfSurface.build(BoardUI, actor: nil, as_of: DateTime.add(booked_at, -60))
     id = appointment.id
 
-    # Every lane, on a database nobody seeded: the lanes are board_lane's
-    # declared values, not rows.
-    assert lane_records(pre) |> Map.keys() |> Enum.sort() ==
-             Enum.sort(~w(board_intake board_low board_medium board_high
-                          board_in_visit board_discharged board_closed))
+    # Every cell, on a database nobody seeded: the cells are board_lane's
+    # declared stages crossed with triage_category's declared rows, not
+    # rows of a table.
+    cells =
+      for row <- ~w(emergency urgent soon routine untriaged),
+          stage <- ~w(booked in_visit discharged closed),
+          do: "board_#{stage}__#{row}"
+
+    assert lane_records(pre) |> Map.keys() |> Enum.sort() == Enum.sort(cells)
 
     assert Enum.all?(lane_records(pre), fn {_lane, records} ->
              not Enum.any?(records, &match?(%{"id" => ^id}, &1))
            end)
+
+    # Booked but not yet triaged: the card is on the board, in the Booked
+    # stage's untriaged row, rather than in no row at all.
+    untriaged = AsOfSurface.build(BoardUI, actor: nil, as_of: DateTime.add(booked_at, 1800))
+    assert record_lanes_for(untriaged, appointment.id) == ["/records/board_booked__untriaged"]
 
     Scheduling.record_appointment_triage!(
       Scheduling.get_appointment!(appointment.id, as_of: triaged_at),
@@ -158,9 +167,9 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
       as_of: triaged_at
     )
 
-    # Between booking and check-in: one card, in the low lane (routine).
+    # Between triage and check-in: one card, in the Booked stage's routine row.
     mid = AsOfSurface.build(BoardUI, actor: nil, as_of: hours_ago(2) |> DateTime.add(1800))
-    assert record_lanes_for(mid, appointment.id) == ["/records/board_low"]
+    assert record_lanes_for(mid, appointment.id) == ["/records/board_booked__routine"]
 
     Scheduling.check_in_appointment!(
       Scheduling.get_appointment!(appointment.id, as_of: checked_in_at),
@@ -168,13 +177,16 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
       as_of: checked_in_at
     )
 
-    # After the check-in: the same card has moved to in_visit — and only
-    # there; the pre-triage and triaged instants keep their own reads.
+    # After the check-in: the same card has moved to in_visit, in the same
+    # row — and only there; the pre-triage and triaged instants keep their own reads.
     after_check_in = AsOfSurface.build(BoardUI, actor: nil, as_of: hours_ago(1))
-    assert record_lanes_for(after_check_in, appointment.id) == ["/records/board_in_visit"]
+
+    assert record_lanes_for(after_check_in, appointment.id) == [
+             "/records/board_in_visit__routine"
+           ]
 
     still_mid = AsOfSurface.build(BoardUI, actor: nil, as_of: hours_ago(2) |> DateTime.add(1800))
-    assert record_lanes_for(still_mid, appointment.id) == ["/records/board_low"]
+    assert record_lanes_for(still_mid, appointment.id) == ["/records/board_booked__routine"]
   end
 
   test "parse reads the picker's zone-less datetime-local value as UTC" do

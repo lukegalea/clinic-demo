@@ -130,6 +130,27 @@ end
     clinician -> {:ok, clinician}
   end
 
+# A second clinician in every role. The engine only delegates a task to one
+# of its candidates, so with one person per role every delegation on the
+# worklist was refused: the nurse holding a CheckIn had no other nurse to
+# hand it to. Candidates are written down when a task is created, so these
+# hires come before the first booking (the finance history's included), or
+# none of the seeded tasks would list them.
+#
+# `Consult` is the exception, by design: its one candidate is the visit's
+# booked clinician, so a second vet takes Consults for the visits booked
+# with them and cannot be handed anyone else's.
+for attrs <- [
+      %{full_name: "Dr. Mateo Lindqvist", role: :veterinarian, license_number: "ON-118207"},
+      %{full_name: "Keiko Brandt", role: :technician},
+      %{full_name: "Tomas Ferreira", role: :nurse}
+    ] do
+  case clinician_by.(full_name: attrs.full_name) do
+    nil -> {:ok, _} = Scheduling.hire_clinician(attrs, actor: staff)
+    _clinician -> :ok
+  end
+end
+
 patients =
   for attrs <- [
         %{
@@ -588,6 +609,38 @@ story_appointments =
 
 for appointment <- story_appointments do
   record_triage_in_history.(appointment, staff)
+end
+
+# ── Cancelled visits leave no work behind ──────────────────────────────────
+#
+# Cancelling a visit stops its process through the engine
+# (`ClinicDemo.Scheduling.Changes.CancelVisitProcess`), so a fresh seed has
+# no open task on a cancelled visit. A database seeded before that change
+# does: every cancelled visit's CheckIn still waited on the nurses'
+# worklist, and completing one failed in the engine. Reseeding stops those
+# processes the same way the cancel now does; on a fresh seed this finds
+# nothing.
+cancelled_ids =
+  ClinicDemo.Scheduling.Appointment
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(status == :cancelled)
+  |> Ash.read!(authorize?: false)
+  |> Enum.map(& &1.id)
+
+stale_instances =
+  ClinicDemo.Visits.Instance
+  |> Ash.Query.for_read(:read)
+  |> Ash.Query.filter(status == :running and subject_id in ^cancelled_ids)
+  |> Ash.read!(authorize?: false)
+
+for instance <- stale_instances do
+  AshBpmn.cancel_instance!(instance, actor: staff)
+end
+
+if stale_instances != [] do
+  IO.puts(
+    "Stopped #{length(stale_instances)} visit process(es) left running on cancelled visits."
+  )
 end
 
 {:ok, _} = Scheduling.record_weight(pepper, Decimal.new("4.35"), actor: staff)

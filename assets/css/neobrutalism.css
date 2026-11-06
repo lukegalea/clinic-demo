@@ -256,6 +256,30 @@
   --a2ui-label-font-weight: 700;
   --a2ui-font-family-title: var(--font-sans);
 
+  /* ---- Board swimlanes (the clinic board's triage rows) --------------
+   * ash_a2ui's theme paints a swimlane band with light-dark() pairs, so
+   * under a dark OS setting the bands alone went dark while the page,
+   * the cards and every other surface stayed on this single light
+   * palette. The bands join the bridge instead: each tone is a tint of
+   * its poster colour, mixed with white so a white card still stands
+   * off it, under the system's one ink. Black on every tint is well past
+   * 4.5:1, in either OS scheme. Info tints the main blue, not cyan: a cyan
+   * tint and the green one differ only in blue, so a viewer without blue
+   * vision would see the Soon and Routine rows as one colour. */
+  --a2ui-swimlane-border-radius: var(--radius-base);
+  --a2ui-swimlane-danger-background: color-mix(in oklab, var(--red) 45%, var(--secondary-background));
+  --a2ui-swimlane-danger-color: var(--foreground);
+  --a2ui-swimlane-warning-background: color-mix(in oklab, var(--orange) 45%, var(--secondary-background));
+  --a2ui-swimlane-warning-color: var(--foreground);
+  --a2ui-swimlane-info-background: color-mix(in oklab, var(--main) 40%, var(--secondary-background));
+  --a2ui-swimlane-info-color: var(--foreground);
+  --a2ui-swimlane-success-background: color-mix(in oklab, var(--green) 40%, var(--secondary-background));
+  --a2ui-swimlane-success-color: var(--foreground);
+  --a2ui-swimlane-accent-background: color-mix(in oklab, var(--violet) 45%, var(--secondary-background));
+  --a2ui-swimlane-accent-color: var(--foreground);
+  --a2ui-swimlane-neutral-background: var(--neutral);
+  --a2ui-swimlane-neutral-color: var(--foreground);
+
   /* ---- Search pickers (merged-catalog combobox & chips) -------------- */
   --a2ui-combobox-max-height: 18rem;
   --a2ui-combobox-z-index: 30;

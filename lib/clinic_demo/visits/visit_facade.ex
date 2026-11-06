@@ -21,6 +21,12 @@ defmodule ClinicDemo.Visits.VisitFacade do
   One button, one path: a check-in that went around the process would let
   the board and the token disagree about where a visit is.
 
+  The engine decides who may complete the task: one of `CheckIn`'s
+  candidates (the active nurses) while it is open, and only its holder once
+  someone has claimed it. Anyone else gets the surface's usual "not
+  authorized" line; the engine's own refusal names task and principal ids,
+  which belong in logs.
+
   ## The fallback
 
   When no open `CheckIn` task exists the visit cannot be advanced through
@@ -34,6 +40,7 @@ defmodule ClinicDemo.Visits.VisitFacade do
   `{:error, Ash.Error.t()}`.
   """
 
+  alias Ash.Error.Forbidden
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.Appointment
   alias ClinicDemo.Visits.HumanTask
@@ -59,13 +66,14 @@ defmodule ClinicDemo.Visits.VisitFacade do
   defp complete(appointment, outcome, actor, surface) do
     case open_check_in_task(appointment) do
       %HumanTask{} = task ->
-        with {:ok, _completed} <-
-               AshBpmn.complete_task(task,
-                 outcome: outcome,
-                 comment: "via the #{surface} surface",
-                 actor: actor
-               ) do
-          {:ok, Scheduling.get_appointment!(appointment.id)}
+        case AshBpmn.complete_task(task,
+               outcome: outcome,
+               comment: "via the #{surface} surface",
+               actor: actor
+             ) do
+          {:ok, _completed} -> {:ok, Scheduling.get_appointment!(appointment.id)}
+          {:error, %ArgumentError{}} -> {:error, Forbidden.exception([])}
+          {:error, _other} = error -> error
         end
 
       # Fallback: the visit's token has already moved past CheckIn or the

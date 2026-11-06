@@ -49,8 +49,10 @@ defmodule ClinicDemo.Scheduling.AppointmentTemporalTest do
   defp hours_ago(hours),
     do: DateTime.utc_now() |> DateTime.add(-hours * 3600, :second) |> DateTime.truncate(:second)
 
+  # The board cell a version sits in: {stage, triage row}.
   defp lane(appointment) do
-    appointment |> Ash.load!(:board_lane) |> Map.get(:board_lane)
+    appointment = Ash.load!(appointment, [:board_lane, :triage_category])
+    {appointment.board_lane, appointment.triage_category}
   end
 
   test "a back-dated lifecycle reads back stage by stage" do
@@ -85,11 +87,11 @@ defmodule ClinicDemo.Scheduling.AppointmentTemporalTest do
       Scheduling.get_appointment!(appointment.id, as_of: DateTime.add(booked_at, -60))
     end
 
-    # As booked: scheduled and untriaged — the intake lane.
+    # As booked: scheduled and untriaged — the Booked stage's untriaged row.
     as_booked = Scheduling.get_appointment!(appointment.id, as_of: booked_at)
     assert as_booked.status == :scheduled
     assert as_booked.triage_urgency == nil
-    assert lane(as_booked) == :intake
+    assert lane(as_booked) == {:booked, :untriaged}
 
     # The engine's own triage write lands at wall-clock time (the process
     # engine is not temporal), so the history's triage is written the way
@@ -101,7 +103,7 @@ defmodule ClinicDemo.Scheduling.AppointmentTemporalTest do
     as_triaged = Scheduling.get_appointment!(appointment.id, as_of: triaged_at)
     assert as_triaged.status == :scheduled
     assert as_triaged.triage_urgency == :routine
-    assert lane(as_triaged) == :low
+    assert lane(as_triaged) == {:booked, :routine}
 
     # An instant BETWEEN the writes reads the earlier stage still.
     between =
@@ -109,7 +111,7 @@ defmodule ClinicDemo.Scheduling.AppointmentTemporalTest do
 
     assert between.status == :scheduled
     assert between.triage_urgency == :routine
-    assert lane(between) == :low
+    assert lane(between) == {:booked, :routine}
 
     Scheduling.check_in_appointment!(
       Scheduling.get_appointment!(appointment.id, as_of: checked_in_at),
@@ -119,7 +121,7 @@ defmodule ClinicDemo.Scheduling.AppointmentTemporalTest do
 
     as_checked_in = Scheduling.get_appointment!(appointment.id, as_of: hours_ago(1))
     assert as_checked_in.status == :checked_in
-    assert lane(as_checked_in) == :in_visit
+    assert lane(as_checked_in) == {:in_visit, :routine}
 
     # The present never regressed: the open version is the engine's
     # post-booking write, untouched by the back-dated walk.

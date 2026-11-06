@@ -168,7 +168,12 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
           The clinic's history starts later.
         </p>
       </div>
-      <AshA2ui.LiveRenderer.surface_container />
+      <%!-- A card carries up to three transition buttons beside the patient's
+           name and compliance chip; at ash_a2ui's 18rem default lane width
+           they are cut off. The lanes scroll inside the board instead. --%>
+      <div class="[--a2ui-board-lane-min-width:32rem]">
+        <AshA2ui.LiveRenderer.surface_container />
+      </div>
     </div>
     """
   end
