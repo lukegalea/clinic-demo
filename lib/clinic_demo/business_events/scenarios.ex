@@ -276,6 +276,32 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
     Enum.map_join(@identity_keys, <<0>>, &to_string(Map.fetch!(identity, &1)))
   end
 
+  # The key joins the five with a NUL, so no field may contain one, and the shapes
+  # are fixed so two distinct tuples can never join to the same string.
+  defp validate_identity!(identity) do
+    bad =
+      Enum.reject(@identity_keys, fn key ->
+        valid_identity_field?(key, Map.fetch!(identity, key))
+      end)
+
+    if bad != [],
+      do:
+        raise(ArgumentError, "planning identity: invalid #{inspect(bad)} in #{inspect(identity)}")
+
+    :ok
+  end
+
+  defp valid_identity_field?(:candidate_id, v),
+    do: is_binary(v) and match?({:ok, _}, Ecto.UUID.cast(v))
+
+  defp valid_identity_field?(key, v) when key in [:snapshot_digest, :model_hash],
+    do: is_binary(v) and v =~ ~r/\A[0-9a-f]{64}\z/
+
+  defp valid_identity_field?(:random_stream_id, v),
+    do: is_binary(v) and v != "" and not String.contains?(v, <<0>>)
+
+  defp valid_identity_field?(:replication_id, v), do: is_integer(v) and v >= 0
+
   # All five planning fields or none. A partial identity is not an identity: it
   # would seed two different evaluations alike.
   defp identity!(opts) do
@@ -288,15 +314,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
       length(given) == length(@identity_keys) ->
         identity = Map.new(@identity_keys, &{&1, Keyword.fetch!(opts, &1)})
 
-        unless Enum.all?(identity, fn
-                 {:replication_id, v} -> is_integer(v) and v >= 0
-                 {_key, v} -> is_binary(v) and v != ""
-               end) do
-          raise ArgumentError,
-                "planning identity: :replication_id must be a non-negative integer " <>
-                  "and the other four non-empty strings, got #{inspect(identity)}"
-        end
-
+        validate_identity!(identity)
         identity
 
       true ->

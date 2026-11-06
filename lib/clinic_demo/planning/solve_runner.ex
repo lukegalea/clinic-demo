@@ -142,15 +142,23 @@ defmodule ClinicDemo.Planning.SolveRunner do
            Planning.record_run_result(run, Map.put(attrs, :epoch, run.lease_epoch),
              actor: Machinery.actor()
            ) do
-      if recorded.solve_status in [:optimal, :feasible] do
-        CheckPipeline.process(recorded, payload, candidates(result), check_opts(opts, payload))
-      end
+      outcome =
+        if recorded.solve_status in [:optimal, :feasible],
+          do:
+            CheckPipeline.process(
+              recorded,
+              payload,
+              candidates(result),
+              check_opts(opts, payload)
+            ),
+          else: :no_answer
 
+      emit_lineage(recorded, payload, if(outcome == :ok, do: :complete, else: :fail))
       {:ok, recorded}
     end
   end
 
-  defp finish(run, {:error, %Error{} = error}, _payload, _opts) do
+  defp finish(run, {:error, %Error{} = error}, payload, _opts) do
     # The backend's message can quote the model's own diagnostics: it goes to the
     # log for an operator, never into a column.
     Logger.warning("planning run #{run.id} failed: #{error.kind}: #{error.message}")
@@ -164,6 +172,8 @@ defmodule ClinicDemo.Planning.SolveRunner do
         _ -> :backend_error
       end
 
+    emit_lineage(run, payload, :fail)
+
     Planning.record_run_result(
       run,
       %{
@@ -176,6 +186,38 @@ defmodule ClinicDemo.Planning.SolveRunner do
       },
       actor: Machinery.actor()
     )
+  end
+
+  # One OpenLineage run per solve/check job (`planning` / `solve_check`), carrying
+  # ONLY the digest facet: digest, purpose, input count, definition kinds. Never actor,
+  # input values or tenant. Observational: a transport or facet problem is logged and
+  # never undoes a recorded result.
+  defp emit_lineage(run, payload, type) do
+    with {:ok, snapshot} <- SnapshotBuilder.snapshot_from_payload(payload) do
+      opts =
+        [
+          event_type: type,
+          job_namespace: "planning",
+          job_name: "solve_check",
+          inputs: [],
+          outputs: [],
+          producer_name: "planning.solve_check",
+          run_id: AshOpenLineage.run_id(run.id, "planning", "solve_check"),
+          correlation_id: run.id
+        ] ++ if(type == :fail, do: [error_message: "solve_check_failed"], else: [])
+
+      event =
+        opts
+        |> AshOpenLineage.Event.run_event()
+        |> put_in(
+          ["run", "facets", AshOpenLineage.Event.snapshot_facet_name()],
+          AshOpenLineage.Event.snapshot_facet(snapshot)
+        )
+
+      AshOpenLineage.Transport.dispatch(AshOpenLineage.transport(), event, %{})
+    end
+  rescue
+    error -> Logger.warning("planning lineage emit failed: #{Exception.message(error)}")
   end
 
   defp check_opts(opts, payload) do

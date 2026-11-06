@@ -29,9 +29,9 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
        counted as preserved); ones the plan drops are cancelled; new ones are
        placed.
     3. **Write, in one transaction.** Cancels first, then placements, as the
-       approving person, with `context: %{planning_apply: %{candidate_id: id}}`
-       (the `Shift`/`Assignment` policy, `Checks.AppliedByCandidate`, requires it
-       and re-verifies the candidate). The first refusal rolls every write back.
+       approving person, with a process-local marker set only around these writes
+       (`Checks.AppliedByCandidate`; the `Shift`/`Assignment` policy trusts that
+       marker, never caller options, and re-verifies the candidate). The first refusal rolls every write back.
     4. **Settlement.** Drift and a write-time refusal both end the candidate
        `:rejected` AND `:stale`, after the rollback: `mark_stale` (planner) first,
        then `reject` (the approving person). That order is forced by the guards:
@@ -55,6 +55,7 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
   require Logger
 
   alias ClinicDemo.Planning
+  alias ClinicDemo.Planning.Checks.AppliedByCandidate
   alias ClinicDemo.Planning.{Machinery, Reader, Run, SnapshotBuilder}
   alias ClinicDemo.Scheduling
 
@@ -137,7 +138,7 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
   end
 
   defp transact(changeset, candidate, plan, facts, actor) do
-    opts = [actor: actor, context: %{planning_apply: %{candidate_id: candidate.id}}]
+    opts = [actor: actor]
 
     shift_key = &{&1.clinician_id, &1.starts_at, &1.ends_at}
     planned_shift_key = &{&1["clinician_id"], &1["starts_at"], &1["ends_at"]}
@@ -171,12 +172,18 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
     # joins it, and returning the error from this hook rolls all of them back
     # together.
     result =
-      Enum.reduce_while(steps, :ok, fn step, :ok ->
-        case run_step(step, candidate.id, opts) do
-          :ok -> {:cont, :ok}
-          {:error, error} -> {:halt, {:error, error}}
+      AppliedByCandidate.with_marker(
+        candidate.id,
+        MapSet.new(Enum.map(drop_assignments ++ drop_shifts, & &1.id)),
+        fn ->
+          Enum.reduce_while(steps, :ok, fn step, :ok ->
+            case run_step(step, candidate.id, opts) do
+              :ok -> {:cont, :ok}
+              {:error, error} -> {:halt, {:error, error}}
+            end
+          end)
         end
-      end)
+      )
 
     case result do
       :ok ->

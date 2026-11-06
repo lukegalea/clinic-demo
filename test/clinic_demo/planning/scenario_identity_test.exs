@@ -278,8 +278,27 @@ defmodule ClinicDemo.Planning.ScenarioIdentityTest do
         Scenarios.generate!(identity_opts(%{replication_id: "zero"}))
       end
 
-      assert_raise ArgumentError, ~r/non-empty strings/, fn ->
-        Scenarios.generate!(identity_opts(%{model_hash: ""}))
+      for bad <- [
+            %{model_hash: ""},
+            %{model_hash: "abc"},
+            %{snapshot_digest: String.duplicate("A", 64)},
+            %{candidate_id: "not-a-uuid"},
+            %{random_stream_id: ""},
+            %{random_stream_id: "x" <> <<0>> <> "y"},
+            %{replication_id: -1}
+          ] do
+        assert_raise ArgumentError, ~r/invalid/, fn ->
+          Scenarios.generate!(identity_opts(bad))
+        end
+      end
+    end
+
+    test "distinct five-tuples cannot collide through the key's separator" do
+      # Before validation, "x\0y" + "z" and "x" + "y\0z" joined to the same key.
+      for stream <- ["x" <> <<0>> <> "y", "y" <> <<0>> <> "z"] do
+        assert_raise ArgumentError, ~r/random_stream_id/, fn ->
+          Scenarios.generate!(identity_opts(%{random_stream_id: stream}))
+        end
       end
     end
   end

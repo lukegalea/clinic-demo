@@ -226,6 +226,96 @@ defmodule ClinicDemo.Planning.FourEyesTest do
       end
     end
 
+    # Both tasks signed by the two approvers, candidate approved, NOT yet applied.
+    defp approved_unapplied(w, candidate) do
+      tasks = FourEyes.tasks(candidate.id)
+
+      {:ok, _} =
+        ClinicDemo.Visits.TaskDesk.complete(
+          tasks["ManagerSignoff"].id,
+          :approved,
+          nil,
+          as(w.team.manager)
+        )
+
+      {:ok, _} =
+        ClinicDemo.Visits.TaskDesk.complete(
+          tasks["HeadVetSignoff"].id,
+          :approved,
+          nil,
+          as(w.team.head_vet)
+        )
+
+      {:ok, approved} = Planning.approve_candidate(candidate, %{}, actor: as(w.team.head_vet))
+      assert approved.disposition == :approved
+      approved
+    end
+
+    test "a signer cannot forge placements in the approved-but-unapplied window" do
+      w = setup_week()
+      approved = approved_unapplied(w, w.candidate)
+
+      shift_params = %{
+        role: :veterinarian,
+        starts_at: DateTime.new!(w.monday, ~T[08:00:00], "Etc/UTC"),
+        ends_at: DateTime.new!(w.monday, ~T[16:00:00], "Etc/UTC"),
+        candidate_id: approved.id,
+        clinician_id: w.team.vet.id
+      }
+
+      forged = %{planning_apply: %{candidate_id: approved.id}}
+
+      for opts <- [[actor: as(w.team.head_vet), context: forged], [actor: as(w.team.manager)]] do
+        assert {:error, %Forbidden{}} = Scheduling.place_shift(shift_params, opts)
+
+        assert {:error, %Forbidden{}} =
+                 Scheduling.place_assignment(
+                   %{
+                     appointment_id: w.a1.id,
+                     role: :veterinarian,
+                     candidate_id: approved.id,
+                     clinician_id: w.team.vet.id
+                   },
+                   opts
+                 )
+      end
+
+      assert Scheduling.list_shifts!(authorize?: false) == []
+      assert Scheduling.list_assignments!(authorize?: false) == []
+
+      # The legitimate path still writes.
+      {:ok, applied} = Planning.apply_candidate(approved, %{}, actor: as(w.team.head_vet))
+      assert applied.disposition == :applied
+      assert length(Scheduling.list_shifts!(authorize?: false)) == 1
+    end
+
+    test "a signer of one candidate cannot cancel another candidate's rows" do
+      w = setup_week()
+      {:ok, _} = FourEyes.sign(w.tasks["ManagerSignoff"].id, :approved, as(w.team.manager))
+      {:ok, applied} = FourEyes.sign(w.tasks["HeadVetSignoff"].id, :approved, as(w.team.head_vet))
+      assert applied.disposition == :applied
+
+      [shift] = Scheduling.list_shifts!(authorize?: false)
+      [assignment | _] = Scheduling.list_assignments!(authorize?: false)
+
+      {:ok, %{candidates: [other]}} = plan_fake(w.monday, staff(), w.script)
+      {:ok, _instance} = WeeklyRoster.submit_for_approval(other)
+      approved = approved_unapplied(w, other)
+
+      # Even with the apply marker genuinely set for the other candidate, rows its
+      # diff did not select (here none) are not its to cancel.
+      ClinicDemo.Planning.Checks.AppliedByCandidate.with_marker(approved.id, MapSet.new(), fn ->
+        assert {:error, %Forbidden{}} =
+                 Scheduling.cancel_shift(shift, %{}, actor: as(w.team.head_vet))
+
+        assert {:error, %Forbidden{}} =
+                 Scheduling.cancel_assignment(assignment, %{}, actor: as(w.team.head_vet))
+      end)
+
+      assert Ash.get!(ClinicDemo.Scheduling.Shift, shift.id, authorize?: false).state ==
+               :scheduled
+    end
+
     test "forging the apply context is not enough: the candidate must be approved, signed and current" do
       w = setup_week()
       forged = %{planning_apply: %{candidate_id: w.candidate.id}}
