@@ -24,7 +24,12 @@ defmodule ClinicDemo.Planning do
     * `CheckResult` — the MiniZinc checker's verdict and the independent
       validator's, recorded separately.
 
-  The entry point is `ClinicDemo.Planning.WeeklyRoster`.
+  The same loop plans a second thing: one veterinarian's mobile visits for one day
+  against a versioned travel matrix (`ClinicDemo.Planning.MobileVisits`). Each plan
+  is a `ClinicDemo.Planning.Model`; the five resources are shared.
+
+  The entry points are `ClinicDemo.Planning.WeeklyRoster` and
+  `ClinicDemo.Planning.MobileVisits`.
   """
 
   use Ash.Domain

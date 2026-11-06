@@ -320,10 +320,14 @@ defmodule ClinicDemo.Planning.Reader do
     })
   end
 
-  # A temporal row's version is when its period starts, in microseconds: any
-  # revision (or a replacement) opens a later period, so the number moves.
-  defp version_number(%{valid_at: %{lower: %DateTime{} = lower}}),
+  @doc """
+  A temporal row's version number: when its period starts, in microseconds, so any
+  revision (or a replacement) opens a later period and the number moves; 0 for a row
+  that is not temporal.
+  """
+  @spec version_number(map()) :: non_neg_integer()
+  def version_number(%{valid_at: %{lower: %DateTime{} = lower}}),
     do: DateTime.to_unix(lower, :microsecond)
 
-  defp version_number(_row), do: 0
+  def version_number(_row), do: 0
 end

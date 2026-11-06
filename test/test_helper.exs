@@ -14,8 +14,10 @@ ExUnit.start(exclude: solver_tag)
 # a test-support workaround.
 ClinicDemo.Rules.install!()
 
-# The weekly roster model is published and bound once for the same reason: its
-# ModelVersion and Binding are committed rows every planning test can see.
+# The weekly roster and mobile-visits models are published and bound once for the
+# same reason: their ModelVersions and Bindings are committed rows every planning
+# test can see.
 ClinicDemo.Planning.Install.install!()
+ClinicDemo.Planning.Install.install!(ClinicDemo.Planning.Models.MobileVisits)
 
 Ecto.Adapters.SQL.Sandbox.mode(ClinicDemo.Repo, :manual)

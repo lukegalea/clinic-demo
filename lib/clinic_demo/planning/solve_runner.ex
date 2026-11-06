@@ -8,7 +8,8 @@ defmodule ClinicDemo.Planning.SolveRunner do
   Steps, each a planner (`Machinery`) write on the run:
 
     1. `Run.start` takes the lease (and bumps its epoch).
-    2. The model and checker files are resolved from `priv/planning` and **their
+    2. The run's model (`ClinicDemo.Planning.Model`) names the model and checker files
+       under `priv/planning` and **their
        SHA-256 must equal the pinned `ModelVersion`'s**: a model edited after it
        was published is refused (`:model_hash_mismatch`), never silently run.
     3. The backend solves the bounded problem under the version's declared limits.
@@ -41,8 +42,7 @@ defmodule ClinicDemo.Planning.SolveRunner do
   alias AshPlanning.{Error, Problem, SolveResult}
   alias ClinicDemo.Planning
 
-  alias ClinicDemo.Planning.{CheckPipeline, Machinery, ModelVersion, SnapshotBuilder}
-  alias ClinicDemo.Planning.Models.WeeklyRoster
+  alias ClinicDemo.Planning.{CheckPipeline, Machinery, Model, ModelVersion, SnapshotBuilder}
 
   @recordable_reasons [
     :time_limit,
@@ -61,10 +61,11 @@ defmodule ClinicDemo.Planning.SolveRunner do
 
     with {:ok, payload} <- SnapshotBuilder.problem_payload(run),
          {:ok, version} <- Ash.get(ModelVersion, run.model_version_id, authorize?: false),
-         {:ok, problem} <- problem(version, payload, opts),
+         {:ok, model} <- Model.for_key(version.key),
+         {:ok, problem} <- problem(model, version, payload, opts),
          {:ok, started} <- start(run, backend) do
       outcome = run_backend(backend, problem, timeout)
-      finish(started, outcome, payload, opts)
+      finish(started, outcome, payload, Keyword.put(opts, :model, model))
     end
   end
 
@@ -78,8 +79,8 @@ defmodule ClinicDemo.Planning.SolveRunner do
     )
   end
 
-  defp problem(version, payload, opts) do
-    definition = WeeklyRoster.definition()
+  defp problem(model, version, payload, opts) do
+    definition = model.definition()
 
     if version.model_sha256 == sha256_file(definition.model_path) and
          version.checker_sha256 == sha256_file(definition.checker_path) do
@@ -229,6 +230,7 @@ defmodule ClinicDemo.Planning.SolveRunner do
       end
 
     [
+      model: Keyword.fetch!(opts, :model),
       backend: Keyword.get(opts, :backend, AshPlanning.Backend.Solverl),
       checker_data: checker_data
     ]

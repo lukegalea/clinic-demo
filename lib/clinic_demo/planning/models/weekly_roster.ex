@@ -21,6 +21,10 @@ defmodule ClinicDemo.Planning.Models.WeeklyRoster do
   that declaration will name; nothing else changes.
   """
 
+  @behaviour ClinicDemo.Planning.Model
+
+  alias ClinicDemo.Planning.RosterPlan
+
   @model_rel "priv/planning/weekly_roster.mzn"
   @checker_rel "priv/planning/weekly_roster.mzc.mzn"
   @validator_source Path.expand("../roster_validator.ex", __DIR__)
@@ -40,6 +44,7 @@ defmodule ClinicDemo.Planning.Models.WeeklyRoster do
 
   @key "weekly_roster"
   @purpose "planning.weekly_roster"
+  @purpose_atom :"planning.weekly_roster"
 
   # What a solve may use: Solverl's own wall-clock limits plus the memory ceiling
   # `prlimit` enforces. Structural values only; no input data.
@@ -61,11 +66,13 @@ defmodule ClinicDemo.Planning.Models.WeeklyRoster do
   def purpose, do: @purpose
 
   @doc "The declaration: artifacts, hashes, validator, capabilities and limits."
+  @impl true
   @spec definition() :: map()
   def definition do
     %{
       key: @key,
       purpose: @purpose,
+      purpose_atom: @purpose_atom,
       model_path: Application.app_dir(:clinic_demo, @model_rel),
       checker_path: Application.app_dir(:clinic_demo, @checker_rel),
       model_sha256: @model_sha256,
@@ -77,4 +84,29 @@ defmodule ClinicDemo.Planning.Models.WeeklyRoster do
       backend_profile: @backend_profile
     }
   end
+
+  # The rest of `ClinicDemo.Planning.Model` is the roster's plan, in `RosterPlan`.
+  @impl true
+  defdelegate scope(opts), to: RosterPlan
+
+  @impl true
+  defdelegate build(run, opts, cutoff, definitions), to: RosterPlan
+
+  @impl true
+  defdelegate decode(payload, answer), to: RosterPlan
+
+  @impl true
+  defdelegate summarize(assignments, payload, candidate), to: RosterPlan
+
+  @impl true
+  defdelegate obligations(assignments), to: RosterPlan
+
+  @impl true
+  defdelegate validate(problem, assignments), to: RosterPlan
+
+  @impl true
+  defdelegate current_inputs(payload), to: RosterPlan
+
+  @impl true
+  defdelegate apply_plan(candidate, payload, actor), to: RosterPlan
 end

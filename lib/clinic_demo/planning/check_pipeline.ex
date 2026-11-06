@@ -7,18 +7,19 @@ defmodule ClinicDemo.Planning.CheckPipeline do
   For every candidate the backend returned (best first):
 
     1. **propose** — `Candidate.propose` as the planner: the model's answer read
-       back to domain-level assignments by `Lowering.decode/2` (shifts, covered
-       appointments, uncovered ones), with the count of previously applied
-       assignments it preserves, plus the unresolved obligations: one per
-       uncovered appointment, as an id and a reason code, never a value.
+       back to domain-level assignments by the model's `decode/2` (the roster's shifts,
+       covered and uncovered appointments; a mobile route's stops), summarised (how
+       much of the applied plan it keeps), plus the unresolved obligations the model
+       names (the roster: one per uncovered appointment) as ids and reason codes,
+       never values.
     2. **MiniZinc checker** — the verdict the backend recorded while solving
        (`checker_ok`). When the backend recorded none, the checker model is run
        against the problem data plus the candidate's variables through the same
        backend: a proven `:infeasible` (the checker is UNSAT) is `INCORRECT`,
        an error is `:checker_failed`.
-    3. **independent Elixir validator** — `ClinicDemo.Planning.RosterValidator`
-       over the domain-level problem and the decoded assignments. It shares no
-       code with the model, the checker or the lowering.
+    3. **independent Elixir validator** — the model's (`RosterValidator`,
+       `MobileValidator`) over the domain-level problem and the decoded assignments.
+       It shares no code with the model, the checker or the lowering.
     4. **record** — a create-only `CheckResult` (the two verdicts, separately, as
        statuses and reason codes; the checker's output as a digest; violation
        details as JSON) and `Candidate.record_check` with the combined verdict:
@@ -37,63 +38,46 @@ defmodule ClinicDemo.Planning.CheckPipeline do
 
   alias AshPlanning.{Problem, SolveResult}
   alias ClinicDemo.Planning
-  alias ClinicDemo.Planning.{Candidate, Lowering, Machinery, RosterValidator}
-  alias ClinicDemo.Planning.Models.WeeklyRoster
+  alias ClinicDemo.Planning.{Candidate, Machinery}
 
   @doc """
-  Options: `:backend` (the `AshPlanning.Backend` the checker run goes through when
+  Options: `:model` (the `ClinicDemo.Planning.Model` the run is for, required: it
+  reads the answer back, summarises it and names the independent validator),
+  `:backend` (the `AshPlanning.Backend` the checker run goes through when
   the solve recorded no verdict; default `AshPlanning.Backend.Solverl`) and
   `:checker_data` (extra problem data for a scripted backend's checker run; the
   real backend never gets any).
   """
   @spec process(struct(), map(), [map()], keyword()) :: :ok | {:error, term()}
-  def process(run, payload, backend_candidates, opts \\ []) do
+  def process(run, payload, backend_candidates, opts) do
+    model = Keyword.fetch!(opts, :model)
+
     backend_candidates
     |> Enum.sort_by(&(&1[:index] || 0), :desc)
     |> Enum.with_index()
     |> Enum.reduce_while(:ok, fn {candidate, position}, :ok ->
-      case check_candidate(run, payload, candidate, position, opts) do
+      case check_candidate(model, run, payload, candidate, position, opts) do
         :ok -> {:cont, :ok}
         {:error, _} = error -> {:halt, error}
       end
     end)
   end
 
-  defp check_candidate(run, payload, candidate, position, opts) do
+  defp check_candidate(model, run, payload, candidate, position, opts) do
     data = stringify(candidate[:data] || %{})
 
-    with {:ok, assignments} <- Lowering.decode(payload, data),
-         assignments = summarize(assignments, payload, candidate),
-         {:ok, row} <- propose(run, position, assignments) do
+    with {:ok, assignments} <- model.decode(payload, data),
+         assignments = model.summarize(assignments, payload, candidate),
+         {:ok, row} <- propose(model, run, position, assignments) do
       if row.check_status == :unchecked,
-        do: verify(payload, row, candidate, assignments, data, opts),
+        do: verify(model, payload, row, candidate, assignments, data, opts),
         else: :ok
     else
       {:error, reason} -> {:error, {:candidate, position, reason}}
     end
   end
 
-  # The decoded assignments plus what a person reading the candidate wants to know
-  # without opening the model: how much of the applied plan it keeps.
-  defp summarize(assignments, payload, candidate) do
-    previous = get_in(payload, ["problem", "previous", "assignments"]) || []
-
-    kept =
-      Enum.count(previous, fn p ->
-        Enum.any?(
-          assignments["assignments"],
-          &(&1["appointment_id"] == p["appointment_id"] and
-              &1["clinician_id"] == p["clinician_id"])
-        )
-      end)
-
-    assignments
-    |> Map.put("preserved_assignments", kept)
-    |> Map.put("previous_assignments", length(previous))
-    |> Map.put("objective", candidate[:objective] && Decimal.to_string(candidate[:objective]))
-  end
-
-  defp propose(run, position, assignments) do
+  defp propose(model, run, position, assignments) do
     run_id = run.id
 
     Candidate
@@ -106,10 +90,7 @@ defmodule ClinicDemo.Planning.CheckPipeline do
             run_id: run_id,
             index: position,
             assignments: Jason.encode!(assignments),
-            unresolved_obligations:
-              for id <- assignments["uncovered"] do
-                %{"id" => id, "kind" => "appointment", "reason" => "uncovered"}
-              end
+            unresolved_obligations: model.obligations(assignments)
           },
           actor: Machinery.actor()
         )
@@ -122,9 +103,11 @@ defmodule ClinicDemo.Planning.CheckPipeline do
     end
   end
 
-  defp verify(payload, row, candidate, assignments, data, opts) do
-    {checker_status, checker_reason} = checker_verdict(candidate, payload, data, opts)
-    {validator_status, validator_reason, details} = validator_verdict(payload, assignments)
+  defp verify(model, payload, row, candidate, assignments, data, opts) do
+    {checker_status, checker_reason} = checker_verdict(model, candidate, payload, data, opts)
+
+    {validator_status, validator_reason, details} =
+      validator_verdict(model, payload, assignments)
 
     with {:ok, _result} <-
            Planning.record_check_result(
@@ -151,14 +134,14 @@ defmodule ClinicDemo.Planning.CheckPipeline do
 
   # ── the MiniZinc checker ───────────────────────────────────────────────────
 
-  defp checker_verdict(%{checker_ok?: true}, _payload, _data, _opts),
+  defp checker_verdict(_model, %{checker_ok?: true}, _payload, _data, _opts),
     do: {:correct, "checker_accepted"}
 
-  defp checker_verdict(%{checker_ok?: false}, _payload, _data, _opts),
+  defp checker_verdict(_model, %{checker_ok?: false}, _payload, _data, _opts),
     do: {:incorrect, "checker_rejected"}
 
-  defp checker_verdict(_no_verdict, payload, data, opts) do
-    definition = WeeklyRoster.definition()
+  defp checker_verdict(model, _no_verdict, payload, data, opts) do
+    definition = model.definition()
     backend = Keyword.get(opts, :backend, AshPlanning.Backend.Solverl)
     extra = Keyword.get(opts, :checker_data, %{})
 
@@ -183,8 +166,8 @@ defmodule ClinicDemo.Planning.CheckPipeline do
 
   # ── the independent validator ──────────────────────────────────────────────
 
-  defp validator_verdict(payload, assignments) do
-    case RosterValidator.validate(payload["problem"], assignments) do
+  defp validator_verdict(model, payload, assignments) do
+    case model.validate(payload["problem"], assignments) do
       :ok ->
         {:correct, "validator_accepted", []}
 

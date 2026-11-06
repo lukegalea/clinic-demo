@@ -1,11 +1,16 @@
 defmodule ClinicDemo.Planning.SnapshotBuilder do
   @moduledoc """
-  Prepares a `:pending` `ClinicDemo.Planning.Run`: reads the declared inputs,
-  asks the pinned staffing policy, lowers everything to the model's data, seals
-  the references-and-hashes envelope (`AshOpenLineage.Snapshot`) and records the
-  result on the run's *preparation* axis.
+  Prepares a `:pending` `ClinicDemo.Planning.Run`: has the run's model
+  (`ClinicDemo.Planning.Model`) read its declared inputs and lower them to the
+  model's data, seals the references-and-hashes envelope (`AshOpenLineage.Snapshot`)
+  and records the result on the run's *preparation* axis.
 
       SnapshotBuilder.prepare(run, week_start: ~D[2026-11-09]) :: {:ok, %Run{}} | {:error, term}
+      SnapshotBuilder.prepare(run, day: ~D[2026-11-10], clinician_id: id) :: {:ok, %Run{}}
+
+  The options are the model's (`week_start` for the roster; `day`, `clinician_id` and
+  `matrix_key` for mobile visits) plus `:cutoff` and `:completeness`. The model is
+  the one the run's pinned `ModelVersion` is a version of.
 
   A run that is not `:pending` is returned unchanged, so a retried job is
   idempotent. The write is `Run.prepare` as the planner (`Machinery`), the only
@@ -13,12 +18,14 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
 
   ## What is read
 
-  `ClinicDemo.Planning.Reader` reads the week's scheduled appointments and
-  availability **`as_of` the run's knowledge cutoff** (both are temporal) plus the
-  active clinicians, shift templates and any already-applied shifts and
-  assignments. `ClinicDemo.Planning.StaffingPolicy` evaluates the `staffing.policy`
-  decision at the version and hash the run's binding pinned (the binding is read
-  `as_of` the cutoff too).
+  What the model declares, **`as_of` the run's knowledge cutoff** for every temporal
+  resource. For the roster, `ClinicDemo.Planning.Reader` reads the week's scheduled
+  appointments and availability plus the active clinicians, shift templates and
+  applied shifts and assignments, and `ClinicDemo.Planning.StaffingPolicy`
+  evaluates `staffing.policy` at the version and hash the run's binding pinned. For
+  mobile visits, `ClinicDemo.Planning.MobileReader` reads the day's visit requests,
+  the vet's calendar and the pinned travel matrix. The binding is read `as_of` the
+  cutoff too.
 
   ## What is recorded
 
@@ -32,8 +39,9 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
 
     * `:prepared` — every input is a `:value`.
     * `:needs_input` — at least one input is not (an appointment that cannot be
-      planned as it stands): `unresolved_inputs` names each by id with a reason
-      code, the digest is recorded and nothing is solved. Never a silent default.
+      planned as it stands; a mobile visit whose travel is unknown): `unresolved_inputs`
+      names each by id with a reason code, the digest is recorded and nothing is
+      solved. Never a silent default.
     * `:preparation_failed` — the binding, model version, decision or a read could
       not be resolved; the reason code is in `stats["reason"]`.
   """
@@ -42,10 +50,7 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
   alias AshOpenLineage.Snapshot.{Definition, Input}
   alias AshPlanning.Snapshot, as: PlanningSnapshot
   alias ClinicDemo.Planning
-  alias ClinicDemo.Planning.{Lowering, Machinery, ModelVersion, Reader, Run, StaffingPolicy}
-
-  @purpose :"planning.weekly_roster"
-  @decision_key "staffing.policy"
+  alias ClinicDemo.Planning.{Machinery, Model, ModelVersion, Reader, Run}
 
   @roles %{
     "appointment" => :appointment,
@@ -53,7 +58,10 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
     "clinician" => :clinician,
     "template" => :template,
     "applied_shift" => :applied_shift,
-    "applied_assignment" => :applied_assignment
+    "applied_assignment" => :applied_assignment,
+    "visit_request" => :visit_request,
+    "service_location" => :service_location,
+    "travel_matrix" => :travel_matrix
   }
   @statuses %{
     "value" => :value,
@@ -68,29 +76,27 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
   }
   @kinds %{"dmn" => :dmn, "bpmn" => :bpmn, "mzn" => :mzn, "validator" => :validator}
 
-  @doc "The purpose the roster's snapshots carry."
-  @spec purpose() :: atom()
-  def purpose, do: @purpose
-
   @doc """
-  Prepares a pending run for the week named by `:week_start` (a Monday, required).
-  Option `:cutoff` is the knowledge cutoff (default: now); `:completeness` the
-  run's declared scope.
+  Prepares a pending run. The options are the run's model's (`:week_start` for the
+  roster, a Monday; `:day` and `:clinician_id` for mobile visits) plus `:cutoff`
+  (the knowledge cutoff, default now) and `:completeness` (the run's declared scope).
   """
   @spec prepare(struct(), keyword()) :: {:ok, struct()} | {:error, term()}
   def prepare(run, opts \\ [])
 
   def prepare(%Run{preparation_status: :pending} = run, opts) do
-    week_start = Keyword.fetch!(opts, :week_start)
     cutoff = run.knowledge_cutoff || Keyword.get(opts, :cutoff) || DateTime.utc_now()
     completeness = Keyword.get(opts, :completeness, :authorized_subset)
 
-    unless Date.day_of_week(week_start) == 1,
-      do: raise(ArgumentError, "week_start must be a Monday, got #{week_start}")
+    case model_of(run) do
+      {:ok, model, version} ->
+        run
+        |> build(model, version, opts, cutoff, completeness)
+        |> record(run, cutoff, model.scope(opts))
 
-    run
-    |> build(week_start, cutoff, completeness)
-    |> record(run, cutoff, week_start)
+      {:error, reason} ->
+        record({:failed, reason}, run, cutoff, %{})
+    end
   end
 
   def prepare(%Run{} = run, _opts), do: {:ok, run}
@@ -121,159 +127,76 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
 
   def problem_payload(%Run{}), do: {:error, :empty}
 
+  @doc """
+  The planning model a run is for: the module declared under its pinned model
+  version's key, and the version.
+  """
+  @spec model_of(struct()) :: {:ok, module(), struct()} | {:error, atom()}
+  def model_of(%Run{model_version_id: id}) do
+    with {:ok, version} <- Ash.get(ModelVersion, id, authorize?: false),
+         {:ok, model} <- Model.for_key(version.key) do
+      {:ok, model, version}
+    else
+      _ -> {:error, :model_version_unavailable}
+    end
+  end
+
   # ── build ──────────────────────────────────────────────────────────────────
 
-  defp build(run, week_start, cutoff, completeness) do
+  defp build(run, model, version, opts, cutoff, completeness) do
     stamped = %{run | knowledge_cutoff: cutoff}
 
     with {:ok, binding} <- fetch(Run.resolve_binding(stamped), :binding_unavailable),
-         {:ok, mv} <-
-           fetch(
-             Ash.get(ModelVersion, run.model_version_id, authorize?: false),
-             :model_version_unavailable
-           ),
-         {:ok, definitions} <- definitions(binding, mv),
-         {:ok, decision} <- pinned_decision(definitions),
-         facts = Reader.read(week_start, cutoff),
-         {:ok, policy} <- policy(decision, facts) do
-      annotated = annotate(facts, policy)
-      assemble(run, cutoff, annotated, definitions, completeness)
+         {:ok, definitions} <- definitions(binding, version),
+         {:ok, built} <- model.build(run, opts, cutoff, definitions) do
+      assemble(run, model, cutoff, built, definitions, completeness)
     else
       {:error, reason} -> {:failed, reason}
     end
   end
 
-  defp assemble(run, cutoff, facts, definitions, completeness) do
-    inputs = Reader.inputs(facts)
-    unresolved = Enum.filter(inputs, &(&1.status != :value))
+  defp assemble(run, model, cutoff, built, definitions, completeness) do
+    unresolved = Enum.filter(built.inputs, &(&1.status != :value))
+    stats = Map.put(built.stats, "inputs", length(built.inputs))
 
     base = %Snapshot{
       id: run.id,
-      purpose: @purpose,
-      effective_at: facts.effective_at,
+      purpose: model.definition().purpose_atom,
+      effective_at: built.effective_at,
       knowledge_cutoff: cutoff,
       world: run.world,
       authority: %{tenant: nil, actor_id: run.requested_actor_id, completeness: completeness},
-      inputs: inputs,
+      inputs: built.inputs,
       definitions: definitions
     }
 
-    stats = %{
-      "week_start" => Date.to_iso8601(facts.week_start),
-      "appointments" => length(facts.appointments),
-      "inputs" => length(inputs)
-    }
+    cond do
+      unresolved != [] ->
+        {:needs_input, PlanningSnapshot.seal(base),
+         Enum.map(unresolved, &unresolved_entry(&1, built.reasons)), stats}
 
-    if unresolved == [] do
-      with {:ok, lowered} <- Lowering.lower(facts) do
-        body = Map.put(lowered, "problem", validator_problem(facts))
-        snapshot = PlanningSnapshot.seal(%{base | payload_hash: Reader.hash(body)})
-        payload = Map.put(body, "snapshot", encode_snapshot(snapshot))
+      is_nil(built.body) ->
+        {:failed, :nothing_lowered}
+
+      true ->
+        snapshot = PlanningSnapshot.seal(%{base | payload_hash: Reader.hash(built.body)})
+        payload = Map.put(built.body, "snapshot", encode_snapshot(snapshot))
         {:prepared, snapshot, payload, stats}
-      else
-        {:error, reason} -> {:failed, reason}
-      end
-    else
-      {:needs_input, PlanningSnapshot.seal(base), Enum.map(unresolved, &unresolved_entry/1),
-       stats}
     end
   end
 
-  # The decision's answers, attached to the facts the model and the validator read.
-  defp annotate(facts, policy) do
-    appointments =
-      Enum.map(facts.appointments, fn a ->
-        answer = Map.fetch!(policy.appointment, a.type_name || "")
-        minutes = max(a.booked_minutes, answer.duration_minutes)
-
-        Map.merge(a, %{
-          required_role: answer.role,
-          planned_minutes: minutes,
-          planned_ends_at: DateTime.add(a.starts_at, minutes * 60, :second)
-        })
-      end)
-
-    facts |> Map.put(:appointments, appointments) |> Map.put(:policy, policy)
-  end
-
-  defp policy(decision, facts) do
-    names = Enum.map(facts.appointments, & &1.type_name)
-    StaffingPolicy.evaluate(decision, names)
-  end
-
-  # The domain-level problem the independent validator reads. Instants are
-  # ISO-8601, durations are minutes, roles are names, days are "1".."7": nothing
-  # here is a slot index or a model code.
-  defp validator_problem(facts) do
-    %{
-      "week_start" => Date.to_iso8601(facts.week_start),
-      "clinicians" =>
-        for(c <- facts.clinicians, do: %{"id" => c.id, "role" => Atom.to_string(c.role)}),
-      "templates" =>
-        for t <- facts.templates do
-          %{
-            "id" => t.id,
-            "name" => t.name,
-            "role" => Atom.to_string(t.role),
-            "from_minute" => t.from_minute,
-            "to_minute" => t.to_minute,
-            "days" => t.days
-          }
-        end,
-      "unavailable" =>
-        for a <- facts.availabilities, not a.available do
-          %{
-            "clinician_id" => a.clinician_id,
-            "starts_at" => DateTime.to_iso8601(a.starts_at),
-            "ends_at" => DateTime.to_iso8601(a.ends_at)
-          }
-        end,
-      "appointments" =>
-        for a <- facts.appointments do
-          %{
-            "id" => a.id,
-            "starts_at" => DateTime.to_iso8601(a.starts_at),
-            "ends_at" => DateTime.to_iso8601(a.planned_ends_at),
-            "required_role" => Atom.to_string(a.required_role),
-            "booked_clinician_id" => a.booked_clinician_id
-          }
-        end,
-      "reserve_minutes" =>
-        Map.new(facts.policy.week, fn {day, w} -> {Integer.to_string(day), w.reserve_minutes} end),
-      "allowed_patterns" =>
-        Map.new(facts.policy.week, fn {day, w} -> {Integer.to_string(day), w.patterns} end),
-      "previous" => %{
-        "shifts" =>
-          for s <- facts.shifts do
-            %{
-              "clinician_id" => s.clinician_id,
-              "starts_at" => DateTime.to_iso8601(s.starts_at),
-              "ends_at" => DateTime.to_iso8601(s.ends_at)
-            }
-          end,
-        "assignments" =>
-          for a <- facts.assignments do
-            %{"appointment_id" => a.appointment_id, "clinician_id" => a.clinician_id}
-          end
-      }
-    }
-  end
-
-  defp unresolved_entry(%Input{} = input) do
+  defp unresolved_entry(%Input{} = input, reasons) do
     %{
       "id" => input.key,
       "resource" => input.source && to_string(input.source.resource),
       "status" => Atom.to_string(input.status),
-      "reason" => reason_code(input.status)
+      "reason" => Map.get(reasons, input.key, Atom.to_string(input.status))
     }
   end
 
-  defp reason_code(:invalid), do: "crosses_midnight"
-  defp reason_code(other), do: Atom.to_string(other)
-
   # ── record ─────────────────────────────────────────────────────────────────
 
-  defp record({:prepared, snapshot, payload, stats}, run, cutoff, _week_start) do
+  defp record({:prepared, snapshot, payload, stats}, run, cutoff, _scope) do
     write(run, %{
       preparation_status: :prepared,
       snapshot_digest: snapshot.digest,
@@ -283,7 +206,7 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
     })
   end
 
-  defp record({:needs_input, snapshot, unresolved, stats}, run, cutoff, _week_start) do
+  defp record({:needs_input, snapshot, unresolved, stats}, run, cutoff, _scope) do
     write(run, %{
       preparation_status: :needs_input,
       snapshot_digest: snapshot.digest,
@@ -293,11 +216,11 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
     })
   end
 
-  defp record({:failed, reason}, run, cutoff, week_start) do
+  defp record({:failed, reason}, run, cutoff, scope) do
     write(run, %{
       preparation_status: :preparation_failed,
       knowledge_cutoff: cutoff,
-      stats: %{"reason" => reason_string(reason), "week_start" => Date.to_iso8601(week_start)}
+      stats: Map.put(scope, "reason", reason_string(reason))
     })
   end
 
@@ -340,16 +263,6 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
       end)
 
     if agrees?, do: {:ok, selected}, else: {:error, :definition_drift}
-  end
-
-  defp pinned_decision(definitions) do
-    case Enum.find(definitions, &(&1.kind == :dmn and &1.key == @decision_key)) do
-      nil ->
-        {:error, :decision_not_pinned}
-
-      %Definition{version: version, content_hash: hash} ->
-        StaffingPolicy.fetch_definition(@decision_key, String.to_integer(version), hash)
-    end
   end
 
   defp get(map, key), do: Map.get(map, key, Map.get(map, Atom.to_string(key)))
@@ -399,7 +312,7 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
   end
 
   defp decode_snapshot(map) do
-    with {:ok, @purpose} <- purpose_from(map["purpose"]),
+    with {:ok, purpose} <- purpose_from(map["purpose"]),
          {:ok, world} <- Map.fetch(@worlds, map["world"]),
          {:ok, completeness} <-
            Map.fetch(@completeness, get_in(map, ["authority", "completeness"])),
@@ -410,7 +323,7 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
       {:ok,
        %Snapshot{
          id: map["id"],
-         purpose: @purpose,
+         purpose: purpose,
          effective_at: effective_at,
          knowledge_cutoff: cutoff,
          world: world,
@@ -429,7 +342,13 @@ defmodule ClinicDemo.Planning.SnapshotBuilder do
     end
   end
 
-  defp purpose_from("planning.weekly_roster"), do: {:ok, @purpose}
+  defp purpose_from(name) when is_binary(name) do
+    case Enum.find(Model.purposes(), &(Atom.to_string(&1) == name)) do
+      nil -> :error
+      purpose -> {:ok, purpose}
+    end
+  end
+
   defp purpose_from(_other), do: :error
 
   defp decode_list(list, fun) when is_list(list) do

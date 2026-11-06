@@ -1,24 +1,26 @@
 defmodule ClinicDemo.Planning.Install do
   @moduledoc """
-  Publishes the weekly roster model and binds it, idempotently.
+  Publishes a planning model and binds it, idempotently. The model is any
+  `ClinicDemo.Planning.Model` (default: the weekly roster).
 
       %{model_version: mv, binding: binding} = ClinicDemo.Planning.Install.install!()
+      ClinicDemo.Planning.Install.install!(ClinicDemo.Planning.Models.MobileVisits)
 
   Two steps, in order, like `ClinicDemo.Rules.install!/0` (which must have run
-  first, so the `staffing.policy` decision exists to be pinned):
+  first, so a model's parameter decision, if it has one, exists to be pinned):
 
-    1. **ModelVersion** — the model, checker and validator hashes from
-       `ClinicDemo.Planning.Models.WeeklyRoster`. A published version whose hashes
-       match is reused; otherwise the next version is drafted and published. A
-       published version is never edited.
-    2. **Binding** — `(weekly_roster, planning.weekly_roster)` is bound to the
-       selection that pins the decision's published version and hash and the
+    1. **ModelVersion** — the model, checker and validator hashes from the model's
+       declaration. A published version whose hashes match is reused; otherwise the
+       next version is drafted and published. A published version is never edited.
+    2. **Binding** — `(model key, purpose)` is bound to the selection that pins the
+       decision's published version and hash (when the model has a decision) and the
        model, checker and validator hashes. The binding is temporal: when the
        pinned definitions change (a new decision version, a new model version) the
        binding is *re*-bound, and a run keeps resolving the binding valid as of
        its own knowledge cutoff.
 
-  `mix run priv/planning/seed_weekly_roster.exs` calls this (synthetic data only).
+  `mix run priv/planning/seed_weekly_roster.exs` and
+  `priv/planning/seed_mobile_visits.exs` call this (synthetic data only).
   """
 
   require Ash.Query
@@ -30,9 +32,9 @@ defmodule ClinicDemo.Planning.Install do
   alias ClinicDemo.Planning.Models.WeeklyRoster
 
   @doc "Publishes the model version and (re)binds it. Returns both rows."
-  @spec install!() :: %{model_version: struct(), binding: struct()}
-  def install!() do
-    definition = WeeklyRoster.definition()
+  @spec install!(module()) :: %{model_version: struct(), binding: struct()}
+  def install!(model \\ WeeklyRoster) do
+    definition = model.definition()
     model_version = model_version!(definition)
     %{model_version: model_version, binding: binding!(definition, model_version)}
   end
@@ -42,16 +44,16 @@ defmodule ClinicDemo.Planning.Install do
   rebinding anything**. A plan is made with what a person bound; planning never
   quietly rebinds. Raises when nothing is installed, naming the seed script.
   """
-  @spec current!() :: %{model_version: struct(), binding: struct()}
-  def current!() do
-    definition = WeeklyRoster.definition()
+  @spec current!(module()) :: %{model_version: struct(), binding: struct()}
+  def current!(model \\ WeeklyRoster) do
+    definition = model.definition()
     selector = BuildSelector.selector(definition.key, definition.purpose)
 
     binding =
       Binding
       |> Ash.Query.filter(selector == ^selector)
       |> Ash.read_one!(actor: Machinery.actor()) ||
-        raise "the weekly roster model is not bound: run `mix run priv/planning/seed_weekly_roster.exs`"
+        raise "the #{definition.key} model is not bound: run its seed script under priv/planning"
 
     %{"version" => version} =
       Enum.find(binding.selection, &(&1["kind"] == "mzn" and &1["key"] == definition.key))
@@ -142,7 +144,33 @@ defmodule ClinicDemo.Planning.Install do
   # What the binding pins: the decision (published version + hash) and the three
   # reviewed artifacts. `(kind, key, version, content_hash)`, all strings.
   defp selection(definition, model_version) do
-    decision = hd(Decisions.latest_published_decision!(definition.decision_key))
+    decision_entries(definition.decision_key) ++
+      [
+        %{
+          "kind" => "mzn",
+          "key" => model_version.key,
+          "version" => Integer.to_string(model_version.version),
+          "content_hash" => model_version.model_sha256
+        },
+        %{
+          "kind" => "mzn",
+          "key" => model_version.key <> ".checker",
+          "version" => Integer.to_string(model_version.version),
+          "content_hash" => model_version.checker_sha256
+        },
+        %{
+          "kind" => "validator",
+          "key" => model_version.validator_module,
+          "version" => Integer.to_string(model_version.version),
+          "content_hash" => model_version.validator_sha256
+        }
+      ]
+  end
+
+  defp decision_entries(nil), do: []
+
+  defp decision_entries(decision_key) do
+    decision = hd(Decisions.latest_published_decision!(decision_key))
 
     [
       %{
@@ -150,24 +178,6 @@ defmodule ClinicDemo.Planning.Install do
         "key" => decision.key,
         "version" => Integer.to_string(decision.version),
         "content_hash" => decision.content_hash
-      },
-      %{
-        "kind" => "mzn",
-        "key" => model_version.key,
-        "version" => Integer.to_string(model_version.version),
-        "content_hash" => model_version.model_sha256
-      },
-      %{
-        "kind" => "mzn",
-        "key" => model_version.key <> ".checker",
-        "version" => Integer.to_string(model_version.version),
-        "content_hash" => model_version.checker_sha256
-      },
-      %{
-        "kind" => "validator",
-        "key" => model_version.validator_module,
-        "version" => Integer.to_string(model_version.version),
-        "content_hash" => model_version.validator_sha256
       }
     ]
   end

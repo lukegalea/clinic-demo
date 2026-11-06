@@ -1,8 +1,11 @@
 defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
   @moduledoc """
   The host side of `Candidate.apply`: a person commits an approved, checked
-  candidate by writing `Shift` and `Assignment` rows through their own actions,
-  after a freshness recheck.
+  candidate by writing the schedule through the domain's own actions, after a
+  freshness recheck. What is written is the run's model's
+  (`ClinicDemo.Planning.Model.apply_plan/3`): `Shift` and `Assignment` rows for the
+  weekly roster; mobile `Appointment`s and `VisitRequest` scheduling for mobile
+  visits. The recheck, the transaction, the marker and the settlement are the same.
 
       # in ClinicDemo.Planning.Candidate
       changes do
@@ -20,14 +23,13 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
 
     1. **Recheck every source.** The run's problem payload carries the snapshot
        envelope (its digest verified). The inputs are read again *now* by the same
-       reader that built them; any input that was added, removed or whose content
+       reader that built them (the model's `current_inputs/1`); any input that was added, removed or whose content
        hash moved (a booking, a rescheduled or cancelled appointment, a changed
        availability, a shift applied by another candidate) is *drift* and refuses
        the apply. Nothing is written.
-    2. **Diff against what is applied.** The candidate is a whole-week plan. Shifts
-       and assignments the week already has and the plan keeps are left alone (and
-       counted as preserved); ones the plan drops are cancelled; new ones are
-       placed.
+    2. **Diff against what is applied.** The candidate is a whole-scope plan (a week;
+       a day's route). What is already applied and the plan keeps is left alone (and
+       counted as preserved); what the plan drops is cancelled; what is new is placed.
     3. **Write, in one transaction.** Cancels first, then placements, as the
        approving person, with a process-local marker set only around these writes
        (`Checks.AppliedByCandidate`; the `Shift`/`Assignment` policy trusts that
@@ -40,9 +42,10 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
        either way; never an approved-looking stale row.
 
   On success the returned candidate carries the outcome as metadata
-  (`record.__metadata__[:planning_apply]`: `placed_shifts`, `placed_assignments`,
-  `cancelled_shifts`, `cancelled_assignments`, `preserved_shifts`,
-  `preserved_assignments`).
+  (`record.__metadata__[:planning_apply]`): the roster's `placed_shifts`,
+  `placed_assignments`, `cancelled_shifts`, `cancelled_assignments`,
+  `preserved_shifts`, `preserved_assignments`; mobile visits' `booked_visits`,
+  `moved_visits`, `preserved_visits`.
 
   The recheck and the writes share one transaction, but a booking that commits
   between the recheck and this transaction's commit is not locked out (a new
@@ -55,9 +58,7 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
   require Logger
 
   alias ClinicDemo.Planning
-  alias ClinicDemo.Planning.Checks.AppliedByCandidate
-  alias ClinicDemo.Planning.{Machinery, Reader, Run, SnapshotBuilder}
-  alias ClinicDemo.Scheduling
+  alias ClinicDemo.Planning.{Machinery, Run, SnapshotBuilder}
 
   @impl true
   def change(changeset, _opts, context) do
@@ -78,11 +79,11 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
     with {:ok, run} <- Ash.get(Run, candidate.run_id, authorize?: false),
          {:ok, payload} <- SnapshotBuilder.problem_payload(run),
          {:ok, snapshot} <- SnapshotBuilder.snapshot_from_payload(payload),
-         {:ok, week_start} <- Date.from_iso8601(payload["problem"]["week_start"]),
-         facts = Reader.read(week_start, DateTime.utc_now()),
-         :ok <- recheck(snapshot, facts),
-         {:ok, plan} <- plan(candidate) do
-      transact(changeset, candidate, plan, facts, context.actor)
+         {:ok, model, _version} <- SnapshotBuilder.model_of(run),
+         {:ok, current} <- model.current_inputs(payload),
+         :ok <- recheck(snapshot, current),
+         {:ok, outcome} <- model.apply_plan(candidate, payload, context.actor) do
+      Ash.Changeset.set_context(changeset, %{planning_outcome: outcome})
     else
       {:drift, key} ->
         changeset
@@ -90,6 +91,14 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
         |> Ash.Changeset.add_error(
           field: :freshness,
           message: "a source changed since the snapshot (#{key}); the candidate is stale"
+        )
+
+      {:error, {:refused, error}} ->
+        changeset
+        |> Ash.Changeset.set_context(%{planning_apply: :refused})
+        |> Ash.Changeset.add_error(
+          field: :assignments,
+          message: "apply refused: #{reason_text(error)}"
         )
 
       {:error, reason} ->
@@ -104,9 +113,9 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
 
   # The snapshot's inputs against the inputs as they are now. `{:drift, key}` on
   # the first that differs (sorted, so the message is stable).
-  defp recheck(snapshot, facts) do
+  defp recheck(snapshot, current_inputs) do
     then = Map.new(snapshot.inputs, &{{&1.key, &1.role}, &1.content_hash})
-    now = Map.new(Reader.inputs(facts), &{{&1.key, &1.role}, &1.content_hash})
+    now = Map.new(current_inputs, &{{&1.key, &1.role}, &1.content_hash})
 
     changed =
       then
@@ -121,137 +130,6 @@ defmodule ClinicDemo.Planning.Changes.ApplyCandidate do
       {key, _role} -> {:drift, key}
     end
   end
-
-  defp plan(candidate) do
-    with binary when is_binary(binary) <- candidate.assignments,
-         {:ok, %{"shifts" => shifts, "assignments" => assignments}} <- Jason.decode(binary) do
-      {:ok, %{shifts: Enum.map(shifts, &parse_shift/1), assignments: assignments}}
-    else
-      _ -> {:error, :assignments_unreadable}
-    end
-  end
-
-  defp parse_shift(shift) do
-    {:ok, starts_at, _} = DateTime.from_iso8601(shift["starts_at"])
-    {:ok, ends_at, _} = DateTime.from_iso8601(shift["ends_at"])
-    %{shift | "starts_at" => starts_at, "ends_at" => ends_at}
-  end
-
-  defp transact(changeset, candidate, plan, facts, actor) do
-    opts = [actor: actor]
-
-    shift_key = &{&1.clinician_id, &1.starts_at, &1.ends_at}
-    planned_shift_key = &{&1["clinician_id"], &1["starts_at"], &1["ends_at"]}
-    assignment_key = &{&1.appointment_id, &1.clinician_id}
-    planned_assignment_key = &{&1["appointment_id"], &1["clinician_id"]}
-
-    {keep_shifts, drop_shifts} = split(facts.shifts, shift_key, plan.shifts, planned_shift_key)
-
-    {keep_assignments, drop_assignments} =
-      split(facts.assignments, assignment_key, plan.assignments, planned_assignment_key)
-
-    kept_shift_keys = MapSet.new(keep_shifts, shift_key)
-    kept_assignment_keys = MapSet.new(keep_assignments, assignment_key)
-
-    place_shifts =
-      Enum.reject(plan.shifts, &MapSet.member?(kept_shift_keys, planned_shift_key.(&1)))
-
-    place_assignments =
-      Enum.reject(
-        plan.assignments,
-        &MapSet.member?(kept_assignment_keys, planned_assignment_key.(&1))
-      )
-
-    steps =
-      Enum.map(drop_assignments, &{:cancel_assignment, &1}) ++
-        Enum.map(drop_shifts, &{:cancel_shift, &1}) ++
-        Enum.map(place_shifts, &{:place_shift, &1}) ++
-        Enum.map(place_assignments, &{:place_assignment, &1})
-
-    # We are already inside the apply action's transaction: every write below
-    # joins it, and returning the error from this hook rolls all of them back
-    # together.
-    result =
-      AppliedByCandidate.with_marker(
-        candidate.id,
-        MapSet.new(Enum.map(drop_assignments ++ drop_shifts, & &1.id)),
-        fn ->
-          Enum.reduce_while(steps, :ok, fn step, :ok ->
-            case run_step(step, candidate.id, opts) do
-              :ok -> {:cont, :ok}
-              {:error, error} -> {:halt, {:error, error}}
-            end
-          end)
-        end
-      )
-
-    case result do
-      :ok ->
-        outcome = %{
-          placed_shifts: length(place_shifts),
-          placed_assignments: length(place_assignments),
-          cancelled_shifts: length(drop_shifts),
-          cancelled_assignments: length(drop_assignments),
-          preserved_shifts: length(keep_shifts),
-          preserved_assignments: length(keep_assignments)
-        }
-
-        Ash.Changeset.set_context(changeset, %{planning_outcome: outcome})
-
-      {:error, error} ->
-        changeset
-        |> Ash.Changeset.set_context(%{planning_apply: :refused})
-        |> Ash.Changeset.add_error(
-          field: :assignments,
-          message: "apply refused: #{reason_text(error)}"
-        )
-    end
-  end
-
-  # {applied rows the plan keeps, applied rows the plan drops}
-  defp split(applied, applied_key, planned, planned_key) do
-    planned_keys = MapSet.new(planned, planned_key)
-    Enum.split_with(applied, &MapSet.member?(planned_keys, applied_key.(&1)))
-  end
-
-  defp run_step({:cancel_assignment, row}, _candidate_id, opts),
-    do: ok(Scheduling.cancel_assignment(row.id, %{}, opts))
-
-  defp run_step({:cancel_shift, row}, _candidate_id, opts),
-    do: ok(Scheduling.cancel_shift(row.id, %{}, opts))
-
-  defp run_step({:place_shift, shift}, candidate_id, opts) do
-    ok(
-      Scheduling.place_shift(
-        %{
-          role: shift["role"],
-          starts_at: shift["starts_at"],
-          ends_at: shift["ends_at"],
-          candidate_id: candidate_id,
-          clinician_id: shift["clinician_id"],
-          shift_template_id: shift["shift_template_id"]
-        },
-        opts
-      )
-    )
-  end
-
-  defp run_step({:place_assignment, assignment}, candidate_id, opts) do
-    ok(
-      Scheduling.place_assignment(
-        %{
-          appointment_id: assignment["appointment_id"],
-          role: assignment["role"],
-          candidate_id: candidate_id,
-          clinician_id: assignment["clinician_id"]
-        },
-        opts
-      )
-    )
-  end
-
-  defp ok({:ok, _record}), do: :ok
-  defp ok({:error, error}), do: {:error, error}
 
   defp attach_outcome(changeset, candidate) do
     case changeset.context[:planning_outcome] do

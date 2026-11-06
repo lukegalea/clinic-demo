@@ -222,6 +222,39 @@ chains into tooling rather than into a human's eyeball.
     replication_id)`); results are labelled `simulated?: true`, and the real ledger
     and projection are never written. Fixtures are synthetic.
 
+### Planning (mobile visits)
+
+31. **One loop, several models.** The roster and the mobile-visits plan run through the
+    same snapshot builder, solve runner, check pipeline, four-eyes approval and apply;
+    each is a `Planning.Model` (`Models.WeeklyRoster`, `Models.MobileVisits`) that
+    supplies its reader, lowering, answer decoding, independent validator and apply
+    writes. Add the next model by implementing the behaviour, not by forking the loop.
+32. **Travel is explicit and never zero.** `Planning.MobileVisits` plans one
+    veterinarian's one day: every requested visit must fit its window with the drive
+    into and out of it between the pinned commitments, or the run is `:infeasible`
+    and there is no candidate (`MobileVisits.refusals/1` says which visit and which
+    commitment). A pair the matrix marks unreachable is infeasible; a pair it does
+    not hold is `:needs_input` naming `travel_pair:<from>:<to>`; the same place needs
+    no travel. Never default a missing leg to zero.
+33. **`TravelMatrix` is a versioned artifact: publish, never edit.** It has `publish`
+    and `read` and nothing else; a changed matrix is a new version, and the snapshot
+    records the one it read as a `:travel_matrix` input carrying its content hash
+    (recomputed on every read). A hosted routing/distance API stays out until
+    `ash_operations` declares it: no HTTP client, no `Req`, in planning.
+34. **Visit requests are scheduled only by applying a plan; in-clinic work is pinned.**
+    `VisitRequest.schedule` is gated by `Checks.AppliedByCandidate` like `Shift` and
+    `Assignment`: apply books a mobile `Appointment` (`location_mode: :mobile`) as the
+    approving person and marks the request scheduled. The vet's in-clinic
+    appointments, blocked time and applied shift are *read* (the attendee is the
+    applied `Assignment` when there is one) and never written by a mobile plan.
+35. **Mobile model, checker and validator are hashed artifacts too.** Editing
+    `mobile_visits.mzn`, its checker or `Planning.MobileValidator` changes the hashes
+    baked in at compile time (`Planning.Models.MobileVisits`); run
+    `mix run priv/planning/seed_mobile_visits.exs` (or
+    `Planning.Install.install!(Planning.Models.MobileVisits)`). The validator reads
+    the domain-level problem and shares nothing with `Planning.MobileLowering` (the
+    minute grid, place indices, the flattened matrix).
+
 ## Layout
 
 ```
@@ -229,12 +262,13 @@ lib/clinic_demo/
   scheduling/            the domain: patients, clinicians, appointments
   decisions/             DMN definitions, the evidence trail, the BPMN bridge
   visits/                the six BPMN resources and the three host callbacks
-  planning/              the weekly roster: reader, lowering, snapshot builder,
-                         solve runner, check pipeline, independent validator,
-                         four-eyes approval, apply (ash_planning fragments)
+  planning/              the weekly roster and mobile visits: readers, lowerings,
+                         snapshot builder, solve runner, check pipeline, independent
+                         validators, four-eyes approval, apply (ash_planning fragments)
   rules.ex               publishes the rule documents from priv/, in order
 priv/
   decisions/*.dmn        the triage table; staffing.policy (the roster's parameters)
   processes/*.bpmn       the visit process; candidate_four_eyes (the roster approval)
-  planning/              weekly_roster.mzn + checker (synthetic MiniZinc) and the seed
+  planning/              weekly_roster.mzn, mobile_visits.mzn + checkers (synthetic
+                         MiniZinc) and the seed scripts
 ```
