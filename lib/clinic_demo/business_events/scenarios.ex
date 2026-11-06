@@ -27,6 +27,24 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
        into `SimValueProjection` — the separate table, never the real
        value projection (design risk #2).
 
+  ## Evaluation identity (planning candidates)
+
+  A scenario can evaluate one planning candidate. Passing the five planning
+  fields makes the run's identity the five-tuple
+
+      (candidate_id, snapshot_digest, model_hash, random_stream_id, replication_id)
+
+  and **the label becomes presentation only**: the seed is `(visit_id,
+  identity-tuple)` instead of `(visit_id, label)`, so two evaluations that differ
+  in any one of the five draw independently, and the same five always draw the
+  same outcomes whatever the run is called. The five go together (all or none; a
+  partial identity is not an identity and raises `ArgumentError`), and they ride
+  each twin event's structural `context` (`"evaluation"`), ids and digests only.
+  With no planning field the seed stays `(visit_id, label)` and everything below
+  holds unchanged. When a planning identity is given and no `:label`, the default
+  label is content-addressed from the identity as well as the knobs, so two
+  candidates never share a delivery-key namespace.
+
   ## Determinism and idempotency
 
   The seed is `(visit_id, label)` alone — the multiplier does not enter
@@ -68,6 +86,23 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
   @cancellation :visit_cancelled
   @no_show :visit_no_show
 
+  @typedoc "The planning evaluation identity: the five-tuple, as a map."
+  @type identity :: %{
+          candidate_id: String.t(),
+          snapshot_digest: String.t(),
+          model_hash: String.t(),
+          random_stream_id: String.t(),
+          replication_id: non_neg_integer()
+        }
+
+  @identity_keys [
+    :candidate_id,
+    :snapshot_digest,
+    :model_hash,
+    :random_stream_id,
+    :replication_id
+  ]
+
   @typedoc "One drawn outcome, ready to record on the twin."
   @type planned :: %{
           required(:appointment_id) => Ecto.UUID.t(),
@@ -77,7 +112,8 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
           required(:amount) => Decimal.t() | nil,
           required(:rate) => Decimal.t(),
           required(:tier) => Forecast.tier(),
-          required(:multiplier) => Decimal.t()
+          required(:multiplier) => Decimal.t(),
+          required(:identity) => identity() | nil
         }
 
   @doc """
@@ -102,6 +138,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
   """
   @spec generate!(keyword()) :: %{
           run: String.t(),
+          identity: identity() | nil,
           events: non_neg_integer(),
           generated: non_neg_integer(),
           appended: non_neg_integer(),
@@ -110,7 +147,8 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
   def generate!(opts \\ []) do
     multiplier = Keyword.get(opts, :multiplier, @default_multiplier)
     horizon_weeks = Keyword.get(opts, :horizon_weeks, @default_horizon_weeks)
-    label = Keyword.get(opts, :label) || default_label(multiplier, horizon_weeks)
+    identity = identity!(opts)
+    label = Keyword.get(opts, :label) || default_label(multiplier, horizon_weeks, identity)
 
     scheduled = Finance.scheduled_with_prices(horizon_weeks)
     rates = Finance.historical_outcomes() |> Forecast.build_rates()
@@ -121,7 +159,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
         Enum.map(scheduled, &Map.put(&1, :duration_minutes, durations[&1.id]))
       end)
 
-    planned = plan(visits, label, rates, multiplier)
+    planned = plan(visits, label, rates, multiplier, identity)
 
     before = run_events(label)
     Enum.each(planned, &record!/1)
@@ -130,6 +168,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
 
     %{
       run: label,
+      identity: identity,
       events: after_count,
       generated: length(planned),
       appended: after_count - before,
@@ -140,8 +179,9 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
   @doc """
   The pure half of the generator — the draw, no ledger, no clock: plain
   visit rows in, drawn outcomes out. Determinism lives here: each visit's
-  draw is seeded by `(visit_id, label)` alone, so the same rows, label
-  and multiplier always produce the identical multiset, and a higher
+  draw is seeded by `(visit_id, label)` alone (or `(visit_id, identity)` when
+  the optional planning `identity` map is given, and then the label is not in
+  the seed at all), so the same rows, seed key and multiplier always produce the identical multiset, and a higher
   multiplier can only move a visit toward completion (the `u` never
   changes; only the bar it must clear does).
 
@@ -149,13 +189,14 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
   `:scheduled_at`, `:amount` and `:duration_minutes` — the shape
   `Finance.scheduled_with_prices/1` emits plus the slot's length.
   """
-  @spec plan([map()], String.t(), Forecast.rates(), Decimal.t()) :: [planned()]
-  def plan(visits, label, rates, multiplier) do
+  @spec plan([map()], String.t(), Forecast.rates(), Decimal.t(), identity() | nil) ::
+          [planned()]
+  def plan(visits, label, rates, multiplier, identity \\ nil) do
     visits
     # Record order is commit order on the twin's chain: order by the
     # visit's id, not by whatever the read happened to return.
     |> Enum.sort_by(& &1.id)
-    |> Enum.map(&draw(&1, label, rates, multiplier))
+    |> Enum.map(&draw(&1, label, rates, multiplier, identity))
   end
 
   @doc "The runs already on the twin, via the package's supported read (AC-3)."
@@ -164,7 +205,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
 
   # ── the draw ───────────────────────────────────────────────────────────
 
-  defp draw(visit, label, rates, multiplier) do
+  defp draw(visit, label, rates, multiplier, identity) do
     {rate, tier, _observations} =
       Forecast.completion_rate(
         rates,
@@ -174,7 +215,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
       )
 
     p = clamp01(Decimal.mult(rate, multiplier))
-    seed = :rand.seed_s(:exsss, seed_tuple(visit.id, label))
+    seed = :rand.seed_s(:exsss, seed_tuple(visit.id, label, identity))
     {u, rest} = :rand.uniform_s(seed)
 
     outcome =
@@ -201,7 +242,8 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
       amount: if(outcome == @completion, do: visit.amount),
       rate: rate,
       tier: tier,
-      multiplier: multiplier
+      multiplier: multiplier,
+      identity: identity
     }
   end
 
@@ -214,12 +256,72 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
 
   # (visit_id, label) alone — never the multiplier, never the clock. The
   # digest spreads the pair across the three integers `:rand.seed_s`
-  # wants, deterministically.
-  defp seed_tuple(visit_id, label) do
+  # wants, deterministically. With a planning identity the seed is
+  # (visit_id, identity-tuple) instead and the label does not enter it.
+  defp seed_tuple(visit_id, label, nil), do: seed_tuple(visit_id <> ":" <> label)
+
+  defp seed_tuple(visit_id, _label, identity),
+    do: seed_tuple(visit_id <> ":plan:" <> identity_key(identity))
+
+  defp seed_tuple(material) do
     <<a::unsigned-integer-32, b::unsigned-integer-32, c::unsigned-integer-32, _::binary>> =
-      :crypto.hash(:sha256, visit_id <> ":" <> label)
+      :crypto.hash(:sha256, material)
 
     {a, b, c}
+  end
+
+  # The five-tuple, in its fixed order, one canonical string. The separator is a
+  # byte no id, digest or hash can contain.
+  defp identity_key(identity) do
+    Enum.map_join(@identity_keys, <<0>>, &to_string(Map.fetch!(identity, &1)))
+  end
+
+  # The key joins the five with a NUL, so no field may contain one, and the shapes
+  # are fixed so two distinct tuples can never join to the same string.
+  defp validate_identity!(identity) do
+    bad =
+      Enum.reject(@identity_keys, fn key ->
+        valid_identity_field?(key, Map.fetch!(identity, key))
+      end)
+
+    if bad != [],
+      do:
+        raise(ArgumentError, "planning identity: invalid #{inspect(bad)} in #{inspect(identity)}")
+
+    :ok
+  end
+
+  defp valid_identity_field?(:candidate_id, v),
+    do: is_binary(v) and match?({:ok, _}, Ecto.UUID.cast(v))
+
+  defp valid_identity_field?(key, v) when key in [:snapshot_digest, :model_hash],
+    do: is_binary(v) and v =~ ~r/\A[0-9a-f]{64}\z/
+
+  defp valid_identity_field?(:random_stream_id, v),
+    do: is_binary(v) and v != "" and not String.contains?(v, <<0>>)
+
+  defp valid_identity_field?(:replication_id, v), do: is_integer(v) and v >= 0
+
+  # All five planning fields or none. A partial identity is not an identity: it
+  # would seed two different evaluations alike.
+  defp identity!(opts) do
+    given = Enum.filter(@identity_keys, &Keyword.has_key?(opts, &1))
+
+    cond do
+      given == [] ->
+        nil
+
+      length(given) == length(@identity_keys) ->
+        identity = Map.new(@identity_keys, &{&1, Keyword.fetch!(opts, &1)})
+
+        validate_identity!(identity)
+        identity
+
+      true ->
+        raise ArgumentError,
+              "planning identity needs all of #{inspect(@identity_keys)}; " <>
+                "missing #{inspect(@identity_keys -- given)}"
+    end
   end
 
   defp clamp01(p) do
@@ -259,13 +361,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
         delivery_key: "scenario:#{run_of(planned)}:#{planned.appointment_id}:#{planned.kind}",
         simulation_run: run_of(planned),
         provenance: canonical.provenance,
-        context: %{
-          "scenario" => %{
-            "multiplier" => Decimal.to_string(normalized(planned.multiplier)),
-            "rate" => Decimal.to_string(planned.rate),
-            "tier" => to_string(planned.tier)
-          }
-        },
+        context: context(planned),
         data: canonical.data
       },
       authorize?: false
@@ -299,10 +395,42 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
               "ClinicDemo.BusinessEvents.install!/0 before generating a scenario"
   end
 
+  # Structural only: the knobs and, for a planning evaluation, the five-tuple's
+  # ids, digests and counter. No actor, no PII.
+  defp context(planned) do
+    base = %{
+      "scenario" => %{
+        "multiplier" => Decimal.to_string(normalized(planned.multiplier)),
+        "rate" => Decimal.to_string(planned.rate),
+        "tier" => to_string(planned.tier)
+      }
+    }
+
+    case planned.identity do
+      nil ->
+        base
+
+      identity ->
+        Map.put(base, "evaluation", Map.new(identity, fn {k, v} -> {to_string(k), v} end))
+    end
+  end
+
   defp normalized(multiplier), do: multiplier |> Decimal.round(4) |> Decimal.normalize()
 
-  defp default_label(multiplier, horizon_weeks),
+  defp default_label(multiplier, horizon_weeks, nil),
     do: "scenario:x#{normalized(multiplier)}-h#{horizon_weeks}"
+
+  # Content-addressed from the identity too: two candidates never share a label,
+  # so never a delivery-key namespace. Sixteen hex characters of the five-tuple's
+  # digest are plenty to tell evaluations apart in a label.
+  defp default_label(multiplier, horizon_weeks, identity) do
+    short =
+      :crypto.hash(:sha256, identity_key(identity))
+      |> Base.encode16(case: :lower)
+      |> binary_part(0, 16)
+
+    "scenario:plan-#{short}-x#{normalized(multiplier)}-h#{horizon_weeks}"
+  end
 
   # ── the reads around the draw ──────────────────────────────────────────
 

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  The four-eyes approval of a roster candidate: the clinic manager AND the head
+  vet must each sign it off before anything is written to the schedule.
+
+  Two things to notice.
+
+  1. The two sign-offs run in PARALLEL behind a fork and meet at a join. Neither
+     task can complete the other's; one person holding both roles still has to
+     be two different people, which the host enforces (it refuses the same
+     clinician completing both).
+  2. The graph never writes a Shift or an Assignment. When both tasks are done
+     the host runs `Candidate.apply` as the second approver, in one
+     transaction. `withdrawn` is the outcome the planner itself records on the
+     remaining task when the other approver rejects, so no orphan task is left
+     on a worklist.
+
+  ASCII-only, like every process document here (see appointment_visit.bpmn).
+-->
+
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:ash="https://github.com/lukegalea/ash_bpmn/ns" id="Definitions_candidate_four_eyes" targetNamespace="https://github.com/lukegalea/ash_bpmn/ns">
+  <bpmn2:process id="Process_candidate_four_eyes" name="Roster candidate four-eyes approval" isExecutable="true">
+    <bpmn2:startEvent id="Start_proposed" name="Candidate proposed">
+      <bpmn2:outgoing>Flow_to_fork</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    <bpmn2:parallelGateway id="Fork_signoffs" name="Both sign-offs">
+      <bpmn2:incoming>Flow_to_fork</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_to_manager</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_to_head_vet</bpmn2:outgoing>
+    </bpmn2:parallelGateway>
+    <bpmn2:userTask id="ManagerSignoff" name="Clinic manager sign-off">
+      <bpmn2:extensionElements>
+        <ash:taskConfig>
+          <ash:candidates>
+            <ash:candidate kind="leadership" of="clinic_manager" />
+          </ash:candidates>
+          <ash:outcomes>
+            <ash:outcome name="approved" />
+            <ash:outcome name="rejected" />
+            <ash:outcome name="withdrawn" />
+          </ash:outcomes>
+        </ash:taskConfig>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_to_manager</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_manager_done</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:userTask id="HeadVetSignoff" name="Head vet sign-off">
+      <bpmn2:extensionElements>
+        <ash:taskConfig>
+          <ash:candidates>
+            <ash:candidate kind="leadership" of="head_vet" />
+          </ash:candidates>
+          <ash:outcomes>
+            <ash:outcome name="approved" />
+            <ash:outcome name="rejected" />
+            <ash:outcome name="withdrawn" />
+          </ash:outcomes>
+        </ash:taskConfig>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_to_head_vet</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_head_vet_done</bpmn2:outgoing>
+    </bpmn2:userTask>
+    <bpmn2:parallelGateway id="Join_signoffs" name="Both done">
+      <bpmn2:incoming>Flow_manager_done</bpmn2:incoming>
+      <bpmn2:incoming>Flow_head_vet_done</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_to_end</bpmn2:outgoing>
+    </bpmn2:parallelGateway>
+    <bpmn2:endEvent id="End_decided" name="Decided">
+      <bpmn2:incoming>Flow_to_end</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="Flow_to_fork" sourceRef="Start_proposed" targetRef="Fork_signoffs" />
+    <bpmn2:sequenceFlow id="Flow_to_manager" sourceRef="Fork_signoffs" targetRef="ManagerSignoff" />
+    <bpmn2:sequenceFlow id="Flow_to_head_vet" sourceRef="Fork_signoffs" targetRef="HeadVetSignoff" />
+    <bpmn2:sequenceFlow id="Flow_manager_done" sourceRef="ManagerSignoff" targetRef="Join_signoffs" />
+    <bpmn2:sequenceFlow id="Flow_head_vet_done" sourceRef="HeadVetSignoff" targetRef="Join_signoffs" />
+    <bpmn2:sequenceFlow id="Flow_to_end" sourceRef="Join_signoffs" targetRef="End_decided" />
+  </bpmn2:process>
+</bpmn2:definitions>

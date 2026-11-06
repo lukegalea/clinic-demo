@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  How the clinic staffs a week.
+
+  The parameter decision behind the weekly roster model: it is asked two kinds of
+  question, and answers each from the rows of its own kind.
+
+    kind = "appointment" (with the catalogue entry's name in appointmentType):
+      requiredRole     the role of the clinician who must be on the appointment
+                       (qualification: a vet for an exam or surgery consult, a
+                       technician for a nail trim, a nurse for vaccination);
+      durationMinutes  the duration POLICY: the slot the roster plans for, which
+                       is never shorter than what the booking says.
+
+    kind = "week" (with the lowercase English weekday in weekday):
+      reserveMinutes   reserve capacity: minutes of every working clinician-day
+                       the roster must keep unassigned for walk-ins and
+                       emergencies;
+      shiftPatterns    the allowed shift patterns: a comma-separated list of
+                       ShiftTemplate names that may start on that day ("" means
+                       the clinic is closed).
+
+  The solver is handed these answers as data and never hardcodes them, so a head
+  vet who changes the reserve on a Tuesday afternoon rebinds without a deploy and
+  without touching the model.
+
+  Hit policy FIRST: the specific rows precede the catch-all. A row of the wrong
+  kind never matches, so the unused outputs of a row are null on purpose.
+
+  Synthetic policy, safe to publish: it describes no real clinic.
+-->
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="staffing_policy_definitions"
+             name="Staffing policy"
+             namespace="https://clinic-demo.example/decisions/staffing-policy"
+             expressionLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/"
+             typeLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/">
+
+  <itemDefinition id="item_staffing" name="tStaffingPolicy">
+    <itemComponent id="item_role" name="requiredRole"><typeRef>string</typeRef></itemComponent>
+    <itemComponent id="item_duration" name="durationMinutes"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="item_reserve" name="reserveMinutes"><typeRef>number</typeRef></itemComponent>
+    <itemComponent id="item_patterns" name="shiftPatterns"><typeRef>string</typeRef></itemComponent>
+  </itemDefinition>
+
+  <inputData id="input_kind" name="kind">
+    <variable id="var_kind" name="kind" typeRef="string"/>
+  </inputData>
+  <inputData id="input_type" name="appointmentType">
+    <variable id="var_type" name="appointmentType" typeRef="string"/>
+  </inputData>
+  <inputData id="input_weekday" name="weekday">
+    <variable id="var_weekday" name="weekday" typeRef="string"/>
+  </inputData>
+
+  <decision id="decision_staffing_policy" name="StaffingPolicy">
+    <variable id="var_policy" name="StaffingPolicy" typeRef="tStaffingPolicy"/>
+    <informationRequirement id="req_kind"><requiredInput href="#input_kind"/></informationRequirement>
+    <informationRequirement id="req_type"><requiredInput href="#input_type"/></informationRequirement>
+    <informationRequirement id="req_weekday"><requiredInput href="#input_weekday"/></informationRequirement>
+
+    <decisionTable id="table_staffing_policy" hitPolicy="FIRST" outputLabel="StaffingPolicy">
+      <input id="clause_kind" label="Kind of question">
+        <inputExpression id="expr_kind" typeRef="string"><text>kind</text></inputExpression>
+        <inputValues id="values_kind"><text>"appointment", "week"</text></inputValues>
+      </input>
+      <input id="clause_type" label="Appointment type">
+        <inputExpression id="expr_type" typeRef="string"><text>appointmentType</text></inputExpression>
+      </input>
+      <input id="clause_weekday" label="Weekday">
+        <inputExpression id="expr_weekday" typeRef="string"><text>weekday</text></inputExpression>
+        <inputValues id="values_weekday">
+          <text>"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"</text>
+        </inputValues>
+      </input>
+
+      <output id="clause_role" name="requiredRole" typeRef="string"/>
+      <output id="clause_duration" name="durationMinutes" typeRef="number"/>
+      <output id="clause_reserve" name="reserveMinutes" typeRef="number"/>
+      <output id="clause_patterns" name="shiftPatterns" typeRef="string"/>
+
+      <rule id="rule_appt_0">
+        <inputEntry id="appt_0_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_0_type"><text>"Nail trim"</text></inputEntry>
+        <inputEntry id="appt_0_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_0_role"><text>"technician"</text></outputEntry>
+        <outputEntry id="appt_0_dur"><text>15</text></outputEntry>
+        <outputEntry id="appt_0_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_0_patterns"><text>null</text></outputEntry>
+      </rule>
+      <rule id="rule_appt_1">
+        <inputEntry id="appt_1_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_1_type"><text>"Vaccination"</text></inputEntry>
+        <inputEntry id="appt_1_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_1_role"><text>"nurse"</text></outputEntry>
+        <outputEntry id="appt_1_dur"><text>20</text></outputEntry>
+        <outputEntry id="appt_1_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_1_patterns"><text>null</text></outputEntry>
+      </rule>
+      <rule id="rule_appt_2">
+        <inputEntry id="appt_2_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_2_type"><text>"Wellness exam"</text></inputEntry>
+        <inputEntry id="appt_2_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_2_role"><text>"veterinarian"</text></outputEntry>
+        <outputEntry id="appt_2_dur"><text>30</text></outputEntry>
+        <outputEntry id="appt_2_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_2_patterns"><text>null</text></outputEntry>
+      </rule>
+      <rule id="rule_appt_3">
+        <inputEntry id="appt_3_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_3_type"><text>"Dental cleaning"</text></inputEntry>
+        <inputEntry id="appt_3_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_3_role"><text>"veterinarian"</text></outputEntry>
+        <outputEntry id="appt_3_dur"><text>60</text></outputEntry>
+        <outputEntry id="appt_3_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_3_patterns"><text>null</text></outputEntry>
+      </rule>
+      <rule id="rule_appt_4">
+        <inputEntry id="appt_4_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_4_type"><text>"Surgery consult"</text></inputEntry>
+        <inputEntry id="appt_4_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_4_role"><text>"veterinarian"</text></outputEntry>
+        <outputEntry id="appt_4_dur"><text>45</text></outputEntry>
+        <outputEntry id="appt_4_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_4_patterns"><text>null</text></outputEntry>
+      </rule>
+      <rule id="rule_appt_5">
+        <inputEntry id="appt_5_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_5_type"><text>"Emergency visit"</text></inputEntry>
+        <inputEntry id="appt_5_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_5_role"><text>"veterinarian"</text></outputEntry>
+        <outputEntry id="appt_5_dur"><text>45</text></outputEntry>
+        <outputEntry id="appt_5_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_5_patterns"><text>null</text></outputEntry>
+      </rule>
+      <!-- Any other appointment type: a vet, thirty minutes. -->
+      <rule id="rule_appt_default">
+        <inputEntry id="appt_default_kind"><text>"appointment"</text></inputEntry>
+        <inputEntry id="appt_default_type"><text>-</text></inputEntry>
+        <inputEntry id="appt_default_day"><text>-</text></inputEntry>
+        <outputEntry id="appt_default_role"><text>"veterinarian"</text></outputEntry>
+        <outputEntry id="appt_default_dur"><text>30</text></outputEntry>
+        <outputEntry id="appt_default_reserve"><text>null</text></outputEntry>
+        <outputEntry id="appt_default_patterns"><text>null</text></outputEntry>
+      </rule>
+      <rule id="rule_week_monday">
+        <inputEntry id="week_0_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_0_type"><text>-</text></inputEntry>
+        <inputEntry id="week_0_day"><text>"monday"</text></inputEntry>
+        <outputEntry id="week_0_role"><text>null</text></outputEntry>
+        <outputEntry id="week_0_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_0_reserve"><text>30</text></outputEntry>
+        <outputEntry id="week_0_patterns"><text>"early,late"</text></outputEntry>
+      </rule>
+      <rule id="rule_week_tuesday">
+        <inputEntry id="week_1_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_1_type"><text>-</text></inputEntry>
+        <inputEntry id="week_1_day"><text>"tuesday"</text></inputEntry>
+        <outputEntry id="week_1_role"><text>null</text></outputEntry>
+        <outputEntry id="week_1_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_1_reserve"><text>30</text></outputEntry>
+        <outputEntry id="week_1_patterns"><text>"early,late"</text></outputEntry>
+      </rule>
+      <rule id="rule_week_wednesday">
+        <inputEntry id="week_2_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_2_type"><text>-</text></inputEntry>
+        <inputEntry id="week_2_day"><text>"wednesday"</text></inputEntry>
+        <outputEntry id="week_2_role"><text>null</text></outputEntry>
+        <outputEntry id="week_2_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_2_reserve"><text>30</text></outputEntry>
+        <outputEntry id="week_2_patterns"><text>"early,late"</text></outputEntry>
+      </rule>
+      <rule id="rule_week_thursday">
+        <inputEntry id="week_3_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_3_type"><text>-</text></inputEntry>
+        <inputEntry id="week_3_day"><text>"thursday"</text></inputEntry>
+        <outputEntry id="week_3_role"><text>null</text></outputEntry>
+        <outputEntry id="week_3_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_3_reserve"><text>30</text></outputEntry>
+        <outputEntry id="week_3_patterns"><text>"early,late"</text></outputEntry>
+      </rule>
+      <rule id="rule_week_friday">
+        <inputEntry id="week_4_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_4_type"><text>-</text></inputEntry>
+        <inputEntry id="week_4_day"><text>"friday"</text></inputEntry>
+        <outputEntry id="week_4_role"><text>null</text></outputEntry>
+        <outputEntry id="week_4_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_4_reserve"><text>30</text></outputEntry>
+        <outputEntry id="week_4_patterns"><text>"early,late"</text></outputEntry>
+      </rule>
+      <rule id="rule_week_saturday">
+        <inputEntry id="week_5_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_5_type"><text>-</text></inputEntry>
+        <inputEntry id="week_5_day"><text>"saturday"</text></inputEntry>
+        <outputEntry id="week_5_role"><text>null</text></outputEntry>
+        <outputEntry id="week_5_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_5_reserve"><text>0</text></outputEntry>
+        <outputEntry id="week_5_patterns"><text>"weekend"</text></outputEntry>
+      </rule>
+      <rule id="rule_week_sunday">
+        <inputEntry id="week_6_kind"><text>"week"</text></inputEntry>
+        <inputEntry id="week_6_type"><text>-</text></inputEntry>
+        <inputEntry id="week_6_day"><text>"sunday"</text></inputEntry>
+        <outputEntry id="week_6_role"><text>null</text></outputEntry>
+        <outputEntry id="week_6_dur"><text>null</text></outputEntry>
+        <outputEntry id="week_6_reserve"><text>0</text></outputEntry>
+        <outputEntry id="week_6_patterns"><text>""</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

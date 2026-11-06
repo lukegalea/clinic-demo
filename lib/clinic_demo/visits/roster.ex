@@ -10,6 +10,10 @@ defmodule ClinicDemo.Visits.Roster do
   Two kinds, which is all the visit process needs:
 
     * `role` — every active clinician in that role.
+    * `leadership` — the active clinician holding that leadership position
+      (`clinic_manager` or `head_vet`). The roster approval process asks for
+      these two, and a position nobody holds resolves to nobody — a task with no
+      candidates rather than a task anyone may take.
     * `booked_clinician` — the one person the appointment names. `of` is a FEEL
       path into the subject, and this module resolves it the way the rest of the
       demo does: as a field of the appointment.
@@ -24,6 +28,7 @@ defmodule ClinicDemo.Visits.Roster do
   alias ClinicDemo.Scheduling.Clinician
 
   @roles ~w(veterinarian technician nurse)
+  @leaderships ~w(clinic_manager head_vet)
 
   @impl true
   def candidates(specs, ctx) do
@@ -49,6 +54,17 @@ defmodule ClinicDemo.Visits.Roster do
     Clinician
     |> Ash.Query.for_read(:read)
     |> Ash.Query.filter(active == true and role == ^role)
+    |> Ash.read!()
+    |> Enum.map(&%{type: :user, id: &1.id})
+  end
+
+  defp resolve(%{"kind" => "leadership", "of" => leadership}, _ctx)
+       when leadership in @leaderships do
+    leadership = String.to_existing_atom(leadership)
+
+    Clinician
+    |> Ash.Query.for_read(:read)
+    |> Ash.Query.filter(active == true and leadership == ^leadership)
     |> Ash.read!()
     |> Enum.map(&%{type: :user, id: &1.id})
   end

@@ -1,5 +1,12 @@
 import Config
 
+# The planner's MiniZinc backend runs through Solverl, whose application starts
+# erlexec at boot, and erlexec exits ("SHELL environment variable not set") when
+# $SHELL is unset, which would take the whole app down: a release image has no
+# $SHELL. Runtime config runs before any application starts, so supply one here
+# only when there is none.
+if System.get_env("SHELL") in [nil, ""], do: System.put_env("SHELL", "/bin/sh")
+
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
 # system starts, so it is typically used to load production configuration

@@ -2,12 +2,19 @@ defmodule ClinicDemo.Rules do
   @moduledoc """
   Publishes the clinic's rule documents from `priv/`.
 
-  Two documents, and the order between them is not arbitrary:
+  Four documents (the planning pair, below, was added with the weekly roster),
+  and the order between them is not arbitrary:
 
     1. `priv/decisions/appointment_triage.dmn` becomes the published
        `appointment.triage` decision.
     2. `priv/processes/appointment_visit.bpmn` becomes the published
        `appointment_visit` process.
+
+  The planning pair is `priv/decisions/staffing_policy.dmn` (the
+  `staffing.policy` decision the roster model's parameters come from) and
+  `priv/processes/candidate_four_eyes.bpmn` (the clinic-manager-and-head-vet
+  approval of a roster candidate). The decision is published first, like the
+  triage decision, and neither depends on the other.
 
   The process will not compile until the decision exists. Its `businessRuleTask`
   carries a reference, and `ash_bpmn` asks
@@ -33,6 +40,14 @@ defmodule ClinicDemo.Rules do
   @decision_name "Appointment triage"
   @decision_path "priv/decisions/appointment_triage.dmn"
 
+  @staffing_key "staffing.policy"
+  @staffing_name "Staffing policy"
+  @staffing_path "priv/decisions/staffing_policy.dmn"
+
+  @four_eyes_key "candidate_four_eyes"
+  @four_eyes_name "Roster candidate four-eyes approval"
+  @four_eyes_path "priv/processes/candidate_four_eyes.bpmn"
+
   @process_key "appointment_visit"
   @process_name "Appointment visit"
   @process_path "priv/processes/appointment_visit.bpmn"
@@ -44,7 +59,12 @@ defmodule ClinicDemo.Rules do
   `DecisionTable` and `Process` resources ask for an actor like every other
   write in this application does.
   """
-  @spec install!(keyword()) :: %{decision: struct(), process: struct()}
+  @spec install!(keyword()) :: %{
+          decision: struct(),
+          process: struct(),
+          staffing_decision: struct(),
+          four_eyes_process: struct()
+        }
   def install!(opts \\ []) do
     actor = Keyword.get(opts, :actor, deployer())
 
@@ -70,7 +90,34 @@ defmodule ClinicDemo.Rules do
         &Visits.publish_process!/2
       )
 
-    %{decision: decision, process: process}
+    staffing_decision =
+      install_document(
+        Decisions.DecisionTable,
+        @staffing_key,
+        @staffing_name,
+        read!(@staffing_path),
+        actor,
+        &Decisions.create_decision!/2,
+        &Decisions.publish_decision!/2
+      )
+
+    four_eyes_process =
+      install_document(
+        Visits.Process,
+        @four_eyes_key,
+        @four_eyes_name,
+        read!(@four_eyes_path),
+        actor,
+        &Visits.create_process!/2,
+        &Visits.publish_process!/2
+      )
+
+    %{
+      decision: decision,
+      process: process,
+      staffing_decision: staffing_decision,
+      four_eyes_process: four_eyes_process
+    }
   end
 
   @doc "Where the DMN document lives, for anything that wants to read it directly."
@@ -84,6 +131,14 @@ defmodule ClinicDemo.Rules do
   @doc "The key the visit process is published under."
   @spec process_key() :: String.t()
   def process_key, do: @process_key
+
+  @doc "The key the roster approval process is published under."
+  @spec four_eyes_process_key() :: String.t()
+  def four_eyes_process_key, do: @four_eyes_key
+
+  @doc "The key the staffing policy decision is published under."
+  @spec staffing_decision_key() :: String.t()
+  def staffing_decision_key, do: @staffing_key
 
   @doc "The key the triage decision is published under."
   @spec decision_key() :: String.t()
