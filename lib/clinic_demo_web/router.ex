@@ -79,6 +79,10 @@ defmodule ClinicDemoWeb.Router do
       live "/emergencies", A2ui.EmergencyBoardLive
       live "/schedule", A2ui.ScheduleLive
       live "/worklist", A2ui.WorklistLive
+      # The roster: the week's gantt, the shifts, and the plans that proposed
+      # them. Plan requests run as the acting clinician; the apply happens on
+      # the worklist's four-eyes sign-off, not here.
+      live "/roster", A2ui.RosterLive
       live "/visits", A2ui.VisitsLive
       live "/patients", A2ui.PatientsLive
       live "/clinicians", A2ui.CliniciansLive

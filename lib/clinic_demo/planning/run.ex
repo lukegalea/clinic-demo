@@ -45,13 +45,34 @@ defmodule ClinicDemo.Planning.Run do
     end
   end
 
+  actions do
+    action :plan_week, {:array, :map} do
+      description """
+      Plan the requested week as the acting person and return the new run's
+      candidates as row maps, best first — the "Plan a week" report's action.
+      A list of row maps, not a struct, because that is the contract of the
+      A2UI report component that runs it; each row carries its run's solve
+      verdict (solve_status, complete?, optimality) beside the candidate's
+      own fields.
+      """
+
+      argument :week_start, :date do
+        description "Any day of the week to plan; the week's Monday is used."
+        allow_nil? false
+        default &ClinicDemo.Planning.Actions.PlanWeek.next_monday/0
+      end
+
+      run ClinicDemo.Planning.Actions.PlanWeek
+    end
+  end
+
   policies do
     policy action_type(:read) do
       description "Runs are readable by anything that can reach the application."
       authorize_if always()
     end
 
-    policy action(:request) do
+    policy action([:request, :plan_week]) do
       description "Any signed-in member of staff may ask for a roster."
       authorize_if actor_present()
     end

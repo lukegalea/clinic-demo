@@ -1,3 +1,5 @@
+# Known flaky, documented in docs/DEMO.md: async temporal re-open race on the
+# appointment's period.
 defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
   @moduledoc """
   The board's as-of wire contract.

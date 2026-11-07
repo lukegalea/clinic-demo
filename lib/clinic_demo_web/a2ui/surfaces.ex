@@ -56,6 +56,18 @@ defmodule ClinicDemoWeb.A2ui.Surfaces do
           "or delegate to a colleague, all through the process engine so the token advances."
     },
     %{
+      name: "roster",
+      label: "Roster",
+      ui: A2ui.RosterUI,
+      path: "/roster",
+      blurb: "The week's roster: the gantt, the shifts, and the plans that proposed them.",
+      description:
+        "The roster: this week as a gantt (placed shifts per clinician, uncovered " <>
+          "appointments in red), the Shifts list behind it, and every plan a run has " <>
+          "proposed. Request a plan with \"Plan a week\"; sign a proposal off on the " <>
+          "Worklist — approving it is what applies the shifts."
+    },
+    %{
       name: "visits",
       label: "Visits",
       ui: A2ui.VisitInstanceUI,

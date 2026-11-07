@@ -79,6 +79,14 @@ defmodule ClinicDemo.Scheduling.Shift do
     end
   end
 
+  calculations do
+    # Grid label for the roster surface: the person's name, not a bare UUID
+    # (the appointment surfaces' same-shaped calculation).
+    calculate :clinician_label, :string, expr(clinician.full_name) do
+      public? true
+    end
+  end
+
   events do
     event_log(ClinicDemo.Events.Event)
   end

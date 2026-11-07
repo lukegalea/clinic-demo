@@ -54,11 +54,121 @@ staff = %{id: "00000000-0000-0000-0000-0000000000aa", role: :veterinarian}
 %{decision: decision, process: process} = ClinicDemo.Rules.install!()
 mapping_versions = ClinicDemo.BusinessEvents.install!()
 
+# ── Planning models (idempotent publish + bind) ───────────────────────────
+#
+# The weekly-roster and mobile-visits models, plus the scheduling rows their
+# demo weeks need: the shift patterns the staffing policy names and the
+# synthetic places + travel matrix the mobile model routes over. The same
+# idempotent blocks as priv/planning/seed_weekly_roster.exs and
+# priv/planning/seed_mobile_visits.exs, so `mix seed` alone leaves a
+# deployable, demo-able database.
+
+roster = ClinicDemo.Planning.Install.install!(ClinicDemo.Planning.Models.WeeklyRoster)
+mobile = ClinicDemo.Planning.Install.install!(ClinicDemo.Planning.Models.MobileVisits)
+
+existing_templates =
+  ClinicDemo.Scheduling.list_shift_templates!(actor: staff)
+  |> MapSet.new(&{&1.name, &1.role})
+
+shift_patterns = [
+  {"early", 8 * 60, 16 * 60, [1, 2, 3, 4, 5]},
+  {"late", 10 * 60, 18 * 60, [1, 2, 3, 4, 5]},
+  {"weekend", 9 * 60, 13 * 60, [6]}
+]
+
+shift_templates =
+  for role <- [:veterinarian, :technician, :nurse],
+      {name, from, to, days} <- shift_patterns,
+      not MapSet.member?(existing_templates, {name, role}) do
+    ClinicDemo.Scheduling.define_shift_template!(
+      %{
+        name: name,
+        role: role,
+        start_offset_minutes: from,
+        end_offset_minutes: to,
+        allowed_days: days
+      },
+      actor: staff
+    )
+
+    "#{name} (#{role})"
+  end
+
+existing_locations =
+  ClinicDemo.Scheduling.list_service_locations!(actor: staff) |> Map.new(&{&1.name, &1})
+
+# {name, kind, address, latitude, longitude, gate/stairs buffer in minutes}
+places = [
+  {"Synthetic Clinic", :clinic, "1 Test Street", "45.0000", "-75.0000", 0},
+  {"Farm A", :client_site, "10 Synthetic Lane", "45.0500", "-75.0500", 0},
+  {"Farm B", :client_site, "20 Synthetic Lane", "45.1000", "-75.1000", 5},
+  {"Farm C", :client_site, "30 Synthetic Lane", "45.1500", "-75.1500", 0}
+]
+
+locations =
+  for {name, kind, address, latitude, longitude, buffer} <- places, into: %{} do
+    location =
+      Map.get(existing_locations, name) ||
+        ClinicDemo.Scheduling.register_service_location!(
+          %{
+            name: name,
+            kind: kind,
+            address_line: address,
+            city: "Testville",
+            latitude: latitude,
+            longitude: longitude,
+            access_buffer_minutes: buffer,
+            access_constraints: if(buffer > 0, do: [:gated_entry], else: [])
+          },
+          actor: staff
+        )
+
+    {name, location}
+  end
+
+travel_matrix =
+  unless ClinicDemo.Scheduling.list_travel_matrices!(actor: staff)
+         |> Enum.any?(&(&1.key == "clinic_van")) do
+    minutes = [
+      {"Synthetic Clinic", "Farm A", 20},
+      {"Synthetic Clinic", "Farm B", 30},
+      {"Synthetic Clinic", "Farm C", 45},
+      {"Farm A", "Farm B", 25},
+      {"Farm A", "Farm C", 35},
+      {"Farm B", "Farm C", 15}
+    ]
+
+    entries =
+      for {from, to, duration} <- minutes, {origin, destination} <- [{from, to}, {to, from}] do
+        %{
+          origin_id: locations[origin].id,
+          destination_id: locations[destination].id,
+          reachable: true,
+          duration_minutes: duration,
+          distance_m: duration * 800
+        }
+      end
+
+    ClinicDemo.Scheduling.publish_travel_matrix!(
+      %{
+        key: "clinic_van",
+        provider: "synthetic",
+        collected_at: DateTime.utc_now() |> DateTime.truncate(:second),
+        entries: entries
+      },
+      actor: staff
+    )
+  end
+
 IO.puts("""
 Published:
   #{decision.key} v#{decision.version} (#{decision.status})
   #{process.key} v#{process.version} (#{process.status})
   #{length(mapping_versions)} value-event mappings active
+  #{roster.model_version.key} v#{roster.model_version.version} (#{roster.model_version.status}) bound as #{roster.binding.selector}
+  #{mobile.model_version.key} v#{mobile.model_version.version} (#{mobile.model_version.status}) bound as #{mobile.binding.selector}
+  #{length(shift_templates)} shift templates defined
+  #{map_size(locations)} places (the clinic and three farms), clinic_van matrix #{if travel_matrix, do: "v#{travel_matrix.version}", else: "already published"}
 """)
 
 require Ash.Query
