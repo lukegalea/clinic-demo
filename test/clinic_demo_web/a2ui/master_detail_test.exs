@@ -34,7 +34,10 @@ defmodule ClinicDemoWeb.A2ui.MasterDetailTest do
         %{
           full_name: name,
           role: :veterinarian,
-          license_number: "ON-#{System.unique_integer([:positive]) + 100_000}"
+          # Bounded to six digits like the planning fixtures' licenses: an
+          # unbounded unique_integer crosses the pattern late in a full-suite
+          # run and fails every hire in this file at once.
+          license_number: "ON-#{:rand.uniform(899_999) + 100_000}"
         },
         actor: @staff
       )
