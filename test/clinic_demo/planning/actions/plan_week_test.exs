@@ -43,11 +43,16 @@ defmodule ClinicDemo.Planning.Actions.PlanWeekTest do
     # Tuesday of the intended week: the action must plan that week's Monday.
     tuesday = Date.add(monday, 1)
 
-    assert {:ok, [row]} =
+    # Best first, possibly several: an open week has many optimal rosters and
+    # the real solver proposes more than one (the flagship tests' [v1 | _]
+    # posture). Only index 0 is "the" proposal.
+    assert {:ok, [row | _]} =
              Run
              |> Ash.ActionInput.for_action(
                :plan_week,
-               %{"week_start" => Date.to_iso8601(tuesday)}, actor: staff())
+               %{"week_start" => Date.to_iso8601(tuesday)},
+               actor: staff()
+             )
              |> Ash.run_action()
 
     assert row.index == 0
