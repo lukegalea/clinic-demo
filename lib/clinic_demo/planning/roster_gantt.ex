@@ -61,11 +61,17 @@ defmodule ClinicDemo.Planning.RosterGantt do
              actor: actor,
              load: [:patient, :appointment_type]
            ),
-         {:ok, assignments} <- Scheduling.list_assignments(actor: actor) do
+         {:ok, assignments} <-
+           Scheduling.list_assignments(actor: actor, query: [filter: [state: :scheduled]]) do
       covered = MapSet.new(assignments, & &1.appointment_id)
 
+      # A cancelled assignment covers nothing, and a cancelled or no-show visit
+      # is no longer work to cover: neither may open or close the band.
       uncovered =
-        Enum.reject(appointments, &(&1.status == :cancelled or MapSet.member?(covered, &1.id)))
+        Enum.reject(
+          appointments,
+          &(&1.status in [:cancelled, :no_show] or MapSet.member?(covered, &1.id))
+        )
 
       {:ok,
        %{

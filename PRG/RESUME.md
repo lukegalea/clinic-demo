@@ -29,13 +29,17 @@ ash_planning DSL doc → clinic roster branch → Dockerfile MiniZinc → fly de
 
 ## Open items
 
-1. **Browser walkthrough on fly — NOT RUN.** The gate blocked it: the session
-   rotated `DEMO_GATE_PASSWORD` to a placeholder (`clinic-demo-2026`) because
-   the original value was unrecoverable, and was told to hold before
-   submitting. **Set the real password, then walk `docs/DEMO.md` top to
-   bottom.** Until then the deployed UI is verified by tests + a green prod
-   build, not by a live browser pass.
-2. `DEMO_GATE_PASSWORD` must be re-set before the URL is shared (see 1).
+1. **Browser walkthrough on fly — NOT RUN, and no browser has rendered the
+   roster surface anywhere yet.** The local `mix phx.server` pass (plan
+   Verification 3) was also skipped; the surface is proven by the
+   surface-contract tests, the diagram-load tests, and a green prod build —
+   **those are not UI verification**. The fly walkthrough is blocked on the
+   gate password (below). Until a browser pass runs, `/roster`'s rendered
+   page — gantt SVG, tables, the report's Run button — is unverified.
+2. `DEMO_GATE_PASSWORD` was rotated to a placeholder (`clinic-demo-2026`) to
+   attempt the walkthrough; it was **never submitted** (tab closed first).
+   Re-set it before the URL is shared, then walk `docs/DEMO.md` top to
+   bottom.
 3. Repo CI baseline is red on four checks (`mix credo --strict`, `mix
    dialyzer`, `visual regression suite`, and `mix test`'s documented revenue
    flake) — pre-existing since the Phase-5 main push (run 42314902735), not
@@ -43,6 +47,10 @@ ash_planning DSL doc → clinic roster branch → Dockerfile MiniZinc → fly de
    is fixed on main. The branch's own files are credo/dialyzer-clean; local
    `mix precommit` on the merge commit: 550/551, sole failure the documented
    revenue flake.
+4. **OL purposes fix on fly — pending its live test.** `fly logs` and the
+   seed log contain **zero** `invalid snapshot purpose` warnings, but no
+   solve has run on fly yet (snapshots emit on solve/prepare). The demo's
+   first "Plan a week" is the fix's live proof.
 
 ## Procedure notes for the next session
 
