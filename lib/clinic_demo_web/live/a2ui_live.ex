@@ -442,6 +442,23 @@ defmodule ClinicDemoWeb.A2ui.WorklistLive do
   end
 end
 
+defmodule ClinicDemoWeb.A2ui.RosterLive do
+  use AshA2ui.LiveRenderer,
+    ui: ClinicDemoWeb.A2ui.RosterUI,
+    actor_fn: & &1.assigns.a2ui_actor
+
+  use ClinicDemoWeb.A2ui.Surface, surface_id: "clinic_roster"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-4">
+      <AshA2ui.LiveRenderer.surface_container />
+    </div>
+    """
+  end
+end
+
 defmodule ClinicDemoWeb.A2ui.VisitsLive do
   use AshA2ui.LiveRenderer,
     ui: ClinicDemoWeb.A2ui.VisitInstanceUI,

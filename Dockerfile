@@ -57,6 +57,15 @@ RUN if [ -f assets/package.json ]; then \
     fi
 
 RUN mix compile
+
+# MiniZinc rides in the image: the roster and mobile planning models shell out
+# to it at solve time, and the demo plans from the browser. The bundle's gecode
+# is statically linked; the runtime stage still installs the small X/GL set the
+# bundled binaries may dlopen under glibc (bookworm matches the bundle's build).
+RUN curl -fsSL https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz \
+  | tar -xz -C /opt \
+  && mv /opt/MiniZincIDE-2.10.1-bundled-linux-x86_64 /opt/minizinc
+
 # app.css imports/scans `_build/dev/phoenix-colocated/...` (LiveView 1.1 colocated assets);
 # the prod compile writes `_build/prod/...` — bridge the exact expected path.
 RUN mkdir -p _build/dev && ln -sf ../prod/phoenix-colocated _build/dev/phoenix-colocated
@@ -73,9 +82,11 @@ FROM ${RUNNER_IMAGE}
 # rather than the builder: ash_decisions validates a DMN document against the
 # normative XSD by shelling out to it, so it is needed when a model LOADS —
 # not when the release is compiled. (CI reaches the same conclusion: its
-# setup action installs libxml2-utils before anything runs.)
+# setup action installs libxml2-utils before anything runs.) The X/GL libs are
+# what the MiniZinc bundle may dlopen at runtime; small and preemptive.
 RUN apt-get update -y \
   && apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates libxml2-utils \
+    libgl1 libegl1 libfontconfig1 libfreetype6 libglu1-mesa libxi6 libxmu6 \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # The BEAM wants a UTF-8 locale; without it, string handling misbehaves in ways
@@ -84,6 +95,12 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 WORKDIR /app
+
+# MiniZinc + its solver (gecode), fetched in the builder stage. `prlimit`
+# ships with debian's util-linux, present in the slim base — Solverl refuses
+# to run without it, and the fly console check after deploy verifies both.
+COPY --from=builder /opt/minizinc /opt/minizinc
+ENV PATH="/opt/minizinc/bin:${PATH}"
 
 # Runs as a non-root user. A release needs no write access to its own files.
 RUN chown nobody /app

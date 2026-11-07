@@ -1,3 +1,4 @@
+# Known flaky, documented in docs/DEMO.md: date-boundary flake, days 1-9 of a month.
 defmodule ClinicDemoWeb.RevenueLiveTest do
   @moduledoc """
   The revenue page reads the whole book once per mount — the Day view's

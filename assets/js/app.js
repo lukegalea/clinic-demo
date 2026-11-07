@@ -70,6 +70,12 @@ const adminCatalog = createAshAdminCatalog({
   A2uiController,
   z,
   lit: {html, css, nothing},
+  // Live diagrams (the /roster gantt): mermaid is bundled as its own IIFE
+  // entry (js/ash_a2ui_mermaid.js, served next to app.js — a classic bundle
+  // has no exports, so the engine publishes itself on window.AshA2uiMermaid).
+  // liveDiagram imports it only when a diagram appears on a surface.
+  loadMermaid: () =>
+    import("/assets/js/ash_a2ui_mermaid.js").then(() => window.AshA2uiMermaid),
 })
 
 // Without a markdown renderer every Text on every surface collapses to one

@@ -110,6 +110,11 @@ config :ash_a2ui,
   link_resolver: ClinicDemoWeb.A2ui.Links,
   catalog: :admin_v1
 
+# The clinic's own OpenLineage snapshot purposes (0.2.2 reads this key at
+# call time): one per planning model whose solves and checks emit snapshots.
+config :ash_open_lineage,
+  extra_snapshot_purposes: [:"planning.weekly_roster", :"planning.mobile_visits"]
+
 # The process engine's three host seams. `ash_bpmn` never guesses any of them:
 # a diagram with a business rule task will not even compile without a decision
 # resolver configured, and the error names this key.
@@ -162,7 +167,7 @@ config :esbuild,
     # refuses the build outright. Inlined as data URLs, which
     # `font-src 'self' data:` in the CSP permits.
     args:
-      ~w(js/app.js js/operator_diagram.js js/flight_view.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --external:/assets/* --alias:@=.) ++
+      ~w(js/app.js js/operator_diagram.js js/flight_view.js js/ash_a2ui_mermaid.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --external:/assets/* --alias:@=.) ++
         ~w(--loader:.woff=dataurl --loader:.woff2=dataurl --loader:.ttf=dataurl
            --loader:.eot=dataurl --loader:.svg=dataurl),
     cd: Path.expand("../assets", __DIR__),
