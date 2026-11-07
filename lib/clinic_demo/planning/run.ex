@@ -22,6 +22,8 @@ defmodule ClinicDemo.Planning.Run do
     authorizers: [Ash.Policy.Authorizer],
     fragments: [AshPlanning.Fragment.Run]
 
+  alias ClinicDemo.Planning.Actions.PlanWeek
+
   postgres do
     table "planning_runs"
     repo ClinicDemo.Repo
@@ -59,10 +61,10 @@ defmodule ClinicDemo.Planning.Run do
       argument :week_start, :date do
         description "Any day of the week to plan; the week's Monday is used."
         allow_nil? false
-        default &ClinicDemo.Planning.Actions.PlanWeek.next_monday/0
+        default &PlanWeek.next_monday/0
       end
 
-      run ClinicDemo.Planning.Actions.PlanWeek
+      run PlanWeek
     end
   end
 

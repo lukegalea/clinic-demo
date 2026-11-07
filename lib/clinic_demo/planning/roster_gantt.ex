@@ -49,7 +49,10 @@ defmodule ClinicDemo.Planning.RosterGantt do
            Scheduling.list_shifts(
              actor: actor,
              query: [
-               filter: [state: :scheduled, starts_at: [greater_than_or_equal: from, less_than: to]]
+               filter: [
+                 state: :scheduled,
+                 starts_at: [greater_than_or_equal: from, less_than: to]
+               ]
              ],
              load: [:clinician]
            ),
@@ -62,13 +65,12 @@ defmodule ClinicDemo.Planning.RosterGantt do
       covered = MapSet.new(assignments, & &1.appointment_id)
 
       uncovered =
-        appointments
-        |> Enum.reject(&(&1.status == :cancelled))
-        |> Enum.reject(&MapSet.member?(covered, &1.id))
+        Enum.reject(appointments, &(&1.status == :cancelled or MapSet.member?(covered, &1.id)))
 
       {:ok,
        %{
-         source: gantt(monday, Enum.map(shifts, &shift_bar/1), Enum.map(uncovered, &appointment_bar/1)),
+         source:
+           gantt(monday, Enum.map(shifts, &shift_bar/1), Enum.map(uncovered, &appointment_bar/1)),
          markers: []
        }}
     end

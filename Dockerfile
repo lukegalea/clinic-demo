@@ -64,7 +64,7 @@ RUN mix compile
 # bundled binaries may dlopen under glibc (bookworm matches the bundle's build).
 RUN curl -fsSL https://github.com/MiniZinc/MiniZincIDE/releases/download/2.10.1/MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz \
   | tar -xz -C /opt \
-  && mv /opt/MiniZincIDE-2.10.1-bundled-linux-x86_64 /opt/minizinc
+  && mv /opt/MiniZincIDE-2.10.1-x86_64-linux-gnu /opt/minizinc
 
 # app.css imports/scans `_build/dev/phoenix-colocated/...` (LiveView 1.1 colocated assets);
 # the prod compile writes `_build/prod/...` — bridge the exact expected path.

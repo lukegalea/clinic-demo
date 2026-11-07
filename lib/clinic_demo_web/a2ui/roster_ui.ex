@@ -38,7 +38,9 @@ defmodule ClinicDemoWeb.A2ui.RosterUI do
 
     diagram :roster_gantt do
       label "The week ahead"
+
       description "Next week's placed shifts per clinician; booked appointments no assignment covers, in red. Approve or reject a candidate on the Worklist."
+
       source ClinicDemo.Planning.RosterGantt
     end
 
