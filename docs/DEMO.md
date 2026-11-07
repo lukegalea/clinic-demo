@@ -1,5 +1,10 @@
 # Clinic demo — the roster loop
 
+> **Status:** written ahead of the first live run — the walkthrough below has
+> not yet been executed against the deployed app (it opens with the gate
+> password, which is being re-set; see `PRG/RESUME.md`). Everything else here
+> reflects the deployed release.
+
 Presenter-oriented: everything here is browser-only against the deployed app.
 All data is synthetic (the seed walks a fictional clinic day; the planning
 models describe no real practice).
