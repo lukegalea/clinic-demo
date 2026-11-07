@@ -45,9 +45,9 @@ defmodule ClinicDemo.Planning.Actions.PlanWeekTest do
 
     assert {:ok, [row]} =
              Run
-             |> Ash.ActionInput.for_action(:plan_week, %{"week_start" => Date.to_iso8601(tuesday)},
-               actor: staff()
-             )
+             |> Ash.ActionInput.for_action(
+               :plan_week,
+               %{"week_start" => Date.to_iso8601(tuesday)}, actor: staff())
              |> Ash.run_action()
 
     assert row.index == 0

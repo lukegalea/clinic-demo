@@ -50,7 +50,9 @@ defmodule ClinicDemo.Planning.RosterGanttTest do
     assert source =~ "section Dr. Vera Vale"
     # 2026-11-09 08:00 UTC as unix seconds, the gantt bar's start.
     start = DateTime.to_unix(DateTime.new!(@monday, ~T[08:00:00], "Etc/UTC"))
-    assert source =~ "veterinarian shift :shift-11111111-1111-1111-1111-111111111111, #{start}, 28800"
+
+    assert source =~
+             "veterinarian shift :shift-11111111-1111-1111-1111-111111111111, #{start}, 28800"
   end
 
   test "one uncovered appointment: a crit bar in the Uncovered appointments section" do
@@ -76,7 +78,8 @@ defmodule ClinicDemo.Planning.RosterGanttTest do
 
     source = RosterGantt.gantt(@monday, [late, early], [uncovered])
 
-    assert source =~ ~r/section Dr\. Early Person.*section Dr\. Late Person.*section Uncovered appointments/s
+    assert source =~
+             ~r/section Dr\. Early Person.*section Dr\. Late Person.*section Uncovered appointments/s
 
     # The early bar sits inside the first section; the late one in the second.
     [_, first, rest] = String.split(source, "section ", parts: 3)
