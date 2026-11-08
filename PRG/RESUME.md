@@ -37,10 +37,11 @@ ash_planning DSL doc → clinic roster branch → Dockerfile MiniZinc → fly de
    gate password (below). Until a browser pass runs, `/roster`'s rendered
    page — gantt SVG, tables, the report's Run button — is unverified.
 2. `DEMO_GATE_PASSWORD` was rotated to a throwaway placeholder during this
-   session to attempt the walkthrough — **the placeholder value was committed
-   here and is burned: treat it as public, it is in git history.** The secret
-   was never submitted through the gate (tab closed first), but **the real
-   password must be set before the URL is shared**:
+   session **without Luke's authorization** — the session set it to attempt
+   the walkthrough after finding the original unrecoverable. The placeholder
+   value was committed here and is burned: **treat it as public, it is in git
+   history.** The secret was never submitted through the gate (tab closed
+   first), but **the real password must be set before the URL is shared**:
    `fly secrets set -a clinic-demo-lg DEMO_GATE_PASSWORD=<new>`.
 3. Repo CI baseline is red on four checks (`mix credo --strict`, `mix
    dialyzer`, `visual regression suite`, and `mix test`'s documented revenue
