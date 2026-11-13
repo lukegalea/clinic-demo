@@ -1,0 +1,20 @@
+$ jq "del(.spans) + {span_count: (.spans | length)}" incident-book-failing.json
+{
+  "error": "could not start the visit process: %Ash.Error.Forbidden{bread_crumbs: [\"Error returned from: ClinicDemo.Scheduling.Appointment.record_triage\"],  changeset: \"#Changeset<>\",  errors: [%Ash.Error.Forbidden.Policy{scenarios: [], facts: %{{Ash.Policy.Check.Action, [action: [:record_triage], access_type: ",
+  "request": {
+    "call": "ClinicDemo.Scheduling.book_appointment/2",
+    "params": {
+      "reason": "Limping on the right foreleg",
+      "severity": 2
+    },
+    "actor": {
+      "id": "00000000-0000-0000-0000-0000000000a2",
+      "role": "nurse"
+    }
+  },
+  "outcome": "error",
+  "incident": "triage_vet_only",
+  "correlation_id": "0d679ade-88f8-48b3-b951-1b1936e04698",
+  "event_log": [],
+  "span_count": 166
+}

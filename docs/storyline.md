@@ -75,6 +75,95 @@ negotiating down to older clients. Evidence, with transcripts and the clock:
 [07 — the daemon slot](evidence/07-daemon-slot.md). The Mix tasks remain for
 shells and CI; the two surfaces are the same tool with different transports.
 
+## The planted incident: one failed booking, three tools
+
+Everything above is an agent being *told* about the code. This chapter is an
+agent debugging a failure it was not told about — a fault planted on purpose,
+so the story is reproducible and the tools can be seen finding something
+they did not already know.
+
+**The switch.** `CLINIC_INCIDENT=triage_vet_only` in the environment (or
+`ClinicDemo.Incident.enable!(:triage_vet_only)` in a console, or
+`mix clinic.incident book --incident triage_vet_only` for one request). With
+no incident on, nothing in the application differs. The incident is one
+policy on `Appointment.record_triage`, applying only while the switch is on:
+*triage is a veterinarian's judgement*. It reads as a sensible tightening, and
+that is the trap. `record_triage` is not something a person calls: it is the
+`RecordUrgency` service task of the visit process, which the engine runs as a
+system actor (`ash_bpmn:advance`) — not a veterinarian, not even a person.
+
+**The symptom.** A nurse at the front desk books a visit
+(`ClinicDemo.Scheduling.book_appointment/2`, the request in README step 8).
+It fails:
+
+```
+could not start the visit process: %Ash.Error.Forbidden{bread_crumbs: ["Error returned from: ClinicDemo.Scheduling.Appointment.record_triage"], ...
+```
+
+The action she called passed its policy; the error talks about a *process*
+and buries the word that matters in a long inspected struct. The obvious
+suspects are the wrong ones: the nurse's permissions (a veterinarian's
+booking fails identically), the BPMN document, the triage decision.
+
+**1. The event log answers by being empty.** The first instinct is the audit
+trail — what did the system do? Nothing, and that is the first finding: the
+booking, the decision evaluation and the failed write all sit in one
+transaction, so the rollback took the evidence with it. A healthy booking
+writes five rows (`book`, the decision's `create on Evaluation`,
+`record_triage`, the judgment's `record` and `materialise`); the failed one
+writes none. The event log is the right reference for *what healthy looks
+like* and the wrong place to look for *why this one failed*. The only witness
+is the request's own trace.
+
+**2. `trace.explain` names the cause.** `AshAgentTools.Trace.explain/2` takes
+the request's 166 spans — `ClinicDemo.Trace.capture/2` records them, stamped
+with one correlation id — and reduces them to what an agent can read.
+`errors` is innermost first: a policy refusal, the `record_triage` write it
+refused, the booking, the request. `policy` has one entry, and it is the
+answer: *forbidden by "Triage is a veterinarian's judgement: only a
+veterinarian may record it" (applies when action == :record_triage and the
+:triage_vet_only incident is switched on) [actor ash_bpmn:advance]*. It names
+the policy, the action it sits on, the switch that makes it apply, and who was
+refused — the engine, not the nurse.
+
+**3. `explain_forbidden` shows where it lives.** `bin/ash-agent forbidden
+ClinicDemo.Scheduling.Appointment record_triage` lists every policy that can
+deny the action, with each one's description, its conditions and its checks.
+The third entry is the planted one, with its `action == :record_triage`
+condition and the incident's. It is a *listing*, not a verdict — it says what
+can deny, and it is the trace that said what did. The two are read together:
+the trace for the verdict, the listing for the policy set around it and the
+one-line check that would have to change.
+
+**4. The fix, and proof of it.** Roll the switch back
+(`ClinicDemo.Incident.disable!/0`, or unset the variable) and the same
+request succeeds: the trace has no errors and no policy entries, and the event
+log has its five rows. That is the documented fix, and it is what the tests
+assert. The durable fix is not a rollback: it is to let the engine's actor
+through that policy while keeping it for people — in a scratch copy a check
+matching `AshBpmn.SystemActor` ahead of the role check made the booking succeed
+and left a nurse calling `record_triage` directly refused. It is not applied
+here, because the incident is the point.
+
+Evidence, with the reproduce block and the transcripts:
+[09 — the planted incident](evidence/09-trace-explain-incident.md). The three
+acceptance behaviours — incident on and the request fails, `Trace.explain` names
+the policy, fix applied and the request succeeds — are
+`test/clinic_demo/incident_test.exs`.
+
+**What this chapter is not claiming.** The tracing here is this repository's
+own: `ClinicDemo.Trace` is an in-process capture around one request, because
+the pinned `ash_agent_tools` ships `Trace.explain/2` as a pure function with no
+span source, no Mix task and no daemon tool. (`bin/ash-agent trace` is the same
+kind of wrapper `forbidden` is, and is logged in the gap log.) The sibling
+tooling in `ash_enterprise` — `mix ash_enterprise.trace`, and a `TraceSink` for
+a running application — is not a dependency of this demo. Two known gaps there
+do not bite this path and are not fixed here: that task's stdout is not pure
+JSON, and the sink starts after the endpoint so spans from boot are dropped. A
+per-request capture has no boot spans to lose, and `mix clinic.incident`
+keeps stdout to the JSON once the project is compiled — but a reader moving
+this story onto a long-running deployment will meet both.
+
 ## The honest boundary
 
 The demo ships with its failures on the record, because a demo that hid them
@@ -135,3 +224,5 @@ tried.
   daemon.
 - [`docs/evidence/README.md`](evidence/README.md) — what was verified
   headlessly, and the precise shape of what was not.
+- [`docs/evidence/09-trace-explain-incident.md`](evidence/09-trace-explain-incident.md)
+  — the planted incident, with a reproduce block.

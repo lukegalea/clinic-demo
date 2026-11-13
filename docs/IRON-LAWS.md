@@ -24,7 +24,7 @@ Review-tier hits are counted but never fail the run. The tree mode also fails
 when a baseline entry stops firing, so an excuse can't outlive the code it
 excused. The judge is pure text processing — it neither boots nor compiles
 the application — but it needs the `ash_agent_tools` Mix task on the path, so
-it always runs under `MIX_ENV=dev` (the dep is `only: :dev`), including from
+it always runs under `MIX_ENV=dev` (the script pins it; the dep is `only: [:dev, :test]`), including from
 `mix precommit`, which itself runs under `test`.
 
 ## The baseline, as landed (2026-10-02, ash_agent_tools 0b7d9bc)
