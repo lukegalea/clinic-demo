@@ -35,6 +35,14 @@ config :clinic_demo, ClinicDemoWeb.Endpoint,
 # transition; dev/test set the same value at compile time.
 config :ash_bpmn, pubsub_server: ClinicDemo.PubSub
 
+# The planted incident's switch (CLIN-33, `ClinicDemo.Incident`): e.g.
+# CLINIC_INCIDENT=triage_vet_only. Unset means no incident; an unrecognised
+# value is inert (`ClinicDemo.Incident.active/0` matches it against the known
+# names). Never set it on a deployment you care about.
+if incident = System.get_env("CLINIC_INCIDENT") do
+  config :clinic_demo, :incident, incident
+end
+
 if config_env() == :dev do
   # The helper agent's interpreter model, e.g.
   # AI_INTERPRETER_MODEL=openrouter:anthropic/claude-haiku-4.5 — format is
