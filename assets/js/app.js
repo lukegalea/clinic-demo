@@ -30,10 +30,10 @@ import topbar from "../vendor/topbar"
 // merged catalog (native <select> choice pickers, typeahead comboboxes for
 // searchable selects) and the semantic admin_v1 catalog (entityPage /
 // dataGrid / recordPanel) that experience v2 selects server-side.
-import "@a2ui/lit/v0_9"
-import {basicCatalog, A2uiLitElement, A2uiController, Context} from "@a2ui/lit/v0_9"
-import {MessageProcessor, Catalog} from "@a2ui/web_core/v0_9"
-import {ChoicePickerApi, ColumnApi} from "@a2ui/web_core/v0_9/basic_catalog"
+import "@a2ui/lit"
+import {A2uiLitElement, A2uiController} from "@a2ui/lit"
+import {MessageProcessor, Catalog} from "@a2ui/web_core"
+import {basicCatalog, ChoicePickerApi, ColumnApi, Context} from "@a2ui/web_core/catalogs/basic/v1"
 import {ContextProvider} from "@lit/context"
 import {renderMarkdown} from "@a2ui/markdown-it"
 import {html, css, nothing} from "lit"
