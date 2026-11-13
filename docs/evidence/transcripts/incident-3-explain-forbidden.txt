@@ -1,0 +1,53 @@
+$ bin/ash-agent forbidden ClinicDemo.Scheduling.Appointment record_triage | jq .
+{
+  "resource": "Elixir.ClinicDemo.Scheduling.Appointment",
+  "action": "record_triage",
+  "policies": [
+    {
+      "description": "The schedule is readable by anything that can reach the application.",
+      "access_type": "filter",
+      "bypass?": null,
+      "condition": [
+        "action.type == :read"
+      ],
+      "checks": [
+        "always true"
+      ]
+    },
+    {
+      "description": "Only a signed-in member of staff may change the schedule.",
+      "access_type": "filter",
+      "bypass?": null,
+      "condition": [
+        "action.type in [:create, :update, :destroy]"
+      ],
+      "checks": [
+        "actor is present"
+      ]
+    },
+    {
+      "description": "Triage is a veterinarian's judgement: only a veterinarian may record it.",
+      "access_type": "filter",
+      "bypass?": null,
+      "condition": [
+        "action == :record_triage",
+        "the :triage_vet_only incident is switched on"
+      ],
+      "checks": [
+        "actor.role == :veterinarian"
+      ]
+    }
+  ],
+  "authorizers": [
+    "Ash.Policy.Authorizer"
+  ],
+  "field_policies": [],
+  "guidance": [
+    "Authorization is deny-by-default: every policy that applies to the action must pass.",
+    "Within a policy, the first authorize_if/forbid_if/authorize_unless/forbid_unless check that produces a decision decides the policy; remaining checks are skipped.",
+    "authorize_if checks are alternatives (OR): any passing authorize_if makes the policy pass. To require several conditions, use multiple policies or forbid_unless.",
+    "bypass policies run before regular policies and, when their condition matches, can grant access regardless of the other policies — typically reserved for admins.",
+    "Filter checks (:filter access type) scope the query instead of erroring: an unexpectedly empty result may mean the action was filtered rather than explicitly forbidden.",
+    "For an actual verdict, use AshAgentTools.can/4 (Ash.can/3 under the hood) with the intended actor — it evaluates these policies without executing anything and reports which checks decided the outcome."
+  ]
+}

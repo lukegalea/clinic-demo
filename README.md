@@ -425,7 +425,8 @@ Triage decided:
   Off her food and quieter than usual -> emergency
 ```
 
-The `ash_agent_tools` dependency is declared `only: :dev, runtime: false`. It
+The `ash_agent_tools` dependency is declared `only: [:dev, :test], runtime:
+false` (test, because the planted-incident tests run its `Trace.explain/2`). It
 is an introspection tool, never part of the running application.
 `ash_decisions` and `ash_bpmn` are not: they are the application.
 
@@ -990,9 +991,11 @@ the post-fix behavior:
   step 3).
 
 The gap log keeps the dated record of all of it, including the one
-`ash_agent_tools` question the Mix-task surface still cannot ask: there is
-no Mix task for `explain_forbidden/2` (`bin/ash-agent` works around it with
-`mix run`; the MCP daemon exposes `ash_forbidden` as an ordinary tool).
+`ash_agent_tools` questions the Mix-task surface still cannot ask: there is
+no Mix task for `explain_forbidden/2` or for `explain_trace/2`
+(`bin/ash-agent forbidden` and `bin/ash-agent trace` work around it with
+`mix run`; the MCP daemon exposes `ash_forbidden` as an ordinary tool and has
+no trace tool at all).
 
 ### ash_bpmn
 
@@ -1067,6 +1070,10 @@ docs/storyline.md                  the public narrative, and the retrospective
 docs/agents.md                     the two-server agent wiring, and its waits
 docs/evidence/                     captured transcripts for every claim above
 bin/ash-agent                      ash_agent_tools as one command
+lib/clinic_demo/incident.ex        the planted incident (CLIN-33) and its switch;
+                                   incident/ holds its policy check and fixture
+lib/clinic_demo/trace.ex           in-process span capture for Trace.explain
+mix clinic.incident book           the incident's documented request, with its trace
 mix ash_agent.serve                ash_agent_tools as an MCP daemon, port 4100
 bin/serena-mcp                     Serena, pointed at upstream Expert v0.1.10
 bin/expert-smoke.exs               a hand-written LSP conversation, to prove it

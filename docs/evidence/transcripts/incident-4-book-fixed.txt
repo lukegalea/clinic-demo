@@ -1,0 +1,37 @@
+$ mix clinic.incident book > fixed.json    # the switch off: the documented fix
+$ jq "del(.spans) + {span_count: (.spans | length)}" fixed.json
+{
+  "error": null,
+  "request": {
+    "call": "ClinicDemo.Scheduling.book_appointment/2",
+    "params": {
+      "reason": "Limping on the right foreleg",
+      "severity": 2
+    },
+    "actor": {
+      "id": "00000000-0000-0000-0000-0000000000a2",
+      "role": "nurse"
+    }
+  },
+  "outcome": "ok",
+  "incident": null,
+  "correlation_id": "04a8a362-9ae8-48a3-a469-22d3d906a3ba",
+  "event_log": [
+    "book on ClinicDemo.Scheduling.Appointment",
+    "create on ClinicDemo.Decisions.Evaluation",
+    "record_triage on ClinicDemo.Scheduling.Appointment",
+    "record on ClinicDemo.Judgments.Observation",
+    "materialise on ClinicDemo.Judgments.Fact"
+  ],
+  "span_count": 270
+}
+$ bin/ash-agent trace < fixed.json | jq "{errors, policy, summary}"
+{
+  "errors": [],
+  "policy": [],
+  "summary": {
+    "duration": 1208156,
+    "span_count": 270,
+    "trace_id": "04a8a362-9ae8-48a3-a469-22d3d906a3ba"
+  }
+}

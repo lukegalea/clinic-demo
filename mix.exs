@@ -196,10 +196,12 @@ defmodule ClinicDemo.MixProject do
        ref: "c35de0bccf39cc2c64db89729736344f1d51462b",
        override: true},
 
-      # The tool under demonstration. Dev-only and `runtime: false`: it is a
-      # read-only introspection layer for agents, never part of the running
-      # application.
-      {:ash_agent_tools, github: "lukegalea/ash_agent_tools", only: :dev, runtime: false},
+      # The tool under demonstration. Dev and test only, and `runtime: false`:
+      # it is a read-only introspection layer for agents, never part of the
+      # running application. Test, because the planted-incident tests run
+      # `AshAgentTools.Trace.explain/2` over a real failing booking's spans.
+      {:ash_agent_tools,
+       github: "lukegalea/ash_agent_tools", only: [:dev, :test], runtime: false},
 
       # The UI layer under demonstration: `a2ui` DSL blocks on the domain's
       # resources emit A2UI message streams, rendered in the browser by the
