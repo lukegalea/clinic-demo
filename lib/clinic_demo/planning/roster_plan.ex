@@ -43,28 +43,39 @@ defmodule ClinicDemo.Planning.RosterPlan do
     with {:ok, decision} <- pinned_decision(definitions),
          facts = Reader.read(week_start, cutoff),
          {:ok, policy} <- policy(decision, facts) do
-      annotated = annotate(facts, policy)
-      inputs = Reader.inputs(annotated)
+      build_from(facts, policy, week_start)
+    end
+  end
 
-      built = %{
-        effective_at: annotated.effective_at,
-        inputs: inputs,
-        reasons:
-          for(i <- inputs, i.status == :invalid, into: %{}, do: {i.key, "crosses_midnight"}),
-        stats: %{
-          "week_start" => Date.to_iso8601(week_start),
-          "appointments" => length(annotated.appointments)
-        },
-        body: nil
-      }
+  defp build_from(facts, policy, week_start) do
+    annotated = annotate(facts, policy)
+    inputs = Reader.inputs(annotated)
 
-      if Enum.all?(inputs, &(&1.status == :value)) do
-        with {:ok, lowered} <- Lowering.lower(annotated) do
-          {:ok, %{built | body: Map.put(lowered, "problem", validator_problem(annotated))}}
-        end
-      else
-        {:ok, built}
-      end
+    built = %{
+      effective_at: annotated.effective_at,
+      inputs: inputs,
+      reasons: for(i <- inputs, i.status == :invalid, into: %{}, do: {i.key, "crosses_midnight"}),
+      stats: %{
+        "week_start" => Date.to_iso8601(week_start),
+        "appointments" => length(annotated.appointments)
+      },
+      body: nil
+    }
+
+    if Enum.all?(inputs, &(&1.status == :value)) do
+      lowered_body(annotated, built)
+    else
+      {:ok, built}
+    end
+  end
+
+  defp lowered_body(annotated, built) do
+    case Lowering.lower(annotated) do
+      {:ok, lowered} ->
+        {:ok, %{built | body: Map.put(lowered, "problem", validator_problem(annotated))}}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -84,6 +95,8 @@ defmodule ClinicDemo.Planning.RosterPlan do
   end
 
   # The decision's answers, attached to the facts the model and the validator read.
+  # The annotated facts are `Reader.facts()` plus the evaluated `:policy`.
+  @spec annotate(Reader.facts(), map()) :: Reader.facts()
   defp annotate(facts, policy) do
     appointments =
       Enum.map(facts.appointments, fn a ->
@@ -204,10 +217,12 @@ defmodule ClinicDemo.Planning.RosterPlan do
   @doc "The week's inputs as they are now (the freshness recheck's other side)."
   @spec current_inputs(map()) :: {:ok, [AshOpenLineage.Snapshot.Input.t()]} | {:error, term()}
   def current_inputs(payload) do
-    with {:ok, week_start} <- Date.from_iso8601(payload["problem"]["week_start"]) do
-      {:ok, week_start |> Reader.read(DateTime.utc_now()) |> Reader.inputs()}
-    else
-      _ -> {:error, :problem_unreadable}
+    case Date.from_iso8601(payload["problem"]["week_start"]) do
+      {:ok, week_start} ->
+        {:ok, week_start |> Reader.read(DateTime.utc_now()) |> Reader.inputs()}
+
+      {:error, _reason} ->
+        {:error, :problem_unreadable}
     end
   end
 
@@ -282,14 +297,7 @@ defmodule ClinicDemo.Planning.RosterPlan do
       AppliedByCandidate.with_marker(
         candidate.id,
         MapSet.new(Enum.map(drop_assignments ++ drop_shifts, & &1.id)),
-        fn ->
-          Enum.reduce_while(steps, :ok, fn step, :ok ->
-            case run_step(step, candidate.id, opts) do
-              :ok -> {:cont, :ok}
-              {:error, error} -> {:halt, {:error, error}}
-            end
-          end)
-        end
+        fn -> run_steps(steps, candidate.id, opts) end
       )
 
     case result do
@@ -313,6 +321,15 @@ defmodule ClinicDemo.Planning.RosterPlan do
   defp split(applied, applied_key, planned, planned_key) do
     planned_keys = MapSet.new(planned, planned_key)
     Enum.split_with(applied, &MapSet.member?(planned_keys, applied_key.(&1)))
+  end
+
+  defp run_steps(steps, candidate_id, opts) do
+    Enum.reduce_while(steps, :ok, fn step, :ok ->
+      case run_step(step, candidate_id, opts) do
+        :ok -> {:cont, :ok}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
   end
 
   defp run_step({:cancel_assignment, row}, _candidate_id, opts),

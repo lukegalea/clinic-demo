@@ -54,7 +54,7 @@ defmodule ClinicDemo.Planning.Model do
   @spec all() :: [module()]
   def all, do: @models
 
-  @doc "The model declared under `key` (`\"weekly_roster\"`, `\"mobile_visits\"`)."
+  @doc ~S[The model declared under `key` (`"weekly_roster"`, `"mobile_visits"`).]
   @spec for_key(String.t()) :: {:ok, module()} | :error
   def for_key(key) do
     case Enum.find(@models, &(&1.definition().key == key)) do

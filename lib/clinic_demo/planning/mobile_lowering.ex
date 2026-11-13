@@ -104,23 +104,7 @@ defmodule ClinicDemo.Planning.MobileLowering do
   # reachable, a stored pair is its minutes, an unreachable pair is a whole day and
   # not reachable, a missing pair is an error.
   defp matrix(facts, locations) do
-    cells =
-      for a <- locations, b <- locations do
-        cond do
-          a == b ->
-            {:ok, {0, true}}
-
-          is_nil(facts.matrix) ->
-            {:error, {:travel_pair_missing, a, b}}
-
-          true ->
-            case Map.fetch(facts.matrix.pairs, {a, b}) do
-              {:ok, %{reachable: true, minutes: minutes}} -> {:ok, {minutes, true}}
-              {:ok, %{reachable: false}} -> {:ok, {@horizon, false}}
-              :error -> {:error, {:travel_pair_missing, a, b}}
-            end
-        end
-      end
+    cells = for a <- locations, b <- locations, do: cell(facts, a, b)
 
     case Enum.find(cells, &match?({:error, _}, &1)) do
       {:error, _} = error ->
@@ -129,6 +113,20 @@ defmodule ClinicDemo.Planning.MobileLowering do
       nil ->
         pairs = Enum.map(cells, fn {:ok, cell} -> cell end)
         {:ok, %{tt: Enum.map(pairs, &elem(&1, 0)), reach: Enum.map(pairs, &elem(&1, 1))}}
+    end
+  end
+
+  # One matrix cell: same place is zero and reachable, a stored pair is its
+  # minutes, an unreachable pair is a whole day and not reachable, a missing
+  # pair is an error.
+  defp cell(_facts, a, b) when a == b, do: {:ok, {0, true}}
+  defp cell(%{matrix: nil}, a, b), do: {:error, {:travel_pair_missing, a, b}}
+
+  defp cell(facts, a, b) do
+    case Map.fetch(facts.matrix.pairs, {a, b}) do
+      {:ok, %{reachable: true, minutes: minutes}} -> {:ok, {minutes, true}}
+      {:ok, %{reachable: false}} -> {:ok, {@horizon, false}}
+      :error -> {:error, {:travel_pair_missing, a, b}}
     end
   end
 

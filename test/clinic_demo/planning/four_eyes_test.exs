@@ -26,9 +26,10 @@ defmodule ClinicDemo.Planning.FourEyesTest do
 
   alias Ash.Error.Forbidden
   alias ClinicDemo.Planning
+  alias ClinicDemo.Planning.Checks.AppliedByCandidate
   alias ClinicDemo.Planning.{FourEyes, Machinery, WeeklyRoster}
   alias ClinicDemo.Scheduling
-  alias ClinicDemo.Visits.{HumanTask, Instance}
+  alias ClinicDemo.Visits.{HumanTask, Instance, TaskDesk}
 
   defp setup_week do
     team = team!()
@@ -251,7 +252,7 @@ defmodule ClinicDemo.Planning.FourEyesTest do
       tasks = FourEyes.tasks(candidate.id)
 
       {:ok, _} =
-        ClinicDemo.Visits.TaskDesk.complete(
+        TaskDesk.complete(
           tasks["ManagerSignoff"].id,
           :approved,
           nil,
@@ -259,7 +260,7 @@ defmodule ClinicDemo.Planning.FourEyesTest do
         )
 
       {:ok, _} =
-        ClinicDemo.Visits.TaskDesk.complete(
+        TaskDesk.complete(
           tasks["HeadVetSignoff"].id,
           :approved,
           nil,
@@ -324,7 +325,7 @@ defmodule ClinicDemo.Planning.FourEyesTest do
 
       # Even with the apply marker genuinely set for the other candidate, rows its
       # diff did not select (here none) are not its to cancel.
-      ClinicDemo.Planning.Checks.AppliedByCandidate.with_marker(approved.id, MapSet.new(), fn ->
+      AppliedByCandidate.with_marker(approved.id, MapSet.new(), fn ->
         assert {:error, %Forbidden{}} =
                  Scheduling.cancel_shift(shift, %{}, actor: as(w.team.head_vet))
 

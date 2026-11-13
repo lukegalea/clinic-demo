@@ -29,6 +29,7 @@ defmodule ClinicDemo.Visits.TaskDesk do
 
   alias Ash.Error.Changes.InvalidArgument
   alias Ash.Error.Forbidden
+  alias ClinicDemo.Planning.Machinery
   alias ClinicDemo.Scheduling.Clinician
   alias ClinicDemo.Visits.Calculations.OutcomeChoices
   alias ClinicDemo.Visits.HumanTask
@@ -74,7 +75,7 @@ defmodule ClinicDemo.Visits.TaskDesk do
   """
   @spec complete_as_planner(Ecto.UUID.t(), atom, map) :: {:ok, struct} | {:error, term}
   def complete_as_planner(task_id, outcome, planner) do
-    if ClinicDemo.Planning.Machinery.machinery?(planner) do
+    if Machinery.machinery?(planner) do
       # System read: the machinery? guard is the gate; the HumanTask read
       # policy scopes to the assignee, which the planner is not.
       with {:ok, task} <- fetch_system(task_id) do

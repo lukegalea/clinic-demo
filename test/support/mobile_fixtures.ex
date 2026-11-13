@@ -13,6 +13,7 @@ defmodule ClinicDemo.MobileFixtures do
 
   import ClinicDemo.PlanningFixtures, only: [staff: 0]
 
+  alias ClinicDemo.Planning.MobileVisits
   alias ClinicDemo.Scheduling
 
   @doc """
@@ -184,23 +185,10 @@ defmodule ClinicDemo.MobileFixtures do
     end_node = n_visit + n_commit + 2
     n_loc = data["n_loc"]
 
-    visit_starts =
-      for id <- ids["visits"] do
-        {h, m} = Map.fetch!(starts, id)
-        h * 60 + m
-      end
-
+    visit_starts = visit_starts(ids, starts)
     commit_starts = Enum.take(data["c_from"], n_commit)
     node_start = visit_starts ++ commit_starts ++ [data["work_from"]]
-
-    node_end =
-      Enum.zip(0..(n_visit - 1)//1, visit_starts)
-      |> Enum.map(fn {i, s} -> s + Enum.at(data["v_dur"], i) end)
-      |> Kernel.++(
-        Enum.zip(0..(n_commit - 1)//1, commit_starts)
-        |> Enum.map(fn {j, _s} -> Enum.at(data["c_to"], j) end)
-      )
-      |> Kernel.++([data["work_from"]])
+    node_end = node_ends(data, n_visit, n_commit, visit_starts, commit_starts)
 
     node_loc =
       Enum.take(data["v_loc"], n_visit) ++
@@ -211,37 +199,64 @@ defmodule ClinicDemo.MobileFixtures do
       |> Enum.sort_by(&Enum.at(node_start, &1 - 1))
 
     chain = [start_node | ordered] ++ [end_node]
+    leg = leg_fn(data, node_loc, n_loc, start_node, end_node)
+    finish = finish(data, ordered, node_end, leg, start_node, end_node)
+    succ = succ(chain, end_node, start_node)
+    tin = tin(chain, leg, end_node)
 
-    leg = fn from, to ->
+    st = Enum.take(node_start, n_visit + n_commit) ++ [data["work_from"], finish]
+    %{"st" => st, "succ" => succ, "tin" => tin}
+  end
+
+  defp visit_starts(ids, starts) do
+    for id <- ids["visits"] do
+      {h, m} = Map.fetch!(starts, id)
+      h * 60 + m
+    end
+  end
+
+  defp node_ends(data, n_visit, n_commit, visit_starts, commit_starts) do
+    Enum.zip(0..(n_visit - 1)//1, visit_starts)
+    |> Enum.map(fn {i, s} -> s + Enum.at(data["v_dur"], i) end)
+    |> Kernel.++(
+      Enum.zip(0..(n_commit - 1)//1, commit_starts)
+      |> Enum.map(fn {j, _s} -> Enum.at(data["c_to"], j) end)
+    )
+    |> Kernel.++([data["work_from"]])
+  end
+
+  defp leg_fn(data, node_loc, n_loc, start_node, end_node) do
+    fn from, to ->
       from_loc = if from == start_node, do: data["start_loc"], else: Enum.at(node_loc, from - 1)
       to_loc = if to == end_node, do: data["end_loc"], else: Enum.at(node_loc, to - 1)
       Enum.at(data["tt"], (from_loc - 1) * n_loc + to_loc - 1)
     end
+  end
 
-    finish =
-      case List.last(ordered) do
-        nil -> data["work_from"] + leg.(start_node, end_node)
-        last -> Enum.at(node_end, last - 1) + leg.(last, end_node)
+  defp finish(data, ordered, node_end, leg, start_node, end_node) do
+    case List.last(ordered) do
+      nil -> data["work_from"] + leg.(start_node, end_node)
+      last -> Enum.at(node_end, last - 1) + leg.(last, end_node)
+    end
+  end
+
+  defp succ(chain, end_node, start_node) do
+    for node <- 1..end_node do
+      if node == end_node do
+        start_node
+      else
+        Enum.at(chain, Enum.find_index(chain, &(&1 == node)) + 1)
       end
+    end
+  end
 
-    succ =
-      for node <- 1..end_node do
-        cond do
-          node == end_node -> start_node
-          true -> Enum.at(chain, Enum.find_index(chain, &(&1 == node)) + 1)
-        end
+  defp tin(chain, leg, end_node) do
+    for node <- 1..end_node do
+      case Enum.find_index(chain, &(&1 == node)) do
+        0 -> 0
+        index -> leg.(Enum.at(chain, index - 1), node)
       end
-
-    tin =
-      for node <- 1..end_node do
-        case Enum.find_index(chain, &(&1 == node)) do
-          0 -> 0
-          index -> leg.(Enum.at(chain, index - 1), node)
-        end
-      end
-
-    st = Enum.take(node_start, n_visit + n_commit) ++ [data["work_from"], finish]
-    %{"st" => st, "succ" => succ, "tin" => tin}
+    end
   end
 
   @doc """
@@ -253,21 +268,29 @@ defmodule ClinicDemo.MobileFixtures do
   def plan_fake(day, vet, actor, starts, opts \\ []) do
     {fake, opts} = Keyword.pop(opts, :fake, %{})
 
-    ClinicDemo.Planning.MobileVisits.plan(
+    MobileVisits.plan(
       [
         day: day,
         clinician_id: vet.id,
         actor: actor,
         backend: AshPlanning.Backend.Fake,
-        backend_data: fn payload ->
-          if Map.get(fake, :fake_outcome) in [:infeasible, :unknown] do
-            fake
-          else
-            starts = if is_function(starts, 1), do: starts.(payload), else: starts
-            Map.merge(%{fake_candidates: [fake_answer(payload, starts)]}, fake)
-          end
-        end
+        backend_data: backend_data(fake, starts)
       ] ++ opts
     )
+  end
+
+  defp backend_data(fake, starts) do
+    fn payload ->
+      if Map.get(fake, :fake_outcome) in [:infeasible, :unknown] do
+        fake
+      else
+        starts = resolve_starts(starts, payload)
+        Map.merge(%{fake_candidates: [fake_answer(payload, starts)]}, fake)
+      end
+    end
+  end
+
+  defp resolve_starts(starts, payload) do
+    if is_function(starts, 1), do: starts.(payload), else: starts
   end
 end

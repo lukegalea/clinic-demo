@@ -244,29 +244,39 @@ defmodule ClinicDemo.Planning.MobileValidator do
   end
 
   defp leg_violations(legs) do
-    Enum.flat_map(legs, fn {from, to, minutes} ->
-      subject = "#{from.id}->#{to.id}"
+    Enum.flat_map(legs, fn {from, to, minutes} -> leg_violation(from, to, minutes) end)
+  end
 
-      case minutes do
-        :unreachable ->
-          [Violation.new(:unreachable_leg, subject, %{from: from.location, to: to.location})]
+  defp leg_violation(from, to, :unreachable) do
+    [
+      Violation.new(:unreachable_leg, "#{from.id}->#{to.id}", %{
+        from: from.location,
+        to: to.location
+      })
+    ]
+  end
 
-        :unknown ->
-          [Violation.new(:travel_time_unknown, subject, %{from: from.location, to: to.location})]
+  defp leg_violation(from, to, :unknown) do
+    [
+      Violation.new(:travel_time_unknown, "#{from.id}->#{to.id}", %{
+        from: from.location,
+        to: to.location
+      })
+    ]
+  end
 
-        minutes ->
-          available = div(to.from - from.to, 60)
+  defp leg_violation(from, to, minutes) do
+    subject = "#{from.id}->#{to.id}"
+    available = div(to.from - from.to, 60)
 
-          if to.from - from.to >= minutes * 60,
-            do: [],
-            else: [
-              Violation.new(:insufficient_travel, subject, %{
-                needed_minutes: minutes,
-                available_minutes: available
-              })
-            ]
-      end
-    end)
+    if to.from - from.to >= minutes * 60,
+      do: [],
+      else: [
+        Violation.new(:insufficient_travel, subject, %{
+          needed_minutes: minutes,
+          available_minutes: available
+        })
+      ]
   end
 
   defp hours_violations(day) do

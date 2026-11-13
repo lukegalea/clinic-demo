@@ -17,6 +17,7 @@ defmodule ClinicDemo.Planning.MobileVisitsTest do
   alias ClinicDemo.Planning
   alias ClinicDemo.Planning.{FourEyes, MobileVisits, SnapshotBuilder}
   alias ClinicDemo.Scheduling
+  alias Ecto.Adapters.SQL
 
   setup do
     BusinessEvents.install!()
@@ -90,7 +91,7 @@ defmodule ClinicDemo.Planning.MobileVisitsTest do
       matrix = publish_matrix!(c.places)
       request_visit!(c.monday, {10, 0}, {12, 0}, c.places.a)
 
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         ClinicDemo.Repo,
         "UPDATE scheduling_travel_matrices SET provider = 'tampered' WHERE id = $1",
         [Ecto.UUID.dump!(matrix.id)]

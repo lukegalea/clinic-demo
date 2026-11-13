@@ -3,9 +3,11 @@ defmodule ClinicDemo.Planning.Checks.Machinery do
 
   use Ash.Policy.SimpleCheck
 
+  alias ClinicDemo.Planning.Machinery
+
   @impl true
   def describe(_opts), do: "the actor is the roster planner"
 
   @impl true
-  def match?(actor, _context, _opts), do: ClinicDemo.Planning.Machinery.machinery?(actor)
+  def match?(actor, _context, _opts), do: Machinery.machinery?(actor)
 end

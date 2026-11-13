@@ -45,6 +45,7 @@ defmodule ClinicDemo.Planning.Reader do
   @assignment "ClinicDemo.Scheduling.Assignment"
 
   @type facts :: %{
+          optional(:policy) => map(),
           week_start: Date.t(),
           effective_at: DateTime.t(),
           horizon_end: DateTime.t(),

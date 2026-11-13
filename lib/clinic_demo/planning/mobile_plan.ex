@@ -54,23 +54,35 @@ defmodule ClinicDemo.Planning.MobilePlan do
     matrix_key = Keyword.get(opts, :matrix_key, @default_matrix_key)
 
     with {:ok, facts} <- MobileReader.read(day, clinician_id, cutoff, matrix_key: matrix_key) do
-      {inputs, reasons} = MobileReader.inputs_with_reasons(facts)
+      build_from(facts)
+    end
+  end
 
-      built = %{
-        effective_at: facts.effective_at,
-        inputs: inputs,
-        reasons: reasons,
-        stats: stats(facts),
-        body: nil
-      }
+  defp build_from(facts) do
+    {inputs, reasons} = MobileReader.inputs_with_reasons(facts)
 
-      if Enum.all?(inputs, &(&1.status == :value)) do
-        with {:ok, lowered} <- MobileLowering.lower(facts) do
-          {:ok, %{built | body: Map.put(lowered, "problem", validator_problem(facts))}}
-        end
-      else
-        {:ok, built}
-      end
+    built = %{
+      effective_at: facts.effective_at,
+      inputs: inputs,
+      reasons: reasons,
+      stats: stats(facts),
+      body: nil
+    }
+
+    if Enum.all?(inputs, &(&1.status == :value)) do
+      lowered_body(facts, built)
+    else
+      {:ok, built}
+    end
+  end
+
+  defp lowered_body(facts, built) do
+    case MobileLowering.lower(facts) do
+      {:ok, lowered} ->
+        {:ok, %{built | body: Map.put(lowered, "problem", validator_problem(facts))}}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -275,12 +287,7 @@ defmodule ClinicDemo.Planning.MobilePlan do
 
     result =
       AppliedByCandidate.with_marker(candidate.id, schedule_ids, fn ->
-        Enum.reduce_while(steps, :ok, fn step, :ok ->
-          case run_step(step, clinician_id, opts) do
-            :ok -> {:cont, :ok}
-            {:error, error} -> {:halt, {:error, error}}
-          end
-        end)
+        run_steps(steps, clinician_id, opts)
       end)
 
     case result do
@@ -295,6 +302,15 @@ defmodule ClinicDemo.Planning.MobilePlan do
       {:error, error} ->
         {:error, {:refused, error}}
     end
+  end
+
+  defp run_steps(steps, clinician_id, opts) do
+    Enum.reduce_while(steps, :ok, fn step, :ok ->
+      case run_step(step, clinician_id, opts) do
+        :ok -> {:cont, :ok}
+        {:error, error} -> {:halt, {:error, error}}
+      end
+    end)
   end
 
   defp run_step({:keep, _visit}, _clinician_id, _opts), do: :ok

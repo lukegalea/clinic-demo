@@ -14,7 +14,17 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
 
   alias AshPlanning.Snapshot, as: PlanningSnapshot
   alias ClinicDemo.Planning
-  alias ClinicDemo.Planning.{Binding, Machinery, SnapshotBuilder, StaffingPolicy, WeeklyRoster}
+
+  alias ClinicDemo.Planning.{
+    Binding,
+    FourEyes,
+    Install,
+    Machinery,
+    SnapshotBuilder,
+    StaffingPolicy,
+    WeeklyRoster
+  }
+
   alias ClinicDemo.Scheduling
 
   defp one_day_week do
@@ -178,7 +188,7 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
 
     test "a binding pinned to a decision that is not the published one is definition_drift, not a plan" do
       w = one_day_week()
-      %{binding: binding} = ClinicDemo.Planning.Install.current!()
+      %{binding: binding} = Install.current!()
 
       selection =
         Enum.map(binding.selection, fn
@@ -201,7 +211,7 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
     test "a run resolves the binding valid as of its cutoff, not the live one" do
       w = one_day_week()
       {:ok, %{run: run}} = plan_fake(w.monday, staff(), good(w))
-      %{binding: live} = ClinicDemo.Planning.Install.current!()
+      %{binding: live} = Install.current!()
 
       Planning.rebind_model!(
         live,
@@ -219,7 +229,7 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
 
   describe "the staffing policy decision" do
     test "answers the required role and the duration policy per appointment type, and the week's reserve and patterns" do
-      %{binding: binding} = ClinicDemo.Planning.Install.current!()
+      %{binding: binding} = Install.current!()
       dmn = Enum.find(binding.selection, &(&1["kind"] == "dmn"))
 
       {:ok, definition} =
@@ -333,7 +343,7 @@ defmodule ClinicDemo.Planning.WeeklyRosterTest do
       assert second.disposition == :proposed
 
       # Its sign-off tasks are closed, not left on a worklist.
-      tasks = ClinicDemo.Planning.FourEyes.tasks(first.id)
+      tasks = FourEyes.tasks(first.id)
       assert Enum.all?(tasks, fn {_node, task} -> task.status == :cancelled end)
     end
   end

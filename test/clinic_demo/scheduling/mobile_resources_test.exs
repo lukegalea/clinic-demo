@@ -9,6 +9,7 @@ defmodule ClinicDemo.Scheduling.MobileResourcesTest do
   import ClinicDemo.MobileFixtures
   import ClinicDemo.PlanningFixtures, only: [staff: 0, next_monday: 0]
 
+  alias Ash.Resource.Info
   alias ClinicDemo.Scheduling
   alias ClinicDemo.Scheduling.{TravelMatrix, VisitRequest}
 
@@ -113,7 +114,7 @@ defmodule ClinicDemo.Scheduling.MobileResourcesTest do
 
     test "there is no way to edit or delete a published version" do
       actions =
-        ClinicDemo.Scheduling.TravelMatrix |> Ash.Resource.Info.actions() |> Enum.map(& &1.name)
+        TravelMatrix |> Info.actions() |> Enum.map(& &1.name)
 
       assert Enum.sort(actions) == [:publish, :read]
     end

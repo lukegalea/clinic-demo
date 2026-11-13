@@ -602,7 +602,7 @@ _A declarative, extensible framework for building Elixir applications._
 <!-- ash:testing-end -->
 <!-- ash_a2ui-start -->
 ## ash_a2ui usage
-_An Ash extension that generates A2UI (Agent to UI) v0.9.1 or v1.0 payloads from Ash resources._
+_An Ash extension that generates A2UI (Agent to UI) 1.0 payloads from Ash resources._
 
 [ash_a2ui usage rules](deps/ash_a2ui/usage-rules.md)
 <!-- ash_a2ui-end -->
@@ -610,10 +610,6 @@ _An Ash extension that generates A2UI (Agent to UI) v0.9.1 or v1.0 payloads from
 ## ash_a2ui:actions usage
 [ash_a2ui:actions usage rules](deps/ash_a2ui/usage-rules/actions.md)
 <!-- ash_a2ui:actions-end -->
-<!-- ash_a2ui:ag-ui-start -->
-## ash_a2ui:ag-ui usage
-[ash_a2ui:ag-ui usage rules](deps/ash_a2ui/usage-rules/ag-ui.md)
-<!-- ash_a2ui:ag-ui-end -->
 <!-- ash_a2ui:contexts-start -->
 ## ash_a2ui:contexts usage
 [ash_a2ui:contexts usage rules](deps/ash_a2ui/usage-rules/contexts.md)
@@ -634,6 +630,10 @@ _An Ash extension that generates A2UI (Agent to UI) v0.9.1 or v1.0 payloads from
 ## ash_a2ui:liveview usage
 [ash_a2ui:liveview usage rules](deps/ash_a2ui/usage-rules/liveview.md)
 <!-- ash_a2ui:liveview-end -->
+<!-- ash_a2ui:localization-start -->
+## ash_a2ui:localization usage
+[ash_a2ui:localization usage rules](deps/ash_a2ui/usage-rules/localization.md)
+<!-- ash_a2ui:localization-end -->
 <!-- ash_a2ui:queries-start -->
 ## ash_a2ui:queries usage
 [ash_a2ui:queries usage rules](deps/ash_a2ui/usage-rules/queries.md)
@@ -646,6 +646,14 @@ _An Ash extension that generates A2UI (Agent to UI) v0.9.1 or v1.0 payloads from
 ## ash_a2ui:reports usage
 [ash_a2ui:reports usage rules](deps/ash_a2ui/usage-rules/reports.md)
 <!-- ash_a2ui:reports-end -->
+<!-- ash_a2ui:shell-start -->
+## ash_a2ui:shell usage
+[ash_a2ui:shell usage rules](deps/ash_a2ui/usage-rules/shell.md)
+<!-- ash_a2ui:shell-end -->
+<!-- ash_a2ui:time-travel-start -->
+## ash_a2ui:time-travel usage
+[ash_a2ui:time-travel usage rules](deps/ash_a2ui/usage-rules/time-travel.md)
+<!-- ash_a2ui:time-travel-end -->
 <!-- ash_a2ui:zero-jank-start -->
 ## ash_a2ui:zero-jank usage
 [ash_a2ui:zero-jank usage rules](deps/ash_a2ui/usage-rules/zero-jank.md)
@@ -713,7 +721,7 @@ _The System One judgment substrate for Ash: declared, typed, calibrated
 questions over any subject resource, a provenance-carrying judgment ledger,
 and the bridges that turn recorded judgments into DMN inputs, rule facts and
 process signals. Transport is upstream `ash_ai` evaluate over ReqLLM — this
-package ships no HTTP client, provider or answer types._
+package ships no HTTP client or provider._
 
 [ash_judgments usage rules](deps/ash_judgments/usage-rules.md)
 <!-- ash_judgments-end -->
