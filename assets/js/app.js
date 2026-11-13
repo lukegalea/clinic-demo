@@ -84,6 +84,7 @@ const adminCatalog = createAshAdminCatalog({
 // DOMPurify — these values come from the database, not a trusted author.
 configureAshA2ui({
   MessageProcessor,
+  Catalog,
   catalogs: [a2uiCatalog, adminCatalog],
   markdown: {ContextProvider, context: Context.markdown, render: renderMarkdown},
 })
