@@ -20,3 +20,11 @@ path = "priv/fixtures/system_one/**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Luke Galea"
 SPDX-License-Identifier = "CC0-1.0"
+
+# The pinned A2UI renderer tarballs are Google's, built from upstream
+# a2ui-project/a2ui commit 8bf644a (their NOTICE says so).
+[[annotations]]
+path = "assets/vendor/a2ui/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Google LLC"
+SPDX-License-Identifier = "Apache-2.0"
