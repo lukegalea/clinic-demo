@@ -13,7 +13,6 @@ defmodule ClinicDemoWeb.A2ui.ProcessUI do
     surface_id "clinic_process_definitions"
     title "Visit processes"
     record_label("visit process")
-    spec_version "0.9.1"
 
     query :default do
       sortable [:key, :version]

@@ -260,7 +260,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLive do
     end
   end
 
-  # Everything else belongs to the renderer: row actions ("a2ui:action"),
+  # Everything else belongs to the renderer: row actions and form submits ("a2ui:message"),
   # function responses, surface opens. The renderer's handle_event/3 is
   # overridable, so defining set-as-of above replaced it outright; without
   # this clause every board button crashed the LiveView.

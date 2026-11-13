@@ -47,7 +47,6 @@ defmodule ClinicDemoWeb.A2ui.BoardUI do
     surface_id "clinic_board"
     title "Clinic board"
     record_label("appointment")
-    spec_version "0.9.1"
 
     component :table, :board do
       display :board

@@ -44,7 +44,7 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurface do
   """
 
   alias Ash.Resource.Info, as: ResourceInfo
-  alias AshA2ui.{ContextRunner, Info, ResolvedView, Sections}
+  alias AshA2ui.{ContextRunner, ResolvedView, Sections}
 
   @type as_of :: DateTime.t()
 
@@ -75,7 +75,7 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurface do
     # threaded with the same as_of before that form can ship.
     opts = Keyword.put(opts, :options, %{})
 
-    Info.encoder(view).encode_surface(view, records, opts)
+    AshA2ui.Encoder.encode_surface(view, records, opts)
   end
 
   @doc """

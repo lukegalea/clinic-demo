@@ -46,16 +46,24 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
   defp hours_ago(hours),
     do: DateTime.utc_now() |> DateTime.add(-hours * 3600, :second) |> DateTime.truncate(:second)
 
-  # The invoke envelopes a live surface emits for its row actions — the
-  # exact shape the basic composition builds:
-  # %{"action" => %{"event" => %{"name" => "invoke", "context" => ...}}}.
+  # The invoke calls a live surface emits for its row actions — the exact
+  # shape the encoder builds: an ashAction function call,
+  # %{"action" => %{"functionCall" => %{"@call" => "ashAction",
+  #   "args" => %{"name" => "invoke", "context" => ...}}}}.
   # Returns the invoked action names; the as-of surface must return none.
   defp invoked_actions(term, acc \\ [])
 
   defp invoked_actions(%{} = map, acc) do
     acc =
       case map do
-        %{"action" => %{"event" => %{"name" => "invoke", "context" => %{"action" => name}}}} ->
+        %{
+          "action" => %{
+            "functionCall" => %{
+              "@call" => "ashAction",
+              "args" => %{"name" => "invoke", "context" => %{"action" => name}}
+            }
+          }
+        } ->
           [name | acc]
 
         _ ->
@@ -73,7 +81,7 @@ defmodule ClinicDemoWeb.A2ui.AsOfSurfaceTest do
   # The lane tables of the root data model: %{"board_<lane>" => [records]}.
   defp lane_records(messages) do
     Enum.find_value(messages, fn
-      %{"updateDataModel" => %{"path" => "/", "value" => %{"records" => records}}} ->
+      %{"createSurface" => %{"dataModel" => %{"records" => records}}} ->
         records
 
       _ ->

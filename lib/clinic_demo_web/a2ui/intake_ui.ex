@@ -22,7 +22,6 @@ defmodule ClinicDemoWeb.A2ui.IntakeUI do
     surface_id "clinic_intake"
     title "Intake"
     record_label("appointment")
-    spec_version "0.9.1"
 
     query :default do
       search_fields [:reason, [:patient, :name]]

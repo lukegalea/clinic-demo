@@ -12,7 +12,6 @@ defmodule ClinicDemoWeb.A2ui.DecisionTableUI do
     surface_id "clinic_decision_definitions"
     title "Decision tables"
     record_label("decision table")
-    spec_version "0.9.1"
 
     query :default do
       sortable [:key, :version]

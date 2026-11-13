@@ -323,7 +323,7 @@ defmodule ClinicDemoWeb.CanvasLive do
   # rather than into an Ash action directly: the handler is what enforces the
   # row-action allowlist, `visible_when`, and the error contract that puts
   # validation messages on the reserved `/errors/<field>` paths.
-  def handle_event("a2ui:action", envelope, %{assigns: %{presentation: nil}} = socket) do
+  def handle_event("a2ui:message", envelope, %{assigns: %{presentation: nil}} = socket) do
     # Nothing is being shown, so there is nothing this envelope can refer to.
     # Rebuilding a surface from something the client echoed back is the
     # tamper-proofing hole the server-held presentation exists to close.
@@ -331,7 +331,7 @@ defmodule ClinicDemoWeb.CanvasLive do
     {:noreply, socket}
   end
 
-  def handle_event("a2ui:action", envelope, socket) do
+  def handle_event("a2ui:message", envelope, socket) do
     actor = socket.assigns[:a2ui_actor]
 
     {socket, presentation} =

@@ -17,7 +17,6 @@ defmodule ClinicDemoWeb.A2ui.ClinicianUI do
     surface_id "clinic_clinicians"
     title "Clinicians"
     record_label("clinician")
-    spec_version "0.9.1"
 
     context :clinician do
       resource ClinicDemo.Scheduling.Clinician

@@ -107,8 +107,16 @@ defmodule ClinicDemoWeb.A2ui.MasterDetailTest do
 
   defp envelope(name, context) do
     %{
-      "version" => "v0.9.1",
-      "action" => %{"name" => name, "surfaceId" => "clinic_patients", "context" => context}
+      "version" => "1.0",
+      "callAgentFunction" => %{
+        "surfaceId" => "clinic_patients",
+        "functionCallId" => "fc_#{name}",
+        "callFunction" => %{
+          "@call" => "ashAction",
+          "catalogId" => AshA2ui.Encoder.ash_catalog_id(),
+          "args" => %{"name" => name, "context" => context}
+        }
+      }
     }
   end
 

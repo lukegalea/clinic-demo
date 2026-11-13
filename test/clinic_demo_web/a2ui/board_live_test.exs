@@ -108,17 +108,25 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
     # is what the action pushed.
     _initial = drain_pushed_messages(view)
 
-    # The envelope the browser sends for the card's Check in button.
-    render_hook(view, "a2ui:action", %{
-      "version" => "v0.9.1",
-      "action" => %{
-        "name" => "invoke",
+    # What the browser sends for the card's Check in button: an ashAction
+    # function call against the ash_a2ui catalog.
+    render_hook(view, "a2ui:message", %{
+      "version" => "1.0",
+      "callAgentFunction" => %{
         "surfaceId" => "clinic_board",
-        "sourceComponentId" => "row_action_board_booked__routine_check_in_button",
-        "context" => %{
-          "action" => "check_in",
-          "component" => "board_booked__routine",
-          "recordId" => appointment.id
+        "functionCallId" => "fc_check_in",
+        "callFunction" => %{
+          "@call" => "ashAction",
+          "catalogId" => AshA2ui.Encoder.ash_catalog_id(),
+          "args" => %{
+            "name" => "invoke",
+            "sourceComponentId" => "row_action_board_booked__routine_check_in_button",
+            "context" => %{
+              "action" => "check_in",
+              "component" => "board_booked__routine",
+              "recordId" => appointment.id
+            }
+          }
         }
       }
     })
@@ -186,7 +194,7 @@ defmodule ClinicDemoWeb.A2ui.BoardLiveTest do
     ClinicDemoWeb.A2ui.BoardUI
     |> AshA2ui.Info.build_surface(actor: nil)
     |> Enum.find_value(fn
-      %{"updateDataModel" => %{"path" => "/", "value" => value}} -> value
+      %{"createSurface" => %{"dataModel" => value}} -> value
       _other -> nil
     end)
   end

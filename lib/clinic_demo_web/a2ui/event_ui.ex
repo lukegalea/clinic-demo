@@ -15,7 +15,6 @@ defmodule ClinicDemoWeb.A2ui.EventUI do
     surface_id "clinic_events"
     title "Audit events"
     record_label("event")
-    spec_version "0.9.1"
 
     query :default do
       # No search_fields: the log's text columns (`action`, `resource`,

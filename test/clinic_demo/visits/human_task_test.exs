@@ -410,7 +410,7 @@ defmodule ClinicDemo.Visits.HumanTaskTest do
   defp lane_totals(actor) do
     Info.build_surface(ClinicDemoWeb.A2ui.WorklistUI, actor: actor)
     |> Enum.find_value(fn
-      %{"updateDataModel" => %{"path" => "/", "value" => value}} -> value
+      %{"createSurface" => %{"dataModel" => value}} -> value
       _ -> nil
     end)
     |> Enum.flat_map(fn
@@ -430,7 +430,7 @@ defmodule ClinicDemo.Visits.HumanTaskTest do
   defp board_records(actor) do
     Info.build_surface(ClinicDemoWeb.A2ui.WorklistUI, actor: actor)
     |> Enum.find_value(fn
-      %{"updateDataModel" => %{"path" => "/", "value" => %{"records" => records}}} -> records
+      %{"createSurface" => %{"dataModel" => %{"records" => records}}} -> records
       _ -> nil
     end)
   end

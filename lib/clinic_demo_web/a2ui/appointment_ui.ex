@@ -27,7 +27,6 @@ defmodule ClinicDemoWeb.A2ui.AppointmentUI do
     surface_id "clinic_schedule"
     title "Schedule"
     record_label("appointment")
-    spec_version "0.9.1"
 
     query :default do
       search_fields [:reason, [:patient, :name], [:clinician, :full_name]]

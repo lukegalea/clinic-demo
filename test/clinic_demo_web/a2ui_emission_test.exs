@@ -36,9 +36,10 @@ defmodule ClinicDemoWeb.A2uiEmissionTest do
     ClinicDemoWeb.A2ui.EmergencyBoardUI
   ]
 
-  # Positions a renderer interpolates as text. `value` is excluded here: it
-  # may legitimately be a %{"path" => path} state binding, which the healthy
-  # default-emission path resolves through the data model.
+  # Positions a renderer interpolates as text. A 1.0 binding (`{"@path": ...}`)
+  # or function call (`{"@call": ...}`) is a legitimate dynamic string and
+  # resolves through the data model; any other object renders as
+  # `[object Object]`.
   @text_positions ~w(text label title buttonText description placeholder emptyText)
 
   for surface <- surfaces do
@@ -65,6 +66,12 @@ defmodule ClinicDemoWeb.A2uiEmissionTest do
       child_path = path ++ [key]
 
       case value do
+        %{"@path" => _} when key in @text_positions ->
+          acc
+
+        %{"@call" => _} when key in @text_positions ->
+          acc
+
         %{} = value when key in @text_positions ->
           [{child_path, value} | acc]
 

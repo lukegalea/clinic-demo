@@ -19,7 +19,6 @@ defmodule ClinicDemoWeb.A2ui.PatientUI do
     surface_id "clinic_patients"
     title "Patients"
     record_label("patient")
-    spec_version "0.9.1"
 
     # Selected only from a row's select button (or a ?ctx[patient] deep
     # link), never from a picker of its own: the table above is the picker.
