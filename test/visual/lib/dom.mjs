@@ -50,8 +50,38 @@ export const DOM_INIT_SCRIPT = /* js */ `
   // carries the browser-default outset border (the never-styled look).
   // Icon-only buttons are skipped: the theme toggle's three segments are
   // deliberately flat inside a chrome-bearing container.
+  //
+  // Two button kinds are flat BY DESIGN in the ash_a2ui admin catalog (the
+  // A2UI 1.0 renderer; sortable headers 1.7, reference links), and are held
+  // to their own affordance contract instead of the chrome rule — a flat
+  // look is not "dead CSS" when the stylesheet that makes it flat is the
+  // thing that loaded:
+  //   - sort header: <th aria-sort="ascending|descending|none"> wrapping a
+  //     <button class="sort-button"> (all: unset, so no chrome of its own)
+  //     that reads as clickable: cursor:pointer.
+  //   - reference link: <button class="am-link"> in a table cell, drawn as
+  //     an underlined link: cursor:pointer + an underline.
+  // A flat button that breaks its contract (no pointer cursor, no aria-sort
+  // on its header, a link with no underline) is still an offender: that is
+  // the lost-affordance regression the audit exists to catch.
+  window.__flatAffordanceProblem = (b, cs) => {
+    if (b.classList.contains("sort-button")) {
+      const th = b.closest("th");
+      const sort = th && th.getAttribute("aria-sort");
+      if (!["ascending", "descending", "none"].includes(sort)) return "sort header without aria-sort on its th";
+      if (cs.cursor !== "pointer") return "sort header without a pointer cursor";
+      return null;
+    }
+    if (b.classList.contains("am-link")) {
+      if (cs.cursor !== "pointer") return "reference link without a pointer cursor";
+      if (!/underline/.test(cs.textDecorationLine)) return "reference link without an underline";
+      return null;
+    }
+    return undefined;
+  };
+
   window.__buttonStyleAudit = () => {
-    const out = { total: 0, offenders: [] };
+    const out = { total: 0, flat: 0, offenders: [] };
     const seen = new Set();
     for (const root of window.__chromeRoots()) {
       for (const b of root.querySelectorAll("button")) {
@@ -63,15 +93,22 @@ export const DOM_INIT_SCRIPT = /* js */ `
         seen.add(key);
         out.total++;
         const cs = getComputedStyle(b);
+        const host = root.host ? root.host.tagName.toLowerCase() : "document";
+        const flat = window.__flatAffordanceProblem(b, cs);
+        if (flat !== undefined) {
+          if (flat === null) out.flat++;
+          else out.offenders.push({ label, host, why: flat });
+          continue;
+        }
         const sides = ["Top", "Right", "Bottom", "Left"];
         const noBorder = sides.every((s) => parseFloat(cs["border" + s + "Width"]) === 0);
         const noShadow = !cs.boxShadow || cs.boxShadow === "none";
         const bg = cs.backgroundColor;
         const transparent = bg === "transparent" || bg === "rgba(0, 0, 0, 0)";
         if (noBorder && noShadow && transparent) {
-          out.offenders.push({ label, host: root.host ? root.host.tagName.toLowerCase() : "document", why: "no border, no shadow, no background" });
+          out.offenders.push({ label, host, why: "no border, no shadow, no background" });
         } else if (cs.borderTopStyle === "outset") {
-          out.offenders.push({ label, host: root.host ? root.host.tagName.toLowerCase() : "document", why: "browser-default outset border" });
+          out.offenders.push({ label, host, why: "browser-default outset border" });
         }
       }
     }
