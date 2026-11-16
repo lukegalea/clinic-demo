@@ -68,7 +68,12 @@ Per surface (15 pages: `/`, `/intake`, `/schedule`, `/worklist`, `/visits`,
   bare (preflight-only) or browser-default (outset border) button is the
   dead-Tailwind incident wearing a different hat. Icon-only buttons are
   skipped (the theme toggle's segments are deliberately flat inside their
-  chrome-bearing container).
+  chrome-bearing container). Two kinds are flat by design in the A2UI 1.0
+  admin catalog and are held to their own affordance contract instead: a
+  **sort header** (`<th aria-sort>` wrapping `button.sort-button`) must keep
+  its `aria-sort` and a pointer cursor; a **reference link** (`button.am-link`
+  in a table cell) must keep a pointer cursor and an underline. A flat button
+  that breaks its contract is still a failure.
 - Full-page screenshot against `__screenshots__/<page>.png`. Before capture,
   seeded volatility (times, dates, ids, counts) is digit-scrubbed to "8"s and
   presence chips are hidden, so baselines move only when structure moves.
@@ -79,8 +84,10 @@ Behavioral pins (from the view/edit/save interaction audit):
   the old "view-opens-edit" bug).
 - The formless surfaces (`/visits`, `/processes`, `/decisions`) render no
   View row control at all.
-- A row-action success renders visible feedback (the old invisible
-  `/ui/status` write).
+- A row-action success renders visible feedback: the surface's status banner
+  says "Record weight completed." (the action's humanized label, as
+  ash_a2ui's success feedback words it; the old invisible `/ui/status` write
+  is the bug this pins).
 - An anonymous write on `/patients` is refused with a visible message.
 - `/events` renders the seeded event stream — the lifecycle's bookings,
   check-ins, completions and the discharge, plus DMN triage evaluations,

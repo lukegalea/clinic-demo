@@ -403,11 +403,15 @@ async function checkPage(reporter, baseUrl, pageDef, state) {
   // The dead-CSS detector: every visible labeled button in app chrome and
   // framework chrome (one shadow level for a2ui hosts) must compute real
   // styling. A bare (preflight-only) or browser-default (outset border)
-  // button is the dead-Tailwind incident wearing a different hat.
+  // button is the dead-Tailwind incident wearing a different hat. Sort
+  // headers and reference links are flat by design in the A2UI 1.0 admin
+  // catalog and are held to their affordance contract instead (see
+  // __flatAffordanceProblem in lib/dom.mjs).
   try {
     const audit = await page.evaluate(() => window.__buttonStyleAudit());
     if (audit.offenders.length === 0) {
-      reporter.pass(id("buttons"), `${audit.total} visible labeled button(s) compute styled chrome`);
+      const flat = audit.flat > 0 ? `, ${audit.flat} flat-by-design (sort header/link) keep their affordance` : "";
+      reporter.pass(id("buttons"), `${audit.total - audit.flat} visible labeled button(s) compute styled chrome${flat}`);
     } else {
       const detail = audit.offenders.map((o) => `"${o.label}" (${o.host}): ${o.why}`).join("; ");
       reporter.fail(id("buttons"), `${audit.offenders.length}/${audit.total}: ${detail}`);
@@ -522,7 +526,10 @@ async function pinRowActionSuccessVisible(reporter, helper, baseUrl) {
       return;
     }
     await page.getByRole("button", { name: "Confirm" }).first().click();
-    const feedback = page.locator("text=record_weight").first();
+    // The surface's status banner announces the outcome in the action's
+    // humanized label — "Record weight completed." (ash_a2ui's success
+    // feedback) — not the raw action name the pre-A2UI-1.0 renderer echoed.
+    const feedback = page.locator("text=/Record weight completed/i").first();
     await feedback.waitFor({ state: "visible", timeout: 10_000 });
     const text = (await feedback.textContent()) || "";
     reporter.pass(pageId, `feedback rendered: ${JSON.stringify(text.trim().slice(0, 80))}`);
