@@ -72,6 +72,19 @@ run_forbidden() {
   "
 }
 
+# `trace` follows the same pattern as `forbidden`: AshAgentTools.explain_trace/2
+# (the pure span-list reduction, AshAgentTools.Trace.explain/2) is a library
+# function with no Mix task. Spans arrive as JSON on stdin: either a list of span
+# maps, or the whole document `mix clinic.incident book` prints (its "spans"
+# key is used). Same --no-compile rule as `forbidden`, for the same reason.
+run_trace() {
+  exec mix run --no-start --no-compile -e '
+    input = IO.read(:stdio, :eof) |> Jason.decode!()
+    spans = if is_map(input), do: Map.fetch!(input, "spans"), else: input
+    spans |> AshAgentTools.explain_trace() |> Jason.encode!() |> IO.puts()
+  '
+}
+
 usage() {
   cat >&2 <<USAGE
 usage: bin/ash-agent <subcommand> [args...]
@@ -83,6 +96,7 @@ subcommands:
   context FILE:LINE              what is declared at a position, and what refers to it
   laws SOURCE...                 judge source against the 26 Iron Laws
   forbidden RESOURCE [ACTION]    the policies that can deny an action
+  trace                          reduce a span list (JSON on stdin) to errors, policies, queries
   diff                           ash_agent.diff
   edit                           a semantic DSL edit addressed by name path
   runtime snapshot|top|tree      read-only BEAM introspection
@@ -104,6 +118,10 @@ esac
 if [ "$cmd" = "forbidden" ]; then
   shift
   run_forbidden "$@"
+fi
+
+if [ "$cmd" = "trace" ]; then
+  run_trace
 fi
 
 for known in "${subcommands[@]}"; do
