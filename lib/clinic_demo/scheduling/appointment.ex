@@ -611,5 +611,17 @@ defmodule ClinicDemo.Scheduling.Appointment do
       description "Only a signed-in member of staff may change the schedule."
       authorize_if actor_present()
     end
+
+    # PLANTED INCIDENT (CLIN-33, `ClinicDemo.Incident`): inert unless
+    # `:triage_vet_only` is switched on. When it is, this policy also has to
+    # pass for `:record_triage` — which the visit process runs as the engine's
+    # system actor, never as the person who booked. So the process cannot write
+    # its own triage answer down, and every booking dies two layers below the
+    # action the caller called. Walkthrough: docs/storyline.md, "The planted
+    # incident".
+    policy [action(:record_triage), {ClinicDemo.Incident.Active, incident: :triage_vet_only}] do
+      description "Triage is a veterinarian's judgement: only a veterinarian may record it."
+      authorize_if actor_attribute_equals(:role, :veterinarian)
+    end
   end
 end

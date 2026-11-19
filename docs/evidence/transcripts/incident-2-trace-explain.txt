@@ -1,0 +1,57 @@
+$ bin/ash-agent trace < incident-book-failing.json | jq .
+{
+  "async": [],
+  "root": {
+    "attributes": {
+      "request": "book_appointment"
+    },
+    "name": "request book_appointment",
+    "kind": "server",
+    "duration": 1061161,
+    "trace_id": "0d679ade-88f8-48b3-b951-1b1936e04698",
+    "span_id": "ec16a137-1590-4308-baf8-b2345f8b1926"
+  },
+  "symbols": [],
+  "errors": [
+    {
+      "message": "forbidden",
+      "name": "ash.policy ClinicDemo.Scheduling.Appointment.record_triage",
+      "depth": 4,
+      "span_id": "4eb89374-c288-4743-8538-0b1099d6d1a0"
+    },
+    {
+      "message": "forbidden",
+      "name": "scheduling:appointment.record_triage",
+      "depth": 3,
+      "span_id": "6afcacd0-7e61-4860-93b9-874aa4a4f5af"
+    },
+    {
+      "message": "could not start the visit process: %Ash.Error.Forbidden{bread_crumbs: [\"Error returned from: ClinicDemo.Scheduling.Appointment.record_triage\"],  changeset: \"#Changeset<>\",  errors: [%Ash.Error.Forbidden.Policy{scenarios: [], facts: %{{Ash.Policy.Check.Acti…",
+      "name": "scheduling:appointment.book",
+      "depth": 1,
+      "span_id": "7c1fb4e9-e671-4f7d-a688-41d7b9bc1dbc"
+    },
+    {
+      "message": "could not start the visit process: %Ash.Error.Forbidden{bread_crumbs: [\"Error returned from: ClinicDemo.Scheduling.Appointment.record_triage\"],  changeset: \"#Changeset<>\",  errors: [%Ash.Error.Forbidden.Policy{scenarios: [], facts: %{{Ash.Policy.Check.Acti…",
+      "name": "request book_appointment",
+      "depth": 0,
+      "span_id": "ec16a137-1590-4308-baf8-b2345f8b1926"
+    }
+  ],
+  "policy": [
+    {
+      "name": "ash.policy ClinicDemo.Scheduling.Appointment.record_triage",
+      "span_id": "4eb89374-c288-4743-8538-0b1099d6d1a0",
+      "decision": "forbidden by: Triage is a veterinarian's judgement: only a veterinarian may record it. (applies when action == :record_triage and the :triage_vet_only incident is switched on) [actor ash_bpmn:advance]"
+    }
+  ],
+  "summary": {
+    "duration": 1061161,
+    "span_count": 166,
+    "trace_id": "0d679ade-88f8-48b3-b951-1b1936e04698"
+  },
+  "backend_url": null,
+  "truncated?": false,
+  "notifications": [],
+  "queries": []
+}

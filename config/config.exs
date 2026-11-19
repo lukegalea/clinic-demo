@@ -48,6 +48,9 @@ config :ash, ash_domains: [AshCompliance.Domain]
 # are the current Ash 3 recommendations; they are set explicitly so that
 # upgrading Ash cannot silently change this app's behaviour.
 config :ash,
+  # The span source for `AshAgentTools.Trace.explain/2`: records only inside a
+  # `ClinicDemo.Trace.capture/1` window, a no-op everywhere else.
+  tracer: [ClinicDemo.Trace.Tracer],
   # Count unicode codepoints for `min_length`/`max_length`, which is how
   # Postgres counts them. Without this the same string can pass validation in
   # Elixir and be rejected by the data layer.
