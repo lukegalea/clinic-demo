@@ -29,14 +29,24 @@ runs:
         otp-version: "27"
         elixir-version: "1.20"
 
+    # The runner image goes in the cache key: _build holds NIFs and ports
+    # (erlexec's exec-port) linked against the image's glibc, and the visual
+    # job pins ubuntu-24.04 while the rest run ubuntu-latest (26.04). Sharing
+    # one key let a 26.04 build land on 24.04, where exec-port fails with
+    # "GLIBC_2.42 not found".
+    - name: Name the runner image
+      id: image
+      shell: bash
+      run: echo "os=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+
     - uses: actions/cache@v6.1.0
       with:
         path: |
           deps
           _build
-        key: ${{ runner.os }}-mix-${{ inputs.mix-env }}-${{ hashFiles('mix.lock') }}
+        key: ${{ runner.os }}-${{ steps.image.outputs.os }}-mix-${{ inputs.mix-env }}-${{ hashFiles('mix.lock') }}
         restore-keys: |
-          ${{ runner.os }}-mix-${{ inputs.mix-env }}-
+          ${{ runner.os }}-${{ steps.image.outputs.os }}-mix-${{ inputs.mix-env }}-
 
     - name: Install hex and rebar
       shell: bash
