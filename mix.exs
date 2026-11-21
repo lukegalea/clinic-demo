@@ -169,7 +169,7 @@ defmodule ClinicDemo.MixProject do
       # facts host is built from. main because C1 (the materialiser's
       # evidence assertion, aeebd86) is the API this wiring exists to ride
       # — the hex ladder has not caught up yet.
-      {:ash_judgments, github: "lukegalea/ash_judgments", branch: "main"},
+      {:ash_judgments, github: "lukegalea/ash_judgments"},
 
       # The value ledger (BPSim BD-1): the clinic's lifecycle moments become
       # canonical discrete business events — locked, chained, delivery-

@@ -11,7 +11,10 @@ defmodule ClinicDemo.Compliance.AppointmentFactsTest do
       renders.
   """
 
-  use ClinicDemo.DataCase, async: true
+  # Serial: every test activates the same organisation's rule set, and the
+  # one-active-per-name exclusion makes concurrent sandbox transactions that
+  # insert it wait on each other until they deadlock.
+  use ClinicDemo.DataCase, async: false
 
   alias AshA2ui.Info
   alias ClinicDemo.Compliance
