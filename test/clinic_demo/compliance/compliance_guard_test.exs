@@ -9,7 +9,10 @@ defmodule ClinicDemo.Compliance.ComplianceGuardTest do
   transitions would meet.
   """
 
-  use ClinicDemo.DataCase, async: true
+  # Serial: every test activates the same organisation's rule set, and the
+  # one-active-per-name exclusion makes concurrent sandbox transactions that
+  # insert it wait on each other until they deadlock.
+  use ClinicDemo.DataCase, async: false
 
   alias ClinicDemo.Compliance
   alias ClinicDemo.Repo
