@@ -11,6 +11,7 @@ config :clinic_demo,
   ecto_repos: [ClinicDemo.Repo],
   ash_domains: [
     ClinicDemo.Scheduling,
+    ClinicDemo.Fhir,
     ClinicDemo.Planning,
     ClinicDemo.Finance,
     ClinicDemo.Decisions,

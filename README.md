@@ -281,6 +281,23 @@ Two documents sit beside those resources, and neither is Elixir:
 | `priv/decisions/appointment_triage.dmn` | How urgent a visit is, from severity, age band and species. Seven rules, FEEL input entries, `PRIORITY` hit policy. |
 | `priv/processes/appointment_visit.bpmn` | The visit itself: booked, triaged, checked in, seen, sometimes waiting on a lab, discharged. |
 
+### The same rows in FHIR's names
+
+`ClinicDemo.Fhir` gives four of those resources a second vocabulary, named after
+HL7 FHIR R4: `Patient`, `Practitioner` (over `Clinician`), `Location` (over
+`ServiceLocation`) and `Encounter` (over `Appointment`). They are façades
+(`AshStrangler.Facade`): no table, no rows of their own, and no policy. A read
+runs the scheduling read as the caller, and a write runs one named scheduling
+action as the caller, so the scheduling policies, the state machine and the
+audit log decide exactly as before.
+
+`Encounter.status` is a decode of the appointment's status (`:planned`,
+`:arrived`, `:finished`, `:cancelled`, `:no_show`). The façade has two writes and
+no generic update: `finish_encounter` runs `:complete` and `cancel_encounter`
+runs `:cancel`. A write that carries `as_of` is refused before the appointment
+is touched; a read accepts `as_of`, because the appointments are temporal. The
+names are FHIR R4's; nothing here claims conformance to FHIR.
+
 ### The one story the three layers tell
 
 Booking an appointment starts a process instance. The instance's first node
