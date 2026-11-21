@@ -33,7 +33,8 @@ defmodule ClinicDemoWeb.A2uiEmissionTest do
     ClinicDemoWeb.A2ui.DecisionTableUI,
     ClinicDemoWeb.A2ui.EvaluationUI,
     ClinicDemoWeb.A2ui.EventUI,
-    ClinicDemoWeb.A2ui.EmergencyBoardUI
+    ClinicDemoWeb.A2ui.EmergencyBoardUI,
+    ClinicDemoWeb.A2ui.EncounterUI
   ]
 
   # Positions a renderer interpolates as text. A 1.0 binding (`{"@path": ...}`)

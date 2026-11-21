@@ -592,6 +592,10 @@ _A declarative, extensible framework for building Elixir applications._
 ## ash:relationships usage
 [ash:relationships usage rules](deps/ash/usage-rules/relationships.md)
 <!-- ash:relationships-end -->
+<!-- ash:signals-start -->
+## ash:signals usage
+[ash:signals usage rules](deps/ash/usage-rules/signals.md)
+<!-- ash:signals-end -->
 <!-- ash:temporal-start -->
 ## ash:temporal usage
 [ash:temporal usage rules](deps/ash/usage-rules/temporal.md)
@@ -787,6 +791,12 @@ _The PostgreSQL data layer for Ash Framework_
 ## ash_postgres:multitenancy usage
 [ash_postgres:multitenancy usage rules](deps/ash_postgres/usage-rules/multitenancy.md)
 <!-- ash_postgres:multitenancy-end -->
+<!-- ash_strangler-start -->
+## ash_strangler usage
+_Strangler-fig migrations for Ash: map an Ash resource onto a legacy Postgres schema and move it through the migration phases without hand-writing SQL._
+
+[ash_strangler usage rules](deps/ash_strangler/usage-rules.md)
+<!-- ash_strangler-end -->
 <!-- usage_rules-start -->
 ## usage_rules usage
 _A config-driven dev tool for Elixir projects to manage AGENTS.md files and agent skills from dependencies_

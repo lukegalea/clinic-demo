@@ -209,6 +209,10 @@ defmodule ClinicDemo.MixProject do
       # hook. Runtime dependency — it powers the app's interface.
       {:ash_a2ui, github: "lukegalea/ash_a2ui"},
 
+      # The FHIR-named façades (ClinicDemo.Fhir): resources with no table over
+      # the scheduling resources. Runtime: they are read by the application.
+      {:ash_strangler, github: "lukegalea/ash_strangler"},
+
       # The operator section's helper agent: ash_ai's prompt actions carry
       # the interpreter, ReqLLM speaks to the model. The console degrades
       # honestly (surface buttons only) when no provider key is set.
