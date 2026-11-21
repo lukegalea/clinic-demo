@@ -6,9 +6,10 @@ defmodule ClinicDemo.Planning.ScenarioIdentityTest do
   `(candidate_id, snapshot_digest, model_hash, random_stream_id, replication_id)`;
   the label is presentation only. These tests pin, in the pure draw and end to end:
 
-    * the seed is `(visit_id, identity-tuple)` when the planning fields are present:
-      the same five draw identically whatever the label, any one differing draws
-      independently;
+    * the draw is common random numbers when the planning fields are present: it is
+      seeded by `(visit_id, random_stream_id, replication_id)` alone, so the same
+      stream and replication draw identically whatever the label, the candidate, the
+      snapshot or the model, and a different stream or replication draws independently;
     * with no planning field the seed is `(visit_id, label)` exactly as before (the
       existing scenario suite holds that pin; here it is restated against the
       identity-aware entry point);
@@ -76,16 +77,10 @@ defmodule ClinicDemo.Planning.ScenarioIdentityTest do
       assert Enum.all?(one, &(&1.identity == @identity))
     end
 
-    test "any one of the five differing draws independently" do
+    test "the stream and the replication each re-roll the draw" do
       base = Scenarios.plan(visits(), "same-label", rates(), Decimal.new("0.5"), @identity)
 
-      for change <- [
-            %{candidate_id: "00000000-0000-0000-0000-00000000c002"},
-            %{snapshot_digest: String.duplicate("c", 64)},
-            %{model_hash: String.duplicate("d", 64)},
-            %{random_stream_id: "stream-2"},
-            %{replication_id: 1}
-          ] do
+      for change <- [%{random_stream_id: "stream-2"}, %{replication_id: 1}] do
         other =
           Scenarios.plan(
             visits(),
@@ -97,6 +92,48 @@ defmodule ClinicDemo.Planning.ScenarioIdentityTest do
 
         refute kinds(base) == kinds(other),
                "changing #{inspect(Map.keys(change))} must change the draw"
+      end
+    end
+
+    test "common random numbers: the candidate, snapshot and model do not enter the draw" do
+      base = Scenarios.plan(visits(), "same-label", rates(), Decimal.new("0.5"), @identity)
+
+      for change <- [
+            %{candidate_id: "00000000-0000-0000-0000-00000000c002"},
+            %{snapshot_digest: String.duplicate("c", 64)},
+            %{model_hash: String.duplicate("d", 64)}
+          ] do
+        other =
+          Scenarios.plan(
+            visits(),
+            "same-label",
+            rates(),
+            Decimal.new("0.5"),
+            Map.merge(@identity, change)
+          )
+
+        assert kinds(base) == kinds(other),
+               "changing #{inspect(Map.keys(change))} must not change the draw"
+      end
+    end
+
+    test "the draw is the package's identity draw for (visit, stream, replication)" do
+      alias AshDiscreteBusinessEvents.Simulation.Identity
+
+      p = Decimal.new("0.5")
+
+      planned =
+        Scenarios.plan(
+          visits(),
+          "any",
+          %{rates() | global: %{completed: 10, cancelled: 0, no_show: 0}},
+          p,
+          @identity
+        )
+
+      for %{appointment_id: id, kind: kind} <- planned do
+        u = Identity.draw(subject: id, random_stream_id: "stream-1", replication_id: 0)
+        assert kind == :visit_completed == u < 0.5
       end
     end
 

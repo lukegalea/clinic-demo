@@ -19,10 +19,12 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjection do
       true` and a `simulation_run` label set at record time; the
       supported surface for run listings is
       `AshDiscreteBusinessEvents.simulation_runs/1`.
+    * **Run** — the run's label is part of the grain: two runs that draw the
+      same visit write two rows, never one overwritten row.
     * **Cursor** — sim drains checkpoint `sim:sim_value_projection_v1.<region>:<run>`;
       no real drain's cursor can alias one, and two runs never share.
 
-  Same grain and field set as the design's §2c value projection — the
+  Same field set as the design's §2c value projection, with the run added to its grain — the
   fold handlers are the scenario fold's own,
   `ClinicDemo.BusinessEvents.VisitProjectionOps` — so a scenario overlay
   reads this table the same way the real page reads its own. All periods
@@ -42,7 +44,7 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjection do
   end
 
   projection_resource do
-    grain_fields([:region, :subject])
+    grain_fields([:region, :subject, :simulation_run])
   end
 
   attributes do
@@ -61,6 +63,14 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjection do
       constraints max_length: 512
 
       description "The visit's id — the ledger's record_id, the sim fold's grain."
+    end
+
+    attribute :simulation_run, :string do
+      allow_nil? false
+      public? true
+      constraints max_length: 512
+
+      description "The simulation run's label — part of the grain, so two runs give two rows per visit."
     end
 
     attribute :outcome, :atom do

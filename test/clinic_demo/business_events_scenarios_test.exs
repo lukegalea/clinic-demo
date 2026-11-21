@@ -375,6 +375,39 @@ defmodule ClinicDemo.BusinessEventsScenariosTest do
                ])
     end
 
+    test "two runs give two rows per visit, each carrying its run", %{versions: _versions} do
+      %{vet: vet, patient: patient} = fixtures()
+      type = catalogue_type(Decimal.new("60"))
+      teach_rates(patient, vet, type)
+      Enum.each([3, 6, 9], &future_visit(patient, vet, type, &1))
+
+      low = Scenarios.generate!(multiplier: Decimal.new("0.0"))
+      high = Scenarios.generate!(multiplier: Decimal.new("99"))
+
+      periods = sim_periods_at(DateTime.utc_now() |> DateTime.add(30 * 86_400, :second))
+      assert length(periods) == 6
+
+      by_run = Enum.group_by(periods, & &1.simulation_run)
+      assert Enum.sort(Map.keys(by_run)) == Enum.sort([low.run, high.run])
+      assert length(by_run[low.run]) == 3 and length(by_run[high.run]) == 3
+
+      # The same three subjects sit in both runs, each with its own run's outcome:
+      # one run's draw never overwrites the other's.
+      assert Enum.sort(Enum.map(by_run[low.run], & &1.subject)) ==
+               Enum.sort(Enum.map(by_run[high.run], & &1.subject))
+
+      assert Enum.all?(by_run[low.run], &(&1.outcome in [:cancelled, :no_show]))
+      assert Enum.all?(by_run[high.run], &(&1.outcome == :completed))
+    end
+
+    test "the sim projector refuses a real-ledger drain: it folds the twin only", %{
+      versions: _versions
+    } do
+      assert_raise ArgumentError, ~r/simulation_projection/, fn ->
+        SimValueProjector.drain(@region)
+      end
+    end
+
     test "the sim drain reads the twin alone, even after a cursor wipe", %{versions: _versions} do
       %{vet: vet, patient: patient} = fixtures()
       type = catalogue_type(Decimal.new("90"))

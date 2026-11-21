@@ -47,7 +47,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
 
   ## Determinism and idempotency
 
-  The seed is `(visit_id, label)` alone — the multiplier does not enter
+  Without a planning identity the seed is `(visit_id, label)` alone — the multiplier does not enter
   it — so for a fixed label the same visit always draws the same `u`, and
   raising the multiplier can only turn non-completions into completions,
   never the reverse. Two knobs are two runs: the default label is
@@ -68,6 +68,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
 
   require Ash.Query
 
+  alias AshDiscreteBusinessEvents.Simulation.Identity
   alias ClinicDemo.BusinessEvents.Ledger
   alias ClinicDemo.BusinessEvents.MappingVersion
   alias ClinicDemo.BusinessEvents.SimValueProjector
@@ -179,9 +180,10 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
   @doc """
   The pure half of the generator — the draw, no ledger, no clock: plain
   visit rows in, drawn outcomes out. Determinism lives here: each visit's
-  draw is seeded by `(visit_id, label)` alone (or `(visit_id, identity)` when
-  the optional planning `identity` map is given, and then the label is not in
-  the seed at all), so the same rows, seed key and multiplier always produce the identical multiset, and a higher
+  draw is seeded by `(visit_id, label)` alone (or, when the optional planning
+  `identity` map is given, drawn as common random numbers from `(visit_id,
+  random_stream_id, replication_id)`, and then the label is not in the draw at
+  all), so the same rows, seed key and multiplier always produce the identical multiset, and a higher
   multiplier can only move a visit toward completion (the `u` never
   changes; only the bar it must clear does).
 
@@ -215,8 +217,7 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
       )
 
     p = clamp01(Decimal.mult(rate, multiplier))
-    seed = :rand.seed_s(:exsss, seed_tuple(visit.id, label, identity))
-    {u, rest} = :rand.uniform_s(seed)
+    {u, u2} = uniforms(visit.id, label, identity)
 
     outcome =
       if Decimal.lt?(Decimal.from_float(u), p) do
@@ -225,8 +226,6 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
         # Not completed: the clinic's observed terminal mix splits the
         # rest between cancelled and no-show. With no history at all the
         # split falls to the cancellation — the story's default loss.
-        {u2, _} = :rand.uniform_s(rest)
-
         if Decimal.lt?(Decimal.from_float(u2), cancellation_share(rates)) do
           @cancellation
         else
@@ -254,14 +253,28 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
 
   defp instant(visit, _lapsed), do: visit.scheduled_at
 
-  # (visit_id, label) alone — never the multiplier, never the clock. The
-  # digest spreads the pair across the three integers `:rand.seed_s`
-  # wants, deterministically. With a planning identity the seed is
-  # (visit_id, identity-tuple) instead and the label does not enter it.
-  defp seed_tuple(visit_id, label, nil), do: seed_tuple(visit_id <> ":" <> label)
+  # The visit's two uniforms: the completion draw and the loss split. Without a
+  # planning identity they come off a `:rand` stream seeded by (visit_id, label)
+  # alone — never the multiplier, never the clock. With one they are the package's
+  # common-random-numbers draws for (visit_id, random_stream_id, replication_id),
+  # and the label does not enter at all.
+  defp uniforms(visit_id, label, nil) do
+    seed = :rand.seed_s(:exsss, seed_tuple(visit_id <> ":" <> label))
+    {u, rest} = :rand.uniform_s(seed)
+    {u2, _} = :rand.uniform_s(rest)
+    {u, u2}
+  end
 
-  defp seed_tuple(visit_id, _label, identity),
-    do: seed_tuple(visit_id <> ":plan:" <> identity_key(identity))
+  defp uniforms(visit_id, _label, identity),
+    do: {crn(visit_id, identity), crn(visit_id <> ":loss", identity)}
+
+  defp crn(subject, identity) do
+    Identity.draw(
+      subject: subject,
+      random_stream_id: identity.random_stream_id,
+      replication_id: identity.replication_id
+    )
+  end
 
   defp seed_tuple(material) do
     <<a::unsigned-integer-32, b::unsigned-integer-32, c::unsigned-integer-32, _::binary>> =
@@ -270,7 +283,8 @@ defmodule ClinicDemo.BusinessEvents.Scenarios do
     {a, b, c}
   end
 
-  # The five-tuple, in its fixed order, one canonical string. The separator is a
+  # The five-tuple, in its fixed order, one canonical string: it names the run's
+  # default label, not the draw. The separator is a
   # byte no id, digest or hash can contain.
   defp identity_key(identity) do
     Enum.map_join(@identity_keys, <<0>>, &to_string(Map.fetch!(identity, &1)))

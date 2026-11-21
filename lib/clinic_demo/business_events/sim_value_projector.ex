@@ -26,20 +26,26 @@ defmodule ClinicDemo.BusinessEvents.SimValueProjector do
     * two knobs are two runs: the generator's content-addressed labels
       keep each run's stream, cursor and periods separate.
 
-  Plain `drain/2` (the real-ledger drain every projector module also
-  carries) has no caller in this application: the sim table is a
-  scenario target, not a live one. It remains the package's standard
-  surface, unmodified.
+  The projector is declared `simulation_projection: true`: its grain carries
+  the run, so two runs give two rows per visit instead of overwriting each
+  other, and the package verifies at compile time that the projection
+  resource's grain names `:simulation_run` and, at drain time, that the grain
+  returns each event's own run. Plain `drain/2` (the real-ledger drain every
+  projector module also carries) has no caller here, and the package refuses
+  it: the sim table is a scenario target, not a live one.
   """
 
   use AshDiscreteBusinessEvents.Projections,
     name: "sim_value_projection_v1",
     event_log: ClinicDemo.BusinessEvents.Ledger,
-    projection_resource: ClinicDemo.BusinessEvents.SimValueProjection
+    projection_resource: ClinicDemo.BusinessEvents.SimValueProjection,
+    simulation_projection: true
 
   alias ClinicDemo.BusinessEvents.VisitProjectionOps
 
-  grain(fn event -> %{region: event.region, subject: event.record_id} end)
+  grain(fn event ->
+    %{region: event.region, subject: event.record_id, simulation_run: event.simulation_run}
+  end)
 
   # The scenario fold: VisitProjectionOps' handlers over the sim table.
   # The real value projector folds its own inline handlers into its own
